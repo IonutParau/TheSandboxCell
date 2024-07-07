@@ -90,8 +90,8 @@ void tsc_ui_clearScrollableState(ui_scrollable *scrollable);
 // Stateful components
 int tsc_ui_button(ui_button *state);
 int tsc_ui_checkbutton(ui_button *state);
-const char *tsc_ui_input(ui_input *state);
-double tsc_ui_slider(ui_slider *state);
+const char *tsc_ui_input(ui_input *state, int width, int height);
+double tsc_ui_slider(ui_slider *state, int width, int height, int thickness);
 
 // Stateless components
 

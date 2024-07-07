@@ -68,6 +68,18 @@ typedef struct ui_scrollable_widget {
     ui_node *child;
 } ui_scrollable_widget;
 
+typedef struct ui_input_widget {
+    ui_input *input;
+    int width;
+    int height;
+} ui_input_widget;
+
+typedef struct ui_slider_widget {
+    ui_slider *slider;
+    int width;
+    int height;
+} ui_slider_widget;
+
 typedef struct ui_translate {
     ui_node *child;
     int x;
@@ -95,8 +107,8 @@ typedef struct ui_node {
         ui_image *image;
         int spacing;
         ui_button_widget *button;
-        ui_slider *slider;
-        ui_input *input;
+        ui_slider_widget *slider;
+        ui_input_widget *input;
         ui_scrollable_widget *scrollable;
         ui_box *box;
         ui_pad *pad;
@@ -134,6 +146,7 @@ static void ui_drawNode(ui_node *node, int x, int y) {
         Vector2 origin = {0, 0};
 
         DrawTexturePro(texture, src, dest, origin, 0, WHITE);
+        return;
     }
 
     if(node->tag == UI_TEXT) {
@@ -145,6 +158,47 @@ static void ui_drawNode(ui_node *node, int x, int y) {
         Vector2 pos = {x, y};
         float spacing = ((float)size) / font.baseSize;
         DrawTextEx(font, text, pos, size, spacing, color);
+        return;
+    }
+
+    if(node->tag == UI_INPUT) {
+        Font font = font_get();
+        ui_input *input = node->input->input;
+        const char *text = input->text;
+        int size = node->text->size;
+        int width = node->input->width;
+        if(width == 0) {
+            width = input->maxlen * MeasureText("A", size);
+        }
+        size_t maxDisplayLen = 0;
+        int curwidth = 0;
+        for(size_t i = 0; i < input->textlen; i++) {
+            char sc[2] = {text[i], '\0'};
+            int w = MeasureText(sc, size);
+            curwidth += w;
+            if(curwidth > width) break;
+            maxDisplayLen++;
+        }
+        static char buffer[1024];
+        size_t len = input->textlen;
+        if(len > maxDisplayLen) len = maxDisplayLen;
+        if(len > input->maxlen) len = input->maxlen;
+        strncpy(buffer, input->text, len);
+        Color color = WHITE;
+
+        Vector2 pos = {x, y};
+        float spacing = ((float)size) / font.baseSize;
+        DrawTextEx(font, buffer, pos, node->input->height, spacing, color);
+        return;
+    }
+
+    if(node->tag == UI_PAD) {
+        ui_drawNode(node->pad->child, x + node->pad->px, y + node->pad->py);
+        return;
+    }
+
+    if(node->tag == UI_SCROLLABLE) {
+
     }
 }
 
@@ -456,4 +510,84 @@ void tsc_ui_space(int amount) {
     node->spacing = amount;
     tsc_ui_backupInFrame(frame, node);
     tsc_ui_giveFrame(frame, node);
+}
+
+int tsc_ui_button(ui_button *state) {
+    ui_frame *frame = tsc_ui_topFrame();
+    if(frame == NULL) return tsc_ui_checkbutton(state);
+    ui_node *child = tsc_ui_takeFromFrame(frame);
+    ui_node *node = tsc_ui_askFrame(frame, UI_BUTTON);
+    if(node == NULL) {
+        node = malloc(sizeof(ui_node));
+        node->tag = UI_BUTTON;
+        ui_button_widget *button = malloc(sizeof(ui_button_widget));
+        button->child = child;
+        button->button = state;
+        node->button = button;
+        return tsc_ui_checkbutton(state);
+    }
+
+    node->button->child = child;
+    node->button->button = state;
+
+    return tsc_ui_checkbutton(state);
+}
+
+int tsc_ui_checkbutton(ui_button *state) {
+    if(state->clicked && !state->wasClicked) {
+        return UI_BUTTON_CLICK;
+    }
+    if(!state->clicked && state->wasClicked && state->pressTime < state->longPressTime) {
+        return UI_BUTTON_PRESS;
+    }
+    if(!state->clicked && state->wasClicked && state->pressTime >= state->longPressTime) {
+        return UI_BUTTON_LONGPRESS;
+    }
+    return 0;
+}
+
+const char *tsc_ui_input(ui_input *state, int width, int height) {
+    ui_frame *frame = tsc_ui_topFrame();
+    if(frame == NULL) return state->text;
+    ui_node *node = tsc_ui_askFrame(frame, UI_BUTTON);
+    if(node == NULL) {
+        node = malloc(sizeof(ui_node));
+        node->tag = UI_BUTTON;
+        ui_input_widget *input = malloc(sizeof(ui_input_widget));
+        input->input = state;
+        input->width = width;
+        input->height = height;
+        node->input = input;
+        return state->text;
+    }
+
+    ui_input_widget *input = node->input;
+    input->input = state;
+    input->width = width;
+    input->height = height;
+
+    return state->text;
+}
+
+double tsc_ui_slider(ui_slider *state, int width, int height, int thickness) {
+    ui_frame *frame = tsc_ui_topFrame();
+    if(frame == NULL) return state->value;
+    ui_node *node = tsc_ui_askFrame(frame, UI_BUTTON);
+    if(node == NULL) {
+        node = malloc(sizeof(ui_node));
+        node->tag = UI_BUTTON;
+        ui_slider_widget *slider = malloc(sizeof(ui_slider_widget));
+        slider->slider = state;
+        slider->width = width;
+        slider->height = height;
+        node->slider = slider;
+        return state->value;
+    }
+
+    ui_slider_widget *slider = node->slider;
+    slider->slider = state;
+    slider->width = width;
+    slider->height = height;
+
+    return state->value;
 }
