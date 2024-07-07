@@ -65,7 +65,6 @@ void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat) 
         // We need a render texture that is big enough
         if(renderingCellBrushSize != gridRepeat) {
             UnloadRenderTexture(renderingCellTexture);
-            printf("%lfx%lf\n", size, size);
             renderingCellTexture = LoadRenderTexture(size, size);
             renderingCellBrushSize = gridRepeat;
         }
