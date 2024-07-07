@@ -1,5 +1,6 @@
 #include "grid.h"
 #include "../utils.h"
+#include "../graphics/resources.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -18,6 +19,9 @@ void tsc_init_builtin_ids() {
     builtin.rotator_ccw = tsc_strintern("rotator_ccw");
     builtin.empty = tsc_strintern("empty");
     builtin.wall = tsc_strintern("wall");
+
+    builtin.audio.destroy = tsc_strintern("destroy");
+    builtin.audio.explosion = tsc_strintern("explosion");
 }
 
 tsc_cell tsc_cell_create(const char *id, char rot) {
@@ -28,6 +32,11 @@ tsc_cell tsc_cell_create(const char *id, char rot) {
     cell.data = NULL;
     cell.updated = false;
     cell.celltable = NULL;
+    cell.flags = 0;
+    // -1 means no interpolation please
+    cell.lx = -1;
+    cell.ly = -1;
+    cell.lrot = -1;
     return cell;
 }
 
@@ -186,6 +195,10 @@ void tsc_cell_onTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, co
     if(cell->id == builtin.enemy) {
         tsc_cell empty = tsc_cell_create(builtin.empty, 0);
         tsc_grid_set(grid, x, y, &empty);
+        tsc_sound_play(builtin.audio.explosion);
+    }
+    if(cell->id == builtin.trash) {
+        tsc_sound_play(builtin.audio.destroy);
     }
 }
 

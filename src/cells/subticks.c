@@ -239,6 +239,11 @@ static void tsc_subtick_doCounterClockwiseRotator(struct tsc_cell *cell, int x, 
 static void tsc_subtick_do(tsc_subtick_t *subtick) {
     char mode = subtick->mode;
     char parallel = subtick->parallel;
+    #ifdef TSC_SINGLE_THREAD
+    parallel = 0;
+    #endif
+    // Not worth the overhead
+    if(currentGrid->width * currentGrid->height < 10000) parallel = 0;
     char spacing = subtick->spacing;
 
     // If bad, blame Blendy
@@ -272,6 +277,81 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
             return;
         }
         // TODO: Single-threaded tracked updates
+        for(int i = 0; i < rotc; i++) {
+            char rot = rots[i];
+            if(rot == 0) {
+                for(int y = 0; y < currentGrid->height; y++) {
+                    for(int x = currentGrid->width - 1; x >= 0; x--) {
+                        tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
+                        for(size_t i = 0; i < subtick->idc; i++) {
+                            if(subtick->ids[i] == cell->id) {
+                                if(cell->updated) break;
+                                if(cell->rot != rot) break;
+                                cell->updated = true;
+                                tsc_celltable *table = tsc_cell_getTable(cell);
+                                if(table == NULL) break;
+                                if(table->update == NULL) break;
+                                table->update(cell, x, y, x, y, table->payload);
+                            }
+                        }
+                    }
+                }
+            }
+            if(rot == 1) {
+                for(int x = 0; x < currentGrid->width; x++) {
+                    for(int y = currentGrid->height-1; y >= 0; y--) {
+                        tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
+                        for(size_t i = 0; i < subtick->idc; i++) {
+                            if(subtick->ids[i] == cell->id) {
+                                if(cell->updated) break;
+                                if(cell->rot != rot) break;
+                                cell->updated = true;
+                                tsc_celltable *table = tsc_cell_getTable(cell);
+                                if(table == NULL) break;
+                                if(table->update == NULL) break;
+                                table->update(cell, x, y, x, y, table->payload);
+                            }
+                        }
+                    }
+                }
+            }
+            if(rot == 2) {
+                for(int y = 0; y < currentGrid->height; y++) {
+                    for(int x = 0; x < currentGrid->width; x++) {
+                        tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
+                        for(size_t i = 0; i < subtick->idc; i++) {
+                            if(subtick->ids[i] == cell->id) {
+                                if(cell->updated) break;
+                                if(cell->rot != rot) break;
+                                cell->updated = true;
+                                tsc_celltable *table = tsc_cell_getTable(cell);
+                                if(table == NULL) break;
+                                if(table->update == NULL) break;
+                                table->update(cell, x, y, x, y, table->payload);
+                            }
+                        }
+                    }
+                }
+            }
+            if(rot == 3) {
+                for(int x = 0; x < currentGrid->width; x++) {
+                    for(int y = 0; y < currentGrid->height; y++) {
+                        tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
+                        for(size_t i = 0; i < subtick->idc; i++) {
+                            if(subtick->ids[i] == cell->id) {
+                                if(cell->updated) break;
+                                if(cell->rot != rot) break;
+                                cell->updated = true;
+                                tsc_celltable *table = tsc_cell_getTable(cell);
+                                if(table == NULL) break;
+                                if(table->update == NULL) break;
+                                table->update(cell, x, y, x, y, table->payload);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
     
     if(mode == TSC_SUBMODE_NEIGHBOUR) {
@@ -307,7 +387,6 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                             tsc_celltable *table = tsc_cell_getTable(cell);
                             if(table == NULL) break;
                             if(table->update == NULL) break;
-                            cell->updated = true;
                             table->update(cell, cx, cy, x, y, table->payload);
                             break;
                         }

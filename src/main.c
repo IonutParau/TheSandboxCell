@@ -37,7 +37,8 @@ int main() {
     InitWindow(800, 600, "The Sandbox Cell");
     SetWindowState(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
     SetWindowMonitor(0);
-    SetWindowIcon(LoadImage("textures/base.png"));
+
+    InitAudioDevice();
    
     const char *defaultRP = tsc_strintern("default");
     tsc_createResourcePack(defaultRP);
@@ -60,9 +61,16 @@ int main() {
         EndDrawing();
 
         tsc_handleRenderInputs();
+        if(IsWindowFocused()) {
+            SetMasterVolume(1.0);
+        } else {
+            SetMasterVolume(0.2);
+        }
+        tsc_sound_playQueue();
     }
 
     CloseWindow();
+    CloseAudioDevice();
 
     return EXIT_SUCCESS;
 }

@@ -168,6 +168,7 @@ static char *tsc_v3_nextPart(const char *code, size_t *idx) {
             (*idx)++;
         }
     }
+    if(len == 0) return NULL;
     char *buf = malloc(sizeof(char) * (len + 1));
     buf[len] = '\0';
     memcpy(buf, mem, sizeof(char) * len);
@@ -265,6 +266,14 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
             celli++;
         }
     }
+
+    char *title = tsc_v3_nextPart(code, &index);
+    grid->title = tsc_strintern(title);
+    free(title);
+    
+    char *desc = tsc_v3_nextPart(code, &index);
+    grid->desc = tsc_strintern(desc);
+    free(desc);
 }
 
 void tsc_saving_register(tsc_saving_format format) {

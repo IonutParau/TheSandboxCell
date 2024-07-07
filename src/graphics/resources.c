@@ -7,6 +7,7 @@
 #include "../api/api.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 
 tsc_resourcepack *defaultResourcePack;
@@ -98,7 +99,6 @@ start:;
     // Check for duplicates (for warning)
     for(size_t i = 0; i < array->len; i++) {
         if(array->ids[i] == id) {
-            printf("ID %s loaded multiple times. This cause memory leak. Please remove duplicate.\n", id);
             memcpy(array->memory + i * array->itemsize, item, array->itemsize);
             return;
         }
@@ -168,7 +168,25 @@ valid_extension:
     tsc_freedirfiles(files);
 }
 
+static const char **rp_allsounds = NULL;
+static size_t rp_allsoundc = 0;
+static tsc_resourcetable *soundQueued = NULL;
+
+static void rp_registerSound(const char *id) {
+    for(size_t i = 0; i < rp_allsoundc; i++) {
+        if(rp_allsounds[i] == id) return;
+    }
+    size_t idx = rp_allsoundc++;
+    rp_allsounds = realloc(rp_allsounds, sizeof(const char *) * rp_allsoundc);
+    rp_allsounds[idx] = id;
+    bool no = false;
+    rp_resourceTablePut(soundQueued, id, &no);
+}
+
 static void rp_init_sounds(tsc_resourcepack *pack, const char *path, const char *modid) {
+    if(soundQueued == NULL) {
+        soundQueued = rp_createResourceTable(sizeof(bool));
+    }
     static char buffer[2048];
     size_t bufsize = 2048;
 
@@ -212,13 +230,18 @@ static void rp_init_sounds(tsc_resourcepack *pack, const char *path, const char 
 valid_extension:
             snprintf(buffer, bufsize, "%s/%s.%s", path, file, ext);
             tsc_pathfix(buffer);
+            printf("Loading %s\n", buffer);
             Sound sound = LoadSound(buffer);
+            const char *key;
             if(modid == NULL) {
                 rp_resourceTablePut(pack->audio, file, &sound);
+                key = tsc_strintern(file);
             } else {
                 snprintf(buffer, bufsize, "%s:%s", modid, file);
                 rp_resourceTablePut(pack->audio, buffer, &sound);
+                key = tsc_strintern(buffer);
             }
+            rp_registerSound(key);
         }
     }
 
@@ -392,7 +415,31 @@ const char *tsc_sound_load(tsc_resourcepack *pack, const char *id, const char *f
     tsc_pathfix(filepath);
 
     const char *resource = tsc_padWithModID(id);
+    resource = tsc_strintern(resource);
     Sound sound = LoadSound(file);
     rp_resourceTablePut(pack->audio, resource, &sound);
-    return tsc_strintern(resource);
+    rp_registerSound(resource);
+    return resource;
+}
+
+void tsc_sound_play(const char *id) {
+    // bool no = false;'s evil twin
+    bool yes = true;
+    rp_resourceTablePut(soundQueued, id, &yes);
+}
+
+void tsc_sound_playQueue() {
+    // no: return of the false
+    bool no = false;
+    for(size_t i = 0; i < rp_allsoundc; i++) {
+        const char *id = rp_allsounds[i];
+        bool *queued = rp_resourceTableGet(soundQueued, id);
+        // Who fucked up soundQueued?
+        if(queued == NULL) continue;
+        if(!*queued) continue; // not queued, move on
+        rp_resourceTablePut(soundQueued, id, &no);
+        Sound sound = audio_get(id);
+        if(IsSoundPlaying(sound)) continue; // fixes my eardrums
+        PlaySound(sound);
+    }
 }

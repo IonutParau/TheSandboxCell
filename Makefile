@@ -41,6 +41,10 @@ ifeq ($(MODE), DEBUG)
 	LFLAGS += -g3
 endif
 
+ifeq ($(FORCE_SINGLE_THREAD), 1)
+	CFLAGS += -DTSC_SINGLE_THREAD
+endif
+
 ifeq ($(PROFILING), 1)
 	CFLAGS += -pg
 	LFLAGS += -pg

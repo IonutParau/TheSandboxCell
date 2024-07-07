@@ -16,10 +16,11 @@ typedef struct tsc_cell {
     const char *texture;
     tsc_cellreg *data;
     struct tsc_celltable *celltable;
-    char rot;
-    char lrot;
     size_t lx;
     size_t ly;
+    size_t flags;
+    char rot;
+    char lrot;
     bool updated;
 } tsc_cell;
 
@@ -33,7 +34,12 @@ typedef struct tsc_celltable {
 tsc_celltable *tsc_cell_newTable(const char *id);
 tsc_celltable *tsc_cell_getTable(tsc_cell *cell);
 
-typedef struct tsc_cell_id_pool_t {
+typedef struct tsc_audio_id_pool_t {
+    const char *destroy;
+    const char *explosion;
+} tsc_audio_id_pool_t;
+
+typedef struct tsc_id_pool_t {
     const char *empty; 
     const char *placeable; 
     const char *mover; 
@@ -44,7 +50,8 @@ typedef struct tsc_cell_id_pool_t {
     const char *rotator_ccw; 
     const char *enemy; 
     const char *trash; 
-    const char *wall; 
+    const char *wall;
+    tsc_audio_id_pool_t audio;
 } tsc_cell_id_pool_t;
 
 extern tsc_cell_id_pool_t builtin;
@@ -59,6 +66,8 @@ void tsc_cell_swap(tsc_cell *a, tsc_cell *b);
 void tsc_cell_destroy(tsc_cell cell);
 const char *tsc_cell_get(const tsc_cell *cell, const char *key);
 void tsc_cell_set(tsc_cell *cell, const char *key, const char *value);
+size_t tsc_cell_getFlags(tsc_cell *cell);
+void tsc_cell_setFlags(tsc_cell *cell, size_t flags);
 
 typedef struct tsc_grid {
     tsc_cell *cells;
