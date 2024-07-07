@@ -16,7 +16,10 @@ objects=workers.o utils.o cell.o grid.o resources.o rendering.o subticks.o savin
 LINKRAYLIB=-lraylib -lGL -lpthread -ldl -lrt -lX11 -lm
 
 ifeq ($(MODE), TURBO)
-	CFLAGS += -Ofast -flto
+	CFLAGS += -DTSC_TURBO -Ofast
+	ifeq ($(CC), gcc)
+		CFLAGS += -flto
+	endif
 	LFLAGS += -Ofast
 endif
 
@@ -73,9 +76,13 @@ CFLAGS += $(ECFLAGS)
 LFLAGS += $(ELFLAGS)
 
 all: library main.o
-	$(LINKER) -o $(OUTPUT) main.o -L. -l:./$(LIBRARY) $(LINKRAYLIB) $(ELFLAGS)
+ifeq ($(MODE), TURBO)
+	$(LINKER) -o $(OUTPUT) main.o $(objects) $(LINKRAYLIB) $(LFLAGS)
+else
+	$(LINKER) -o $(OUTPUT) main.o -L. -l:./$(LIBRARY) $(LINKRAYLIB) $(LFLAGS)
+endif
 clean:
-	rm $(objects) $(LIBRARY) $(OUTPUT)
+	rm $(objects) $(LIBRARY) $(OUTPUT) main.o
 fresh: clean all
 	
 library: $(objects)

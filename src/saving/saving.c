@@ -185,69 +185,77 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
     tsc_clearGrid(grid, width, height);
 
     char *cells = tsc_v3_nextPart(code, &index);
+    printf("%s\n", cells);
     tsc_cell *cellArr = malloc(sizeof(tsc_cell) * width * height);
     size_t celli = 0;
     for(int i = 0; cells[i] != '\0'; i++) {
         char c = cells[i];
         char str[2] = {c, '\0'};
-        if(c == '(') {
-            char *cur = cells + i + 1;
-            size_t len = 0;
-            while(cur[len] != ')' && cur[len] != '(') {
-                len++;
-            }
-            char *buf = malloc(sizeof(char) * (len + 1));
-            memcpy(buf, cur, sizeof(char) * len);
-            buf[len] = '\0';
-            int farBack = tsc_saving_decode74(buf);
-            free(buf);
-            int times = 0;
-            i += len + 1;
-            if(cur[len] == ')') {
-                char thing[] = {cur[len+1], '\0'};
-                times = tsc_saving_decode74(thing);
-                i++;
-                goto gotAllTheThings;
-            }
-            if(cur[len] == '(') {
-                cur += len + 1;
-                len = 0;
-                while(cur[len] != ')') {
-                    len++;
-                }
-                char *buf = malloc(sizeof(char) * (len + 1));
-                memcpy(buf, cur, sizeof(char) * len);
-                buf[len] = '\0';
-                times = tsc_saving_decode74(buf);
-                free(buf);
-                goto gotAllTheThings;
-            }
-// fuck labels, naming these is hard as fuck
-gotAllTheThings:;
-            tsc_cell *buffer = cellArr + celli - 1 - farBack;
-            for(int i = 0; i < times; i++) {
-                cellArr[celli] = tsc_cell_clone(buffer);
-                celli++;
-                buffer++;
-            }
-        } else if (c == ')') {
-            char backstr[] = {cells[i+1], '\0'};
-            char timesstr[] = {cells[i+2], '\0'};
-            int farBack = tsc_saving_decode74(backstr);
-            int times = tsc_saving_decode74(timesstr);
-            tsc_cell *buffer = cellArr + celli - 1 - farBack;
-            for(int i = 0; i < times; i++) {
-                cellArr[celli] = tsc_cell_clone(buffer);
-                celli++;
-                buffer++;
-            }
+        if(c == ')') {
+            char scellcount[2] = {cells[i+1], '\0'};
+            char srepcount[2] = {cells[i+2], '\0'};
+            int cellcount = tsc_saving_decode74(scellcount)+1;
+            int repcount = tsc_saving_decode74(srepcount);
             i += 2;
+
+            for(size_t j = 0; j < repcount; j++) {
+                cellArr[celli] = cellArr[celli-cellcount];
+                celli++;
+            }
+        } else if(c == '(') {
+            bool simplerepcount = false;
+            i++;
+            tsc_saving_buffer cellcountencoded = tsc_saving_newBuffer("");
+            while(true) {
+                if(cells[i] == '(') {
+                    break;
+                } else if(cells[i] == ')') {
+                    simplerepcount = true;
+                    break;
+                } else {
+                    tsc_saving_write(&cellcountencoded, cells[i]);
+                    i++;
+                }
+            }
+
+            int cellcount = tsc_saving_decode74(cellcountencoded.mem)+1;
+            printf("Cell Count %s\n", cellcountencoded.mem);
+            tsc_saving_deleteBuffer(cellcountencoded);
+
+            tsc_saving_buffer repcountencoded = tsc_saving_newBuffer("");
+            i++;
+            if(simplerepcount) {
+                tsc_saving_write(&repcountencoded, cells[i]);
+            } else {
+                while(true) {
+                    if(cells[i] == ')') {
+                        break;
+                    } else {
+                        tsc_saving_write(&repcountencoded, cells[i]);
+                        i++;
+                    }
+                }
+            }
+
+            int repcount = tsc_saving_decode74(repcountencoded.mem);
+            printf("Rep Count %s\n", repcountencoded.mem);
+            tsc_saving_deleteBuffer(repcountencoded);
+
+            for(size_t j = 0; j < repcount; j++) {
+                cellArr[celli] = cellArr[celli-cellcount];
+                celli++;
+            }
         } else {
-            bool isBg = true;
+            bool isBg = false;
             tsc_cell cell = tsc_v3_chartocell(str, &isBg);
             cellArr[celli] = cell;
             celli++;
         }
+    }
+
+    // Stupid V3 encoding lets you omit cells
+    while(celli < width * height) {
+        cellArr[celli++] = tsc_cell_create(builtin.empty, 0);
     }
 
     celli = 0;

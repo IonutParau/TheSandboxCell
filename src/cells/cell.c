@@ -22,7 +22,7 @@ void tsc_init_builtin_ids() {
 
 tsc_cell tsc_cell_create(const char *id, char rot) {
     tsc_cell cell;
-    cell.id = tsc_strintern(id);
+    cell.id = id;
     cell.texture = NULL;
     cell.rot = rot % 4;
     cell.data = NULL;

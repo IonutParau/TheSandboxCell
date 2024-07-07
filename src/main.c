@@ -49,6 +49,8 @@ int main() {
     tsc_enableResourcePack(defaultResourcePack);
     tsc_setupRendering();
 
+    SetTargetFPS(60);
+
     while(!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(GetColor(0x171c1fFF));

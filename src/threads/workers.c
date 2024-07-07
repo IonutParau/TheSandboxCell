@@ -48,9 +48,9 @@ typedef struct worker_channel_t {
     mtx_t lock;
     cnd_t taskCompleted;
     cnd_t taskGiven;
-    size_t len;
-    size_t cap;
-    worker_task_info_t *info;
+    volatile size_t len;
+    volatile size_t cap;
+    worker_task_info_t *volatile info;
 } worker_channel_t;
 
 static worker_channel_t workers_channel;
