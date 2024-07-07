@@ -99,6 +99,7 @@ typedef struct ui_translate {
 #define UI_ROW 10
 #define UI_COLUMN 11
 #define UI_STACK 12
+#define UI_TRANSLATE 13
 
 typedef struct ui_node {
     size_t tag;
@@ -126,10 +127,90 @@ static void ui_destroyNode(ui_node *node) {
 
 
 static int ui_widthOf(ui_node *node) {
+    if (node->tag == UI_TEXT) {
+        return MeasureText(node->text->text, node->text->size);
+    } else if (node->tag == UI_IMAGE) {
+        return node->image->width;
+    } else if (node->tag == UI_SPACING) {
+        return node->spacing;
+    } else if (node->tag == UI_BUTTON) {
+        return ui_widthOf(node->button->child);
+    } else if (node->tag == UI_SLIDER) {
+        return node->slider->width;
+    } else if (node->tag == UI_INPUT) {
+        return node->input->width;
+    } else if (node->tag == UI_SCROLLABLE) {
+        return ui_widthOf(node->scrollable->scrollable->width);
+    } else if (node->tag == UI_BOX) {
+        return ui_widthOf(node->box->child);
+    } else if (node->tag == UI_PAD) {
+        return node->pad->px*2 + ui_widthOf(node->pad->child);
+    } else if (node->tag == UI_ALIGN) {
+        return node->align->width;
+    } else if (node->tag == UI_ROW) {
+        int maxwidth = 0;
+        for (int i = 0; i < node->row->stackc; ++i) {
+            int width = ui_widthOf(node->row->stack[i]);
+            maxwidth += width;
+        }
+        return maxwidth;
+    } else if (node->tag == UI_COLUMN) {
+        int maxwidth = 0;
+        for (int i = 0; i < node->row->stackc; ++i) {
+            int width = ui_widthOf(node->row->stack[i]);
+            maxwidth = (width > maxwidth) ? width : maxwidth;
+        }
+        return maxwidth;
+    } else if (node->tag == UI_STACK) {
+        return 0;
+    } else if (node->tag == UI_TRANSLATE) {
+        return ui_widthOf(node->translate->child);
+    }
+    
     return 0;
 }
 
 static int ui_heightOf(ui_node *node) {
+    if (node->tag == UI_TEXT) {
+        return node->text->size;
+    } else if (node->tag == UI_IMAGE) {
+        return node->image->height;
+    } else if (node->tag == UI_SPACING) {
+        return node->spacing;
+    } else if (node->tag == UI_BUTTON) {
+        return ui_heightOf(node->button->child);
+    } else if (node->tag == UI_SLIDER) {
+        return node->slider->height;
+    } else if (node->tag == UI_INPUT) {
+        return node->input->height;
+    } else if (node->tag == UI_SCROLLABLE) {
+        return ui_heightOf(node->scrollable->scrollable->height);
+    } else if (node->tag == UI_BOX) {
+        return ui_heightOf(node->box->child);
+    } else if (node->tag == UI_PAD) {
+        return node->pad->py*2 + ui_heightOf(node->pad->child);
+    } else if (node->tag == UI_ALIGN) {
+        return node->align->height;
+    } else if (node->tag == UI_ROW) {
+        int maxheight = 0;
+        for (int i = 0; i < node->row->stackc; ++i) {
+            int height = ui_heightOf(node->row->stack[i]);
+            maxheight = (height > maxheight) ? height : maxheight;
+        }
+        return maxheight;
+    } else if (node->tag == UI_COLUMN) {
+        int maxheight = 0;
+        for (int i = 0; i < node->row->stackc; ++i) {
+            int height = ui_heightOf(node->row->stack[i]);
+            maxheight += height;
+        }
+        return maxheight;
+    } else if (node->tag == UI_STACK) {
+        return 0;
+    } else if (node->tag == UI_TRANSLATE) {
+        return ui_heightOf(node->translate->child);
+    }
+    
     return 0;
 }
 
