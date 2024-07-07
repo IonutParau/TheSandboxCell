@@ -7,11 +7,11 @@ backgrounds and more. It uses little endian byte order (least significant byte c
 
 The text structure of `TSC;` is simple.
 ```
-TSC;<base74 width>;<base74 height>;<title;<description>;<base85 encoded binary cell data>;
+TSC;<base74 width>;<base74 height>;<title;<description>;<base85 encoded deflate compressed binary cell data>;
 ```
 
 TSC's Base85 uses a modified key that is Markdown-safe, thus it can be freely shared on applications such as Discord which may process it as markdown.
-The key is `!\"#$%&'{)x+,-.}0123456789;w<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[v]^yzabcdefghijklmnopqrstu`
+The key is `!"#$%&'{)x+,-.}0123456789;w<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[v]^yzabcdefghijklmnopqrstu`
 The index of the character represents its associated value, indexes starting at 0.
 
 # The binary format
