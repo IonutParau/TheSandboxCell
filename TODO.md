@@ -2,9 +2,7 @@
 
 Things to actually do.
 - Fix V3 decoding
-- Rewrite `src/graphics/textures.c` to handle all resource pack logic, from enabling / disabling, overlap resolution, audio and fonts
 - Give `textures_dev` a wall texture
-- Restructure `textures` and `textures_dev` to be resource packs in `resources` (`default` and `dev`).
 - Optimize rendering using cell skipping and rectangle optimizations
 - Optimize `tsc_strintern`
 
