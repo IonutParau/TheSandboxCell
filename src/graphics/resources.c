@@ -1,0 +1,398 @@
+// The soon-to-be general resource pack manager
+// Fairly efficient, very high-level and fault tolerant.
+
+#include "resources.h"
+#include <raylib.h>
+#include "../utils.h"
+#include "../api/api.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+tsc_resourcepack *defaultResourcePack;
+
+tsc_resourcepack **rp_all = NULL;
+size_t rp_allc = 0;
+
+tsc_resourcepack **rp_enabled = NULL;
+size_t rp_enabledc = 0;
+
+static tsc_resourcetable *rp_createResourceTable(size_t itemsize) {
+    tsc_resourcetable *table = malloc(sizeof(tsc_resourcetable));
+    table->itemsize = itemsize;
+    table->arrayc = 20;
+    table->hashes = malloc(sizeof(size_t) * table->arrayc);
+    table->arrays = malloc(sizeof(tsc_resourcearray) * table->arrayc);
+    for(size_t i = 0; i < table->arrayc; i++) {
+        table->hashes[i] = 0;
+        tsc_resourcearray array;
+        array.len = 0;
+        array.ids = NULL;
+        array.memory = NULL;
+        array.itemsize = itemsize;
+        table->arrays[i] = array;
+    }
+    return table;
+}
+
+static void *rp_resourceTableGet(tsc_resourcetable *table, const char *id) {
+    size_t hash = tsc_strhash(id);
+    size_t idx = hash % table->arrayc;
+
+    if(table->hashes[idx] != hash) return NULL;
+    tsc_resourcearray array = table->arrays[idx];
+    for(size_t i = 0; i < array.len; i++) {
+        if(array.ids[i] == id) {
+            return array.memory + i * array.itemsize;
+        }
+    }
+    return NULL;
+}
+
+static void rp_resourceTablePut(tsc_resourcetable *table, const char *id, const void *item) {
+    id = tsc_strintern(id);
+    size_t hash = tsc_strhash(id);
+start:;
+    size_t idx = hash % table->arrayc;
+    tsc_resourcearray *array = table->arrays + idx;
+    if(array->len == 0) {
+        // Uninitialized, shove it here
+        table->hashes[idx] = hash;
+        array->len = 1;
+        array->ids = malloc(sizeof(const char *));
+        array->ids[0] = id;
+        array->memory = malloc(array->itemsize);
+        memcpy(array->memory, item, array->itemsize);
+        return;
+    }
+    if(table->hashes[idx] != hash) {
+        // Initialized (because uninitialized would've been handled first)
+        // But the backing array is too small.
+        // Resize
+        size_t arrayc = table->arrayc * 2;
+        tsc_resourcearray *arrays = malloc(sizeof(tsc_resourcearray) * arrayc);
+        size_t *hashes = malloc(sizeof(size_t) * arrayc);
+        for(size_t i = 0; i < arrayc; i++) {
+            hashes[i] = 0;
+            arrays[i].len = 0;
+            arrays[i].ids = NULL;
+            arrays[i].memory = NULL;
+            arrays[i].itemsize = table->itemsize;
+        }
+
+        // Relocate
+        for(size_t i = 0; i < table->arrayc; i++) {
+            if(table->arrays[i].len == 0) continue;
+            size_t idx = table->hashes[i] % arrayc;
+            hashes[idx] = table->hashes[i];
+            arrays[idx] = table->arrays[i];
+        }
+        free(table->arrays);
+        free(table->hashes);
+        table->arrays = arrays;
+        table->hashes = hashes;
+        table->arrayc = arrayc;
+        goto start;
+    }
+
+    // Check for duplicates (for warning)
+    for(size_t i = 0; i < array->len; i++) {
+        if(array->ids[i] == id) {
+            printf("ID %s loaded multiple times. This cause memory leak. Please remove duplicate.\n", id);
+            memcpy(array->memory + i * array->itemsize, item, array->itemsize);
+            return;
+        }
+    }
+    // Finally, just push.
+    size_t i = array->len++;
+    array->ids = realloc(array->ids, sizeof(const char *) * array->len);
+    array->memory = realloc(array->memory, array->itemsize * array->len);
+    memcpy(array->memory + i * array->itemsize, item, array->itemsize);
+}
+
+static void rp_init_textures(tsc_resourcepack *pack, const char *path, const char *modid) {
+    static char buffer[2048];
+    size_t bufsize = 2048;
+
+    size_t filec;
+    char **files = tsc_dirfiles(path, &filec);
+    
+    for(size_t i = 0; i < filec; i++) {
+        char *file = files[i];
+        const char *ext = tsc_fextension(file);
+        if(ext == NULL) {
+            snprintf(buffer, bufsize, "%s/%s", path, file);
+            tsc_pathfix(buffer);
+            if(modid == NULL && tsc_streql(file, "mods")) {
+                size_t modc;
+                char **mods = tsc_dirfiles(buffer, &modc);
+                char *dirpath = tsc_strdup(buffer);
+                for(size_t i = 0; i < modc; i++) {
+                    snprintf(buffer, bufsize, "%s/mods/%s", path, mods[i]);
+                    tsc_pathfix(buffer);
+                    char *modDir = tsc_strdup(buffer);
+                    rp_init_textures(pack, modDir, mods[i]);
+                    free(modDir);
+                }
+                free(dirpath);
+                tsc_freedirfiles(mods);
+            }
+            // Copy because buffer is re-used when recursing.
+            char *dirpath = tsc_strdup(buffer);
+            rp_init_textures(pack, dirpath, modid);
+            free(dirpath);
+            continue;
+        } else {
+            const char *exts[] = {
+                "png", "jpg", "jpeg",
+            };
+            size_t extc = sizeof(exts) / sizeof(const char *);
+            for(size_t i = 0; i < extc; i++) {
+                if(tsc_streql(exts[i], ext)) goto valid_extension;
+            }
+            continue; // if not valid, skip.
+valid_extension:
+            snprintf(buffer, bufsize, "%s/%s.%s", path, file, ext);
+            tsc_pathfix(buffer);
+            printf("Loading %s\n", buffer);
+            Texture texture = LoadTexture(buffer);
+            if(modid == NULL) {
+                rp_resourceTablePut(pack->textures, file, &texture);
+            } else {
+                snprintf(buffer, bufsize, "%s:%s", modid, file);
+                rp_resourceTablePut(pack->textures, buffer, &texture);
+            }
+        }
+    }
+
+    tsc_freedirfiles(files);
+}
+
+static void rp_init_sounds(tsc_resourcepack *pack, const char *path, const char *modid) {
+    static char buffer[2048];
+    size_t bufsize = 2048;
+
+    size_t filec;
+    char **files = tsc_dirfiles(path, &filec);
+    
+    for(size_t i = 0; i < filec; i++) {
+        char *file = files[i];
+        const char *ext = tsc_fextension(file);
+        if(ext == NULL) {
+            snprintf(buffer, bufsize, "%s/%s", path, file);
+            tsc_pathfix(buffer);
+            if(modid == NULL && tsc_streql(file, "mods")) {
+                size_t modc;
+                char **mods = tsc_dirfiles(buffer, &modc);
+                char *dirpath = tsc_strdup(buffer);
+                for(size_t i = 0; i < modc; i++) {
+                    snprintf(buffer, bufsize, "%s/mods/%s", path, mods[i]);
+                    tsc_pathfix(buffer);
+                    char *modDir = tsc_strdup(buffer);
+                    rp_init_sounds(pack, modDir, mods[i]);
+                    free(modDir);
+                }
+                free(dirpath);
+                tsc_freedirfiles(mods);
+            }
+            // Copy because buffer is re-used when recursing.
+            char *dirpath = tsc_strdup(buffer);
+            rp_init_sounds(pack, dirpath, modid);
+            free(dirpath);
+            continue;
+        } else {
+            const char *exts[] = {
+                "wav", "ogg", "mp3",
+            };
+            size_t extc = sizeof(exts) / sizeof(const char *);
+            for(size_t i = 0; i < extc; i++) {
+                if(tsc_streql(exts[i], ext)) goto valid_extension;
+            }
+            continue; // if not valid, skip.
+valid_extension:
+            snprintf(buffer, bufsize, "%s/%s.%s", path, file, ext);
+            tsc_pathfix(buffer);
+            Sound sound = LoadSound(buffer);
+            if(modid == NULL) {
+                rp_resourceTablePut(pack->audio, file, &sound);
+            } else {
+                snprintf(buffer, bufsize, "%s:%s", modid, file);
+                rp_resourceTablePut(pack->audio, buffer, &sound);
+            }
+        }
+    }
+
+    tsc_freedirfiles(files);
+}
+
+// Shoves everything into pack that is obtainable.
+static void rp_init(tsc_resourcepack *pack) {
+    // 2kb for a filepath is very extreme.
+    // If you need more, reconsider your life choices, resource pack developers.
+    // Yes UTF-8 files will take up more space than they seem, but 2kb is still extreme.
+    static char rpPath[2048];
+    // rpPath only stores path to Resource Pack
+    // path is used for sub-stuff
+    static char path[2048];
+    size_t bufsize = 2048;
+
+    snprintf(rpPath, bufsize, "resources/%s", pack->id);
+    tsc_pathfix(rpPath);
+
+    snprintf(path, bufsize, "%s/textures", rpPath);
+    tsc_pathfix(path);
+    rp_init_textures(pack, path, NULL);
+
+    snprintf(path, bufsize, "%s/audio", rpPath);
+    tsc_pathfix(path);
+    rp_init_sounds(pack, path, NULL);
+
+    snprintf(path, bufsize, "%s/font.ttf", rpPath);
+    tsc_pathfix(path);
+    if(tsc_hasfile(path)) {
+        pack->font = malloc(sizeof(Font));
+        *pack->font = LoadFontEx(path, 32, NULL, 0);
+    }
+}
+
+tsc_resourcepack *tsc_createResourcePack(const char *id) {
+    tsc_resourcepack *pack = malloc(sizeof(tsc_resourcepack));
+    pack->id = id;
+    // Start with a nothingburger
+    pack->name = NULL;
+    pack->description = NULL;
+    pack->readme = NULL;
+    pack->license = NULL;
+    
+    pack->textures = rp_createResourceTable(sizeof(Texture));
+    pack->audio = rp_createResourceTable(sizeof(Sound));
+    pack->font = NULL;
+
+    // Add the toppings
+    rp_init(pack);
+
+    // Yeet it to the customer
+    size_t idx = rp_allc++;
+    rp_all = realloc(rp_all, sizeof(tsc_resourcepack *) * rp_allc);
+    rp_all[idx] = pack;
+    return pack;
+}
+
+tsc_resourcepack *tsc_getResourcePack(const char *id) {
+    id = tsc_strintern(id);
+    for(size_t i = 0; i < rp_allc; i++) {
+        if(rp_all[i]->id == id) {
+            return rp_all[i];
+        }
+    }
+    return NULL;
+}
+
+tsc_resourcepack *tsc_indexResourcePack(size_t idx) {
+    if(idx >= rp_allc) return NULL;
+    return rp_all[idx];
+}
+
+void tsc_enableResourcePack(tsc_resourcepack *pack) {
+    size_t idx = rp_enabledc++;
+    rp_enabled = realloc(rp_enabled, sizeof(tsc_resourcepack *) * rp_enabledc);
+    rp_enabled[idx] = pack;
+}
+
+void tsc_disableResourcePack(tsc_resourcepack *pack) {
+    if(rp_enabledc == 0) return;
+    size_t j = 0;
+    for(size_t i = 0; i < rp_enabledc; i++) {
+        if(rp_enabled[i] == pack) {
+            j = i;
+            goto found;
+        }
+    }
+    return; // not found
+found:;
+    for(size_t i = j; i < rp_enabledc-1; i++) {
+        rp_enabled[i] = rp_enabled[i+1];
+    }
+    rp_enabledc--;
+    if(rp_enabledc > 0) {
+        rp_enabled = realloc(rp_enabled, sizeof(tsc_resourcepack *) * rp_enabledc);
+    } else {
+        free(rp_enabled);
+        rp_enabled = NULL;
+    }
+}
+
+tsc_resourcepack *tsc_indexEnabledResourcePack(size_t idx) {
+    if(idx >= rp_enabledc) return NULL;
+    return rp_enabled[rp_enabledc - idx - 1];
+}
+
+Texture textures_get(const char *key) {
+start:;
+    for(size_t i = 0; i < rp_enabledc; i++) {
+        tsc_resourcepack *pack = tsc_indexEnabledResourcePack(rp_enabledc - i - 1);
+        if(pack == NULL) continue;
+        Texture *texture = rp_resourceTableGet(pack->textures, key);
+        if(texture != NULL) return *texture;
+    }
+
+    if(tsc_streql(key, "fallback")) {
+        // Fallback texture is not found, panic.
+        fprintf(stderr, "fallback.png missing. Please ensure at least one enabled resource pack contains it\n");
+        exit(1);
+    }
+
+    key = tsc_strintern("fallback");
+    goto start;
+}
+
+Sound audio_get(const char *key) {
+start:;
+    for(size_t i = 0; i < rp_enabledc; i++) {
+        tsc_resourcepack *pack = tsc_indexEnabledResourcePack(rp_enabledc - i - 1);
+        Sound *sound = rp_resourceTableGet(pack->audio, key);
+        if(sound != NULL) return *sound;
+    }
+
+    if(tsc_streql(key, "fallback")) {
+        // Fallback texture is not found, panic.
+        fprintf(stderr, "fallback.wav missing. Please ensure at least one enabled resource pack contains it\n");
+        exit(1);
+    }
+
+    key = tsc_strintern("fallback");
+    goto start;
+}
+
+Font font_get() {
+    if(rp_enabledc == 0) return GetFontDefault();
+
+    for(size_t i = 0; i < rp_enabledc; i++) {
+        tsc_resourcepack *pack = tsc_indexEnabledResourcePack(i);
+        if(pack->font != NULL) return *pack->font;
+    }
+
+    return GetFontDefault();
+}
+
+const char *tsc_textures_load(tsc_resourcepack *pack, const char *id, const char *file) {
+    static char filepath[1024];
+    snprintf(filepath, 1024, "mods/%s/textures/%s", tsc_currentModID(), file);
+    tsc_pathfix(filepath);
+
+    const char *resource = tsc_padWithModID(id);
+    Texture texture = LoadTexture(file);
+    rp_resourceTablePut(pack->textures, resource, &texture);
+    return tsc_strintern(resource);
+}
+
+const char *tsc_sound_load(tsc_resourcepack *pack, const char *id, const char *file) {
+    static char filepath[1024];
+    snprintf(filepath, 1024, "mods/%s/audio/%s", tsc_currentModID(), file);
+    tsc_pathfix(filepath);
+
+    const char *resource = tsc_padWithModID(id);
+    Sound sound = LoadSound(file);
+    rp_resourceTablePut(pack->audio, resource, &sound);
+    return tsc_strintern(resource);
+}
