@@ -140,7 +140,7 @@ static int ui_widthOf(ui_node *node) {
     } else if (node->tag == UI_INPUT) {
         return node->input->width;
     } else if (node->tag == UI_SCROLLABLE) {
-        return ui_widthOf(node->scrollable->scrollable->width);
+        return node->scrollable->scrollable->width;
     } else if (node->tag == UI_BOX) {
         return ui_widthOf(node->box->child);
     } else if (node->tag == UI_PAD) {
@@ -184,7 +184,7 @@ static int ui_heightOf(ui_node *node) {
     } else if (node->tag == UI_INPUT) {
         return node->input->height;
     } else if (node->tag == UI_SCROLLABLE) {
-        return ui_heightOf(node->scrollable->scrollable->height);
+        return node->scrollable->scrollable->height;
     } else if (node->tag == UI_BOX) {
         return ui_heightOf(node->box->child);
     } else if (node->tag == UI_PAD) {
