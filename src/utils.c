@@ -143,6 +143,14 @@ void tsc_pathfix(char *path) {
     return;
 }
 
+const char *tsc_pathfixi(const char *path) {
+    char *pathAlloc = tsc_strdup(path);
+    tsc_pathfix(pathAlloc);
+    const char *fixed = tsc_strintern(pathAlloc);
+    free(pathAlloc);
+    return fixed;
+}
+
 char tsc_pathsep() {
 #ifdef _WIN32
     return '\\';

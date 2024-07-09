@@ -13,6 +13,7 @@ unsigned long tsc_strhash(const char *str);
 
 // Replaces the / with \ on Windows
 void tsc_pathfix(char *path);
+const char *tsc_pathfixi(const char *path);
 char tsc_pathsep();
 
 char *tsc_allocfile(const char *path, size_t *len);

@@ -16,6 +16,7 @@ typedef union tsc_categorybutton {
 } tsc_categorybutton;
 
 void tsc_setupRendering();
+void tsc_resetRendering();
 void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat);
 int tsc_cellMouseX();
 int tsc_cellMouseY();

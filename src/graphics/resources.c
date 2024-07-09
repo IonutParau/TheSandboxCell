@@ -44,7 +44,12 @@ static void *rp_resourceTableGet(tsc_resourcetable *table, const char *id) {
     tsc_resourcearray array = table->arrays[idx];
     for(size_t i = 0; i < array.len; i++) {
         if(array.ids[i] == id) {
-            return array.memory + i * array.itemsize;
+            // This is to support the actual C standard
+            // void* math is invalid, but if it is allowed, technically it is useless as
+            // sizeof(void) == 0.
+            // However, GCC and Clang have sizeof(void) == 1.
+            size_t addr = (size_t)array.memory;
+            return (void *)(addr + i * array.itemsize);
         }
     }
     return NULL;
@@ -99,7 +104,9 @@ start:;
     // Check for duplicates (for warning)
     for(size_t i = 0; i < array->len; i++) {
         if(array->ids[i] == id) {
-            memcpy(array->memory + i * array->itemsize, item, array->itemsize);
+            size_t addr = (size_t)array->memory;
+            addr += i * array->itemsize;
+            memcpy((void*)addr, item, array->itemsize);
             return;
         }
     }
@@ -107,7 +114,9 @@ start:;
     size_t i = array->len++;
     array->ids = realloc(array->ids, sizeof(const char *) * array->len);
     array->memory = realloc(array->memory, array->itemsize * array->len);
-    memcpy(array->memory + i * array->itemsize, item, array->itemsize);
+    size_t addr = (size_t)array->memory;
+    addr += i * array->itemsize;
+    memcpy((void*)addr, item, array->itemsize);
 }
 
 static void rp_init_textures(tsc_resourcepack *pack, const char *path, const char *modid) {

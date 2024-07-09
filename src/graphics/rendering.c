@@ -42,22 +42,27 @@ static tsc_categorybutton *tsc_createCellButtons(tsc_category *category) {
     return buttons;
 }
 
-void tsc_setupRendering() {
+void tsc_resetRendering() {
     renderingCamera.x = 0;
     renderingCamera.y = 0;
     renderingCamera.cellSize = 32;
     renderingCamera.speed = 200;
-    renderingRepeatingShader = LoadShader(NULL, "shaders/repeating.glsl");
-    renderingRepeatingScaleLoc = GetShaderLocation(renderingRepeatingShader, "scale");
     renderingEmpty = textures_get(builtin.empty);
-    currentId = tsc_strintern("mover");
+    currentId = builtin.mover;
     currentRot = 0;
+}
+
+void tsc_setupRendering() {
+    tsc_resetRendering();
+    renderingRepeatingShader = LoadShader(NULL, tsc_pathfixi("shaders/repeating.glsl"));
+    renderingRepeatingScaleLoc = GetShaderLocation(renderingRepeatingShader, "scale");
     renderingCellTexture = LoadRenderTexture(1, 1);
     renderingCellBrushSize = 0;
     renderingGameUI = tsc_ui_newFrame();
 
     // Why is this in setupRendering?
-    // To fix bugs
+    // I have no idea
+    // This codebase has existed for so little yet is so spaghetti
     tsc_setupUpdateThread();
 
     if(tickDelay != 0) {
