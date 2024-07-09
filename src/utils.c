@@ -16,28 +16,87 @@ typedef struct tsc_intern_array_pool {
     size_t len;
 } tsc_intern_array_pool;
 
-tsc_intern_array_pool *intern_pool = NULL;
+typedef struct tsc_intern_hash_pool {
+    tsc_intern_array_pool *arrays;
+    size_t *hashes;
+    size_t arrayc;
+} tsc_intern_hash_pool;
+
+tsc_intern_hash_pool *intern_pool = NULL;
 
 static void tsc_intern_setup() {
     if(intern_pool != NULL) return;
-    intern_pool = malloc(sizeof(tsc_intern_array_pool));
-    intern_pool->len = 0;
-    intern_pool->str = NULL;
+    intern_pool = malloc(sizeof(tsc_intern_hash_pool));
+    intern_pool->arrayc = 20;
+    intern_pool->arrays = malloc(sizeof(tsc_intern_array_pool) * intern_pool->arrayc);
+    intern_pool->hashes = malloc(sizeof(size_t) * intern_pool->arrayc);
+    for(size_t i = 0; i < intern_pool->arrayc; i++) {
+        intern_pool->hashes[i] = 0;
+        tsc_intern_array_pool array;
+        array.str = NULL;
+        array.len = 0;
+        intern_pool->arrays[i] = array;
+    }
 }
 
+static const char *tsc_addToInternArray(tsc_intern_array_pool *pool, const char *str) {
+    for(size_t i = 0; i < pool->len; i++) {
+        if(tsc_streql(pool->str[i], str)) {
+            return pool->str[i];
+        }
+    }
+    str = tsc_strdup(str);
+    size_t idx = pool->len++;
+    pool->str = realloc(pool->str, sizeof(const char *) * pool->len);
+    pool->str[idx] = str;
+    return str;
+}
+
+// If we fuck up, we can measure how much we fucked up right here
+// Higher is worse, as it measures the percentage of the discrepency.
+// Ideally, it would be 0.
+// Does not count unused arrays (aka length 0).
+double tsc_strhashimbalance() {
+    // TODO: implement
+}
+
+// New implementation not tested
+// TODO: Stress test
 const char *tsc_strintern(const char *str) {
     if(str == NULL) return NULL;
     tsc_intern_setup();
-    for(size_t i = 0; i < intern_pool->len; i++) {
-        if(tsc_streql(intern_pool->str[i], str)) {
-            return intern_pool->str[i];
-        }
+    size_t hash = tsc_strhash(str);
+start:
+    size_t i = hash % intern_pool->arrayc;
+    tsc_intern_array_pool *array = &intern_pool->arrays[i];
+    if(array->str == NULL) {
+        intern_pool->hashes[i] = hash;
+        return tsc_addToInternArray(array, str);
     }
-    char *entry = tsc_strdup(str);
-    size_t idx = intern_pool->len++;
-    intern_pool->str = realloc(intern_pool->str, sizeof(char *) * intern_pool->len);
-    intern_pool->str[idx] = entry;
-    return entry;
+    if(intern_pool->hashes[i] != hash) {
+        // Collision!!!
+        size_t arrayc = intern_pool->arrayc * 2;
+        size_t *hashes = malloc(sizeof(size_t) * arrayc);
+        tsc_intern_array_pool *arrays = malloc(sizeof(tsc_intern_array_pool) * arrayc);
+        for(size_t i = 0; i < arrayc; i++) {
+            hashes[i] = 0;
+            arrays[i].str = NULL;
+            arrays[i].len = 0;
+        }
+        for(size_t i = 0; i < intern_pool->arrayc; i++) {
+            if(intern_pool->arrays[i].str == NULL) continue;
+            size_t j = intern_pool->hashes[i] % intern_pool->arrayc;
+            arrays[j] = intern_pool->arrays[i];
+            hashes[j] = intern_pool->hashes[i];
+        }
+        free(intern_pool->hashes);
+        free(intern_pool->arrays);
+        intern_pool->arrayc = arrayc;
+        intern_pool->arrays = arrays;
+        intern_pool->hashes = hashes;
+        goto start;
+    }
+    return tsc_addToInternArray(array, str);
 }
 
 int tsc_streql(const char *a, const char *b) {

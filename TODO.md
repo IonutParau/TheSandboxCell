@@ -1,10 +1,14 @@
 # Actual TODO
 
 Things to actually do.
-- Fix V3 decoding
 - Give `textures_dev` a wall texture
 - Optimize rendering using cell skipping and rectangle optimizations
 - Optimize `tsc_strintern`
+- Add more comments for people who want to
+- Finish implementing `ui.c`
+- Add a cellbar
+- Add a main menu
+- Add a settings menu
 
 # Features which may be added (massively varying levels of may be)
 
