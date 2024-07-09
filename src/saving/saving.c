@@ -220,7 +220,6 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
             }
 
             int cellcount = tsc_saving_decode74(cellcountencoded.mem)+1;
-            printf("Cell Count %s\n", cellcountencoded.mem);
             tsc_saving_deleteBuffer(cellcountencoded);
 
             tsc_saving_buffer repcountencoded = tsc_saving_newBuffer("");
@@ -239,7 +238,6 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
             }
 
             int repcount = tsc_saving_decode74(repcountencoded.mem);
-            printf("Rep Count %s\n", repcountencoded.mem);
             tsc_saving_deleteBuffer(repcountencoded);
 
             for(size_t j = 0; j < repcount; j++) {

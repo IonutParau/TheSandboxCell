@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "api.h"
+#include "../cells/grid.h"
 #include "../utils.h"
 
 const char *currentMod = NULL;
@@ -33,15 +34,16 @@ tsc_category *rootCategory;
 
 tsc_category *tsc_rootCategory() {
     if(rootCategory == NULL) {
-        rootCategory = tsc_newCategory("Root", "Why are you looking at the description of root");
+        rootCategory = tsc_newCategory("Root", "Why are you looking at the description of root", builtin.trash);
     }
     return rootCategory;
 }
 
-tsc_category *tsc_newCategory(const char *title, const char *description) {
+tsc_category *tsc_newCategory(const char *title, const char *description, const char *icon) {
     tsc_category *category = malloc(sizeof(tsc_category));
     category->title = title;
     category->description = description;
+    category->icon = icon;
     category->itemc = 0;
     category->itemcap = 20;
     category->items = malloc(sizeof(tsc_categoryitem) * category->itemcap);
@@ -115,4 +117,17 @@ void tsc_closeCategory(tsc_category *category) {
     for(size_t i = 0; i < category->itemc; i++) {
         if(category->items[i].isCategory) tsc_closeCategory(category->items[i].category);
     }
+}
+
+void tsc_loadDefaultCellBar() {
+    tsc_category *root = tsc_rootCategory();
+    tsc_addCell(root, builtin.mover);
+    tsc_addCell(root, builtin.generator);
+    tsc_addCell(root, builtin.push);
+    tsc_addCell(root, builtin.slide);
+    tsc_addCell(root, builtin.rotator_cw);
+    tsc_addCell(root, builtin.rotator_ccw);
+    tsc_addCell(root, builtin.wall);
+    tsc_addCell(root, builtin.enemy);
+    tsc_addCell(root, builtin.trash);
 }

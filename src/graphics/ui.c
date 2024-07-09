@@ -278,16 +278,95 @@ static void ui_drawNode(ui_node *node, int x, int y) {
         return;
     }
 
+    if(node->tag == UI_BOX) {
+        DrawRectangle(x, y, ui_widthOf(node->box->child), ui_heightOf(node->box->child), node->box->color);
+        ui_drawNode(node->box->child, x, y);
+        return;
+    }
+
+    if(node->tag == UI_BUTTON) {
+        ui_drawNode(node->button->child, x, y);
+        return;
+    }
+
+    if(node->tag == UI_TRANSLATE) {
+        ui_drawNode(node->translate->child, x + node->translate->x, y + node->translate->y);
+        return;
+    }
+
     if(node->tag == UI_SCROLLABLE) {
 
     }
+
+    if(node->tag == UI_ROW) {
+        ui_drawFrame(node->row, x, y, 1, 0);
+        return;
+    }
+    
+    if(node->tag == UI_COLUMN) {
+        ui_drawFrame(node->column, x, y, 0, 1);
+        return;
+    }
+    
+    if(node->tag == UI_STACK) {
+        ui_drawFrame(node->stack, x, y, 0, 0);
+        return;
+    }
 }
 
-static void ui_updateFrame(ui_frame *frame, double delta);
+static void ui_updateFrame(ui_frame *frame, int x, int y, int mx, int my, double delta);
 
-static void ui_updateNode(ui_node *node, double delta) {
-    if(node->tag == UI_ROW || node->tag == UI_COLUMN || node->tag == UI_STACK) {
-        ui_updateFrame(node->row, delta);
+static void ui_updateNode(ui_node *node, int x, int y, double delta) {
+start:
+    if(node->tag == UI_ROW) {
+        ui_updateFrame(node->row, x, y, 1, 0, delta);
+        return;
+    }
+    if(node->tag == UI_COLUMN) {
+        ui_updateFrame(node->row, x, y, 0, 1, delta);
+        return;
+    }
+    if(node->tag == UI_STACK) {
+        ui_updateFrame(node->row, x, y, 0, 0, delta);
+        return;
+    }
+
+    if(node->tag == UI_PAD) {
+        // avoiding recursion as much as possible
+        x += node->pad->px;
+        y += node->pad->py;
+        node = node->pad->child;
+        goto start;  
+    }
+
+    if(node->tag == UI_BOX) {
+        node = node->box->child;
+        goto start;
+    }
+
+    if(node->tag == UI_BUTTON) {
+        ui_button *button = node->button->button;
+        int width = ui_widthOf(node->button->child);
+        int height = ui_heightOf(node->button->child);
+        button->wasClicked = button->clicked;
+        button->clicked = false;
+        int mx = GetMouseX();
+        int my = GetMouseY();
+        if(IsMouseButtonDown(MOUSE_BUTTON_LEFT) && mx >= x && my >= y && mx <= x + width && my <= y + height) {
+            button->clicked = true;
+            button->pressTime += delta;
+        } else {
+            button->pressTime = 0;
+        }
+        node = node->button->child;
+        goto start;
+    }
+
+    if(node->tag == UI_TRANSLATE) {
+        x += node->translate->x;
+        y += node->translate->y;
+        node = node->translate->child;
+        goto start;
     }
 }
 
@@ -302,6 +381,12 @@ static int ui_nodeAbsorbs(ui_node *node, int x, int y, int px, int py) {
     }
     if(node->tag == UI_STACK) {
         return ui_frameAbsorbs(node->row, x, y, px, py, 0, 0);
+    }
+    if(node->tag == UI_BOX) {
+        return px >= x && py >= y && px <= x + ui_widthOf(node->box->child) && py <= y + ui_heightOf(node->box->child);
+    }
+    if(node->tag == UI_TRANSLATE) {
+        return ui_nodeAbsorbs(node->translate->child, x + node->translate->x, y + node->translate->y, px, py);
     }
     return false;
 }
@@ -326,10 +411,12 @@ static int ui_frameAbsorbs(ui_frame *frame, int x, int y, int px, int py, int mx
     return false;
 }
 
-static void ui_updateFrame(ui_frame *frame, double delta) {
+static void ui_updateFrame(ui_frame *frame, int x, int y, int mx, int my, double delta) {
     for(size_t i = 0; i < frame->stackc; i++) {
         ui_node *node = frame->stack[i];
-        ui_updateNode(node, delta);
+        ui_updateNode(node, x, y, delta);
+        x += mx * ui_widthOf(node);
+        y += my * ui_heightOf(node);
     }
 }
 
@@ -361,10 +448,7 @@ void tsc_ui_destroyFrame(ui_frame *frame) {
 
 void tsc_ui_pushFrame(ui_frame *frame) {
     tsc_ui_bringBackFrame(frame);
-    // Easy way to clear the stack.
-    // If this causes problems, fuck you
-    frame->stackc = 0;
-    frame->backupi = 0;
+    tsc_ui_reset();
 }
 
 void tsc_ui_bringBackFrame(ui_frame *frame) {
@@ -390,7 +474,10 @@ static ui_frame *tsc_ui_topFrame() {
 void tsc_ui_reset() {
     ui_frame *frame = tsc_ui_topFrame();
     if(frame == NULL) return;
+    // Super easy reset.
+    // This better work, or else, I will fucking nuke everything
     frame->stackc = 0;
+    frame->backupi = 0;
 }
 
 static ui_node *tsc_ui_askFrame(ui_frame *frame, size_t type) {
@@ -429,14 +516,16 @@ static void tsc_ui_backupInFrame(ui_frame *frame, ui_node *node) {
             ui_destroyNode(frame->backups[frame->backupi]);
         }
         frame->backups[frame->backupi] = node;
+        frame->backupi++;
         return;
     }
-    size_t idx = frame->backupc++;
     if(frame->backupc == frame->backupcap) {
         frame->backupcap *= 2;
         frame->backups = realloc(frame->backups, sizeof(ui_node *) * frame->backupcap);
     }
+    size_t idx = frame->backupc++;
     frame->backups[idx] = node;
+    frame->backupi++;
 }
 
 // Super high-level stuff
@@ -444,19 +533,19 @@ static void tsc_ui_backupInFrame(ui_frame *frame, ui_node *node) {
 void tsc_ui_update(double delta) {
     ui_frame *frame = tsc_ui_topFrame();
     if(frame == NULL) return;
-    ui_updateFrame(frame, delta);
+    ui_updateFrame(frame, 0, 0, 0, 0, delta);
 }
 
 void tsc_ui_render() {
     ui_frame *frame = tsc_ui_topFrame();
     if(frame == NULL) return;
-    ui_drawFrame(frame, 0, 0, 1, 0);
+    ui_drawFrame(frame, 0, 0, 0, 0);
 }
 
 int tsc_ui_absorbedPointer(int x, int y) {
     ui_frame *frame = tsc_ui_topFrame();
     if(frame == NULL) return false;
-    return ui_frameAbsorbs(frame, 0, 0, x, y, 1, 0);
+    return ui_frameAbsorbs(frame, 0, 0, x, y, 0, 0);
 }
 
 // States
@@ -586,10 +675,12 @@ void tsc_ui_space(int amount) {
     ui_frame *frame = tsc_ui_topFrame();
     if(frame == NULL) return;
     ui_node *node = tsc_ui_askFrame(frame, UI_SPACING);
-    if(node == NULL) node = malloc(sizeof(ui_node));
+    if(node == NULL) {
+        node = malloc(sizeof(ui_node));
+        tsc_ui_backupInFrame(frame, node);
+    }
     node->tag = UI_SPACING;
     node->spacing = amount;
-    tsc_ui_backupInFrame(frame, node);
     tsc_ui_giveFrame(frame, node);
 }
 
@@ -605,12 +696,14 @@ int tsc_ui_button(ui_button *state) {
         button->child = child;
         button->button = state;
         node->button = button;
+        tsc_ui_backupInFrame(frame, node);
+        tsc_ui_giveFrame(frame, node);
         return tsc_ui_checkbutton(state);
     }
 
     node->button->child = child;
     node->button->button = state;
-
+    tsc_ui_giveFrame(frame, node);
     return tsc_ui_checkbutton(state);
 }
 
@@ -639,6 +732,8 @@ const char *tsc_ui_input(ui_input *state, int width, int height) {
         input->width = width;
         input->height = height;
         node->input = input;
+        tsc_ui_backupInFrame(frame, node);
+        tsc_ui_giveFrame(frame, node);
         return state->text;
     }
 
@@ -646,7 +741,7 @@ const char *tsc_ui_input(ui_input *state, int width, int height) {
     input->input = state;
     input->width = width;
     input->height = height;
-
+    tsc_ui_giveFrame(frame, node);
     return state->text;
 }
 
@@ -662,6 +757,8 @@ double tsc_ui_slider(ui_slider *state, int width, int height, int thickness) {
         slider->width = width;
         slider->height = height;
         node->slider = slider;
+        tsc_ui_backupInFrame(frame, node);
+        tsc_ui_giveFrame(frame, node);
         return state->value;
     }
 
@@ -669,6 +766,75 @@ double tsc_ui_slider(ui_slider *state, int width, int height, int thickness) {
     slider->slider = state;
     slider->width = width;
     slider->height = height;
-
+    tsc_ui_giveFrame(frame, node);
     return state->value;
+}
+
+void tsc_ui_pushRow() {
+    ui_frame *frame = tsc_ui_topFrame();
+    if(frame == NULL) return;
+    ui_node *node = tsc_ui_askFrame(frame, UI_ROW);
+    if(node == NULL) {
+        node = malloc(sizeof(ui_node));
+        node->tag = UI_ROW;
+        node->row = tsc_ui_newFrame();
+        tsc_ui_backupInFrame(frame, node);
+    }
+    tsc_ui_giveFrame(frame, node);
+    tsc_ui_pushFrame(node->row);
+    tsc_ui_reset();
+}
+
+void tsc_ui_finishRow() {
+    tsc_ui_popFrame();
+}
+
+void tsc_ui_translate(int x, int y) {
+    ui_frame *frame = tsc_ui_topFrame();
+    if(frame == NULL) return;
+    ui_node *child = tsc_ui_takeFromFrame(frame);
+    ui_node *node = tsc_ui_askFrame(frame, UI_TRANSLATE);
+    if(node == NULL) {
+        node = malloc(sizeof(ui_node));
+        node->tag = UI_TRANSLATE;
+        node->translate = malloc(sizeof(ui_translate));
+        tsc_ui_backupInFrame(frame, node);
+    }
+    node->translate->x = x;
+    node->translate->y = y;
+    node->translate->child = child;
+    tsc_ui_giveFrame(frame, node);
+}
+
+void tsc_ui_pad(int x, int y) {
+    ui_frame *frame = tsc_ui_topFrame();
+    if(frame == NULL) return;
+    ui_node *child = tsc_ui_takeFromFrame(frame);
+    ui_node *node = tsc_ui_askFrame(frame, UI_PAD);
+    if(node == NULL) {
+        node = malloc(sizeof(ui_node));
+        node->tag = UI_PAD;
+        node->pad = malloc(sizeof(ui_pad));
+        tsc_ui_backupInFrame(frame, node);
+    }
+    node->pad->px = x;
+    node->pad->py = y;
+    node->pad->child = child;
+    tsc_ui_giveFrame(frame, node);
+}
+
+void tsc_ui_box(Color background) {
+    ui_frame *frame = tsc_ui_topFrame();
+    if(frame == NULL) return;
+    ui_node *child = tsc_ui_takeFromFrame(frame);
+    ui_node *node = tsc_ui_askFrame(frame, UI_BOX);
+    if(node == NULL) {
+        node = malloc(sizeof(ui_node));
+        node->tag = UI_BOX;
+        node->box = malloc(sizeof(ui_box));
+        tsc_ui_backupInFrame(frame, node);
+    }
+    node->box->color = background;
+    node->box->child = child;
+    tsc_ui_giveFrame(frame, node);
 }

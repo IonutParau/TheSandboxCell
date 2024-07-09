@@ -30,6 +30,7 @@ typedef struct tsc_categoryitem {
 typedef struct tsc_category {
     const char *title;
     const char *description;
+    const char *icon;
     tsc_categoryitem *items;
     size_t itemc;
     size_t itemcap;
@@ -38,7 +39,7 @@ typedef struct tsc_category {
 } tsc_category;
 
 tsc_category *tsc_rootCategory();
-tsc_category *tsc_newCategory(const char *title, const char *description);
+tsc_category *tsc_newCategory(const char *title, const char *description, const char *icon);
 void tsc_addCategory(tsc_category *category, tsc_category *toAdd);
 void tsc_addCell(tsc_category *category, const char *cell);
 tsc_category *tsc_getCategory(tsc_category *category, const char *path);
@@ -46,4 +47,5 @@ tsc_category *tsc_getCategory(tsc_category *category, const char *path);
 // hideapi
 void tsc_openCategory(tsc_category *category);
 void tsc_closeCategory(tsc_category *category);
+void tsc_loadDefaultCellBar();
 // hideapi

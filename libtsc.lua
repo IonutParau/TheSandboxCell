@@ -41,6 +41,8 @@ if task == "generate" then
         workers = "src/threads/workers.h",
         -- This is because some stuff wants string interning (like IDs)
         utils = "src/utils.h",
+        -- api.h is confusingly named by yours truly, but I don't care
+        api = "src/api/api.h",
     }
 
     local usedHeaders = {}

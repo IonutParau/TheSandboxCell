@@ -2,9 +2,18 @@
 #define TSC_GRAPHICS_RENDERING
 
 #include "../cells/grid.h"
+#include "ui.h"
 
 extern const char *currentId;
 extern char currentRot;
+
+typedef union tsc_categorybutton {
+    ui_button *cell;
+    struct {
+        ui_button *category;
+        union tsc_categorybutton *items;
+    };
+} tsc_categorybutton;
 
 void tsc_setupRendering();
 void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat);

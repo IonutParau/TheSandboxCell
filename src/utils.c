@@ -45,11 +45,11 @@ static const char *tsc_addToInternArray(tsc_intern_array_pool *pool, const char 
             return pool->str[i];
         }
     }
-    str = tsc_strdup(str);
+    char *s = tsc_strdup(str);
     size_t idx = pool->len++;
     pool->str = realloc(pool->str, sizeof(const char *) * pool->len);
-    pool->str[idx] = str;
-    return str;
+    pool->str[idx] = s;
+    return s;
 }
 
 // If we fuck up, we can measure how much we fucked up right here
@@ -74,9 +74,9 @@ const char *tsc_strintern(const char *str) {
     if(str == NULL) return NULL;
     tsc_intern_setup();
     size_t hash = tsc_strhash(str);
-start:
+start:;
     size_t i = hash % intern_pool->arrayc;
-    tsc_intern_array_pool *array = &intern_pool->arrays[i];
+    tsc_intern_array_pool *array = intern_pool->arrays + i;
     if(array->str == NULL) {
         intern_pool->hashes[i] = hash;
         return tsc_addToInternArray(array, str);
@@ -93,7 +93,7 @@ start:
         }
         for(size_t i = 0; i < intern_pool->arrayc; i++) {
             if(intern_pool->arrays[i].str == NULL) continue;
-            size_t j = intern_pool->hashes[i] % intern_pool->arrayc;
+            size_t j = intern_pool->hashes[i] % arrayc;
             arrays[j] = intern_pool->arrays[i];
             hashes[j] = intern_pool->hashes[i];
         }

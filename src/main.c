@@ -8,6 +8,7 @@
 #include "graphics/resources.h"
 #include "graphics/rendering.h"
 #include "utils.h"
+#include "api/api.h"
 
 void doShit(void *thing) {
     int *num = thing;
@@ -27,12 +28,9 @@ int main() {
     tsc_grid *initial = tsc_createGrid("initial", grid->width, grid->height, NULL, NULL);
     tsc_copyGrid(initial, grid);
 
-    tsc_cell mover = tsc_cell_create(builtin.mover, 0);
-    tsc_grid_set(grid, 0, 0, &mover);
-    tsc_cell_destroy(mover);
-
     tsc_subtick_addCore();
     tsc_saving_registerCore();
+    tsc_loadDefaultCellBar();
     
     InitWindow(800, 600, "The Sandbox Cell");
     SetWindowState(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
@@ -49,8 +47,6 @@ int main() {
     }
     tsc_enableResourcePack(defaultResourcePack);
     tsc_setupRendering();
-
-    SetTargetFPS(60);
 
     while(!WindowShouldClose()) {
         BeginDrawing();

@@ -4,9 +4,12 @@
 #include "resources.h"
 #include "../utils.h"
 #include <raylib.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include "../cells/ticking.h"
+#include "../api/api.h"
+#include "ui.h"
 #include <time.h>
 
 typedef struct camera_t {
@@ -19,10 +22,25 @@ static unsigned int renderingRepeatingScaleLoc;
 static Texture renderingEmpty;
 static RenderTexture renderingCellTexture;
 static int renderingCellBrushSize;
+static ui_frame *renderingGameUI;
+static tsc_categorybutton *renderingCellButtons = NULL;
 
 const char *currentId = NULL;
 char currentRot = 0;
 static int brushSize = 0;
+
+static tsc_categorybutton *tsc_createCellButtons(tsc_category *category) {
+    tsc_categorybutton *buttons = malloc(sizeof(tsc_categorybutton) * category->itemc);
+    for(size_t i = 0; i < category->itemc; i++) {
+        if(category->items[i].isCategory) {
+            buttons[i].category = tsc_ui_newButtonState();
+            buttons[i].items = tsc_createCellButtons(category->items[i].category);
+        } else {
+            buttons[i].cell = tsc_ui_newButtonState();
+        }
+    }
+    return buttons;
+}
 
 void tsc_setupRendering() {
     renderingCamera.x = 0;
@@ -36,6 +54,7 @@ void tsc_setupRendering() {
     currentRot = 0;
     renderingCellTexture = LoadRenderTexture(1, 1);
     renderingCellBrushSize = 0;
+    renderingGameUI = tsc_ui_newFrame();
 
     // Why is this in setupRendering?
     // To fix bugs
@@ -46,6 +65,8 @@ void tsc_setupRendering() {
     } else {
         gameTPS = 0;
     }
+
+    renderingCellButtons = tsc_createCellButtons(tsc_rootCategory());
 }
 
 void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat) {
@@ -97,6 +118,49 @@ static int tsc_cellScreenY(int screenY) {
     y += renderingCamera.y;
     y /= renderingCamera.cellSize;
     return y;
+}
+
+static void tsc_buildCellbar(tsc_category *category, tsc_categorybutton *buttons, int cellButton, int padding, int y) {
+    int height = GetScreenHeight();
+    int rowHeight = cellButton + padding * 2;
+    tsc_ui_row({
+        for(size_t i = 0; i < category->itemc; i++) {
+            if(category->items[i].isCategory) {
+                tsc_ui_image(category->items[i].category->icon, cellButton, cellButton);
+                tsc_ui_button(buttons[i].category);
+                tsc_ui_pad(padding, padding);
+            } else {
+                tsc_ui_image(category->items[i].cellID, cellButton, cellButton);
+                tsc_ui_button(buttons[i].cell);
+                tsc_ui_pad(padding, padding);
+            }
+        }
+    });
+    tsc_ui_translate(0, height - rowHeight - y);
+    for(size_t i = 0; i < category->itemc; i++) {
+        if(category->items[i].isCategory && category->items[i].category->open) {
+            tsc_buildCellbar(category->items[i].category, buttons[i].items, cellButton, padding, y + rowHeight);
+        }
+    }
+}
+
+static void tsc_updateCellbar(tsc_category *category, tsc_categorybutton *buttons) {
+    for(size_t i = 0; i < category->itemc; i++) {
+        if(category->items[i].isCategory) {
+            if(tsc_ui_checkbutton(buttons[i].category) == UI_BUTTON_PRESS) {
+                if(category->items[i].category->open) {
+                    tsc_closeCategory(category->items[i].category);
+                } else {
+                    tsc_openCategory(category->items[i].category);
+                }
+            }
+            tsc_updateCellbar(category->items[i].category, buttons[i].items);
+        } else {
+            if(tsc_ui_checkbutton(buttons[i].cell) == UI_BUTTON_PRESS) {
+                currentId = category->items[i].cellID;
+            }
+        }
+    }
 }
 
 void tsc_drawGrid() {
@@ -155,6 +219,19 @@ void tsc_drawGrid() {
     }
 
     DrawFPS(10, 10);
+
+    tsc_ui_pushFrame(renderingGameUI);
+    int height = GetScreenHeight();
+    int padding = 20;
+    int cellButton = 40;
+    int rowHeight = cellButton + padding * 2;
+    // Cellbar background
+    tsc_ui_space(GetScreenWidth());
+    tsc_ui_box(GetColor(0x00000055));
+    tsc_ui_translate(0, height - rowHeight);
+    tsc_buildCellbar(tsc_rootCategory(), renderingCellButtons, cellButton, padding, 0);
+    tsc_ui_render();
+    tsc_ui_popFrame();
 }
 
 int tsc_cellMouseX() {
@@ -213,6 +290,13 @@ static void tsc_handleCellPlace() {
 
 void tsc_handleRenderInputs() {
     float delta = GetFrameTime();
+
+    tsc_ui_bringBackFrame(renderingGameUI);
+    tsc_ui_update(delta);
+    tsc_updateCellbar(tsc_rootCategory(), renderingCellButtons);
+    int absorbed = tsc_ui_absorbedPointer(GetMouseX(), GetMouseY());
+    tsc_ui_popFrame();
+
     double speed = renderingCamera.speed;
     if(IsKeyDown(KEY_LEFT_SHIFT)) {
         speed *= 2;
@@ -233,18 +317,18 @@ void tsc_handleRenderInputs() {
     if(IsKeyPressed(KEY_Q)) {
         currentRot--;
         while(currentRot < 0) currentRot += 4;
-        printf("rot %d\n", (int)currentRot);
     }
     if(IsKeyPressed(KEY_E)) {
         currentRot++;
         currentRot %= 4;
-        printf("rot %d\n", (int)currentRot);
     }
 
     if(IsKeyPressed(KEY_L)) {
         const char *clipboard = GetClipboardText();
-        printf("Loading %s\n", clipboard);
-        tsc_saving_decodeWithAny(clipboard, currentGrid);
+        if(clipboard != NULL) {
+            printf("Loading %s\n", clipboard);
+            tsc_saving_decodeWithAny(clipboard, currentGrid);
+        }
     }
 
 #define CELL_KEY(key, cell) if(IsKeyPressed(key)) currentId = cell
@@ -262,7 +346,7 @@ void tsc_handleRenderInputs() {
 
 #undef CELL_KEY
 
-    tsc_handleCellPlace();
+    if(!absorbed) tsc_handleCellPlace();
 
     float mouseWheel = GetMouseWheelMove();
     if(mouseWheel > 0) {

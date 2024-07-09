@@ -86,7 +86,7 @@ static void tsc_subtick_worker(void *data) {
                 int y = info->x;
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                 if(cell == NULL) continue;
-                if(cell->rot != rot) continue;
+                if(cell->rot != 0) continue;
                 if(cell->updated) continue;
                 for(size_t i = 0; i < info->subtick->idc; i++) {
                     if(info->subtick->ids[i] == cell->id) {
@@ -99,13 +99,11 @@ static void tsc_subtick_worker(void *data) {
                     }
                 }
             }
-        }
-        if(rot == 2) {
             for(int x = 0; x < currentGrid->width; x++) {
                 int y = info->x;
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                 if(cell == NULL) continue;
-                if(cell->rot != rot) continue;
+                if(cell->rot != 2) continue;
                 if(cell->updated) continue;
                 for(size_t i = 0; i < info->subtick->idc; i++) {
                     if(info->subtick->ids[i] == cell->id) {
@@ -120,10 +118,10 @@ static void tsc_subtick_worker(void *data) {
             }
         }
         if(rot == 1) {
-            for(int y = currentGrid->height-1; y >= 0; y--) {
+            for(int y = 0; y < currentGrid->height; y++) {
                 int x = info->x;
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
-                if(cell->rot != rot) continue;
+                if(cell->rot != 3) continue;
                 if(cell->updated) continue;
                 for(size_t i = 0; i < info->subtick->idc; i++) {
                     if(info->subtick->ids[i] == cell->id) {
@@ -136,12 +134,10 @@ static void tsc_subtick_worker(void *data) {
                     }
                 }
             }
-        }
-        if(rot == 3) {
-            for(int y = 0; y < currentGrid->height; y++) {
+            for(int y = currentGrid->height-1; y >= 0; y--) {
                 int x = info->x;
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
-                if(cell->rot != rot) continue;
+                if(cell->rot != 1) continue;
                 if(cell->updated) continue;
                 for(size_t i = 0; i < info->subtick->idc; i++) {
                     if(info->subtick->ids[i] == cell->id) {
@@ -254,12 +250,11 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
         if(parallel) {
             tsc_updateinfo_t *buffer = subticks_getBuffer(currentGrid->width < currentGrid->height ? currentGrid->height : currentGrid->width);
 
-            for(char i = 0; i < rotc; i++) {
-                char rot = rots[i];
-                if(rot % 2 == 1) {
+            for(char i = 0; i < 2; i++) {
+                if(i == 1) {
                     for(size_t x = 0; x < currentGrid->width; x++) {
                         buffer[x].x = x;
-                        buffer[x].rot = rot;
+                        buffer[x].rot = 1;
                         buffer[x].subtick = subtick;
                     }
 
@@ -267,7 +262,7 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                 } else {
                     for(size_t y = 0; y < currentGrid->height; y++) {
                         buffer[y].x = y;
-                        buffer[y].rot = rot;
+                        buffer[y].rot = 0;
                         buffer[y].subtick = subtick;
                     }
 
