@@ -57,7 +57,15 @@ static const char *tsc_addToInternArray(tsc_intern_array_pool *pool, const char 
 // Ideally, it would be 0.
 // Does not count unused arrays (aka length 0).
 double tsc_strhashimbalance() {
-    // TODO: implement
+    // TODO: implement the math. Now it just prints debug stuff
+    for(size_t i = 0; i < intern_pool->arrayc; i++) {
+        if(i == intern_pool->arrayc - 1) {
+            printf("%lu\n", intern_pool->arrays[i].len);
+        } else {
+            printf("%lu ", intern_pool->arrays[i].len);
+        }
+    }
+    return 0;
 }
 
 // New implementation not tested

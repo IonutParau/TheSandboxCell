@@ -20,7 +20,7 @@ Things to actually do.
 - Basic main menu
 - Basic editor menu
 - Basic settings menu
-- VX / SSF1
+- VX / SSF1 / TSC format support
 - Resource Pack support (shaders, texture packs, audio packs, ui themes, fonts) (unlikely to be fully implemented for some time)
 - Modding (WebAssembly, Lua, Python)
 - Mod Signals (Mod-to-Mod communication)
