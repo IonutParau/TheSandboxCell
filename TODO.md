@@ -4,7 +4,7 @@ Things to actually do.
 - Give `textures_dev` a wall texture
 - Optimize rendering using cell skipping and rectangle optimizations
 - Optimize `tsc_strintern`
-- Add more comments for people who want to
+- Add more comments for people who want to contribute
 - Finish implementing `ui.c`
 - Add a cellbar
 - Add a main menu
