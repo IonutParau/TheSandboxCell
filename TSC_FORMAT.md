@@ -7,7 +7,7 @@ backgrounds and more. It uses little endian byte order (least significant byte c
 
 The text structure of `TSC;` is simple.
 ```
-TSC;<base74 width>;<base74 height>;<title;<description>;<base85 encoded deflate compressed binary cell data>;
+TSC;<base74 width>;<base74 height>;<title;<description>;<base85 encoded deflate compressed binary cell data>
 ```
 
 TSC's Base85 uses a modified key that is Markdown-safe, thus it can be freely shared on applications such as Discord which may process it as markdown.
@@ -77,8 +77,10 @@ the amount of cells skipped, starting at 0. These cells also aren't pushed.
 c is how many cells to look back (0 meaning the last cell put there), and r means how many times to copy it.
 - The opcodes `9` through `16` (inclusive) mean slice copy compressed. After the opcode are 3 integers (c, l and r) which are `opcode - 8` bytes long.
 c is how many cells to look back, representing the start of the slice. l is the length of the slice. r is how many times to copy that slice.
-- The opcodes `17` through `24` (inclusive) mean block compressed. After it are 4 integers (c, w, h and r) which are `opcode - 16`) bytes long.
-c is how many cells to look back, representing the top left corner of the block. w and h are the width and height of the block. r is how many times to repeat
+- The opcodes `17` through `24` (inclusive) mean vertical slice copy compressed. Just like slice copy compressed, except it copies it vertically (starting at
+the bottom)
+- The opcodes `25` through `32` (inclusive) mean block compressed. After it are 4 integers (c, w, h and r) which are `opcode - 16`) bytes long.
+c is how many cells to look back, representing the bottom left corner of the block. w and h are the width and height of the block. r is how many times to repeat
 the block. This should put on the grid all rows of the block, but only push the top one `r` times. The other tiles are assumed to be later skipped, although
 the encoder can re-encode them if they so choose (though it is not recommended, as you are storing duplicate data).
 
@@ -95,7 +97,8 @@ It and `maxn` (more on it in a bit) are calculated like so:
 ```lua
 -- id and background are indexes in the string intern table (they start at 1 and thus 1 is subtracted)
 -- hasflags and hasdata are 0 if false and 1 if true
--- #strings is the length of the string intern table
+-- #ids is the length of the cell ID array
+-- #backgrounds is the length of the background ID array
 
 local n = rot + backgroundRot * 4 + hasflags * 16 + hasdata * 32 + id * 64 + background * 64 * #ids
 -- Each part is set to its highest value
