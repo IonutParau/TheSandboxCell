@@ -181,7 +181,6 @@ float tsc_cell_getBias(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, c
 int tsc_cell_canGenerate(tsc_grid *grid, tsc_cell *cell, int x, int y, tsc_cell *generator, int gx, int gy, char dir) {
     // Can't generate air
     if(cell->id == builtin.empty) return 0;
-    if(cell->id == builtin.trash) return 0;
     return 1;
 }
 

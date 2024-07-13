@@ -382,6 +382,12 @@ static int ui_nodeAbsorbs(ui_node *node, int x, int y, int px, int py) {
     if(node->tag == UI_STACK) {
         return ui_frameAbsorbs(node->row, x, y, px, py, 0, 0);
     }
+    if(node->tag == UI_PAD) {
+        return ui_nodeAbsorbs(node->pad->child, x + node->pad->px, y + node->pad->py, px, py);
+    }
+    if(node->tag == UI_BUTTON) {
+        return px >= x && py >= y && px <= x + ui_widthOf(node->button->child) && py <= y + ui_heightOf(node->button->child);
+    }
     if(node->tag == UI_BOX) {
         return px >= x && py >= y && px <= x + ui_widthOf(node->box->child) && py <= y + ui_heightOf(node->box->child);
     }

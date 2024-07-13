@@ -4,6 +4,10 @@
 #include "api.h"
 #include "../cells/grid.h"
 #include "../utils.h"
+#include <raylib.h>
+#include "../saving/saving.h"
+#include "../graphics/resources.h"
+#include "../cells/ticking.h"
 
 const char *currentMod = NULL;
 
@@ -62,7 +66,7 @@ void tsc_addCategory(tsc_category *category, tsc_category *toAdd) {
         category->itemcap *= 2;
         category->items = realloc(category->items, sizeof(tsc_categoryitem) * category->itemcap);
     }
-    category->items[category->itemc].isCategory = true;
+    category->items[category->itemc].kind = TSC_CATEGORY_SUBCATEGORY;
     category->items[category->itemc].category = toAdd;
     category->itemc++;
 }
@@ -72,8 +76,20 @@ void tsc_addCell(tsc_category *category, const char *cell) {
         category->itemcap *= 2;
         category->items = realloc(category->items, sizeof(tsc_categoryitem) * category->itemcap);
     }
-    category->items[category->itemc].isCategory = false;
+    category->items[category->itemc].kind = TSC_CATEGORY_CELL;
     category->items[category->itemc].cellID = cell;
+    category->itemc++;
+}
+
+void tsc_addButton(tsc_category *category, const char *icon, void (*click)(void *), void *payload) {
+    if(category->itemc == category->itemcap) {
+        category->itemcap *= 2;
+        category->items = realloc(category->items, sizeof(tsc_categoryitem) * category->itemcap);
+    }
+    category->items[category->itemc].kind = TSC_CATEGORY_BUTTON;
+    category->items[category->itemc].button.click = click;
+    category->items[category->itemc].button.payload = payload;
+    category->items[category->itemc].button.icon = tsc_strintern(icon);
     category->itemc++;
 }
 
@@ -92,7 +108,7 @@ tsc_category *tsc_getCategory(tsc_category *category, const char *path) {
         }
     }
     for(size_t i = 0; i < category->itemc; i++) {
-        if(!category->items[i].isCategory) continue;
+        if(category->items[i].kind != TSC_CATEGORY_SUBCATEGORY) continue;
         tsc_category *child = category->items[i].category;
         if(tsc_streql(child->title, part)) {
             if(final) return child;
@@ -105,6 +121,7 @@ tsc_category *tsc_getCategory(tsc_category *category, const char *path) {
 
 void tsc_openCategory(tsc_category *category) {
 start:
+    if(category == NULL) return;
     if(category->open) return;
     category->open = true;
     category = category->parent;
@@ -115,12 +132,41 @@ void tsc_closeCategory(tsc_category *category) {
     if(!category->open) return;
     category->open = false;
     for(size_t i = 0; i < category->itemc; i++) {
-        if(category->items[i].isCategory) tsc_closeCategory(category->items[i].category);
+        if(category->items[i].kind == TSC_CATEGORY_SUBCATEGORY) tsc_closeCategory(category->items[i].category);
     }
+}
+
+static void tsc_loadButton(void *_) {
+    const char *clipboard = GetClipboardText();
+    if(clipboard == NULL) {
+        tsc_sound_play(builtin.audio.explosion);
+    } else {
+        printf("Loading %s\n", clipboard);
+        tsc_saving_decodeWithAny(clipboard, currentGrid);
+    }
+}
+
+static void tsc_restoreInitial(void *_) {
+    if(isGameTicking) return;
+    tsc_copyGrid(currentGrid, tsc_getGrid("initial"));
+    isInitial = true;
+}
+
+static void tsc_setInitial(void *_) {
+    if(isGameTicking) return;
+    tsc_copyGrid(tsc_getGrid("initial"), currentGrid);
+    isInitial = true;
 }
 
 void tsc_loadDefaultCellBar() {
     tsc_category *root = tsc_rootCategory();
+
+    tsc_category *tools = tsc_newCategory("Tools", "Simple tools and buttons", "icon");
+    tsc_addButton(tools, "opengl ftw", tsc_loadButton, NULL);
+    tsc_addButton(tools, "generator", tsc_setInitial, NULL);
+    tsc_addButton(tools, "rotator_cw", tsc_restoreInitial, NULL);
+
+    tsc_addCategory(root, tools);
     tsc_addCell(root, builtin.mover);
     tsc_addCell(root, builtin.generator);
     tsc_addCell(root, builtin.push);

@@ -119,6 +119,13 @@ char *tsc_strdup(const char *str) {
     return buf;
 }
 
+char *tsc_strcata(const char *a, const char *b) {
+    char *buffer = malloc(sizeof(char) * (strlen(a) + strlen(b) + 1));
+    strcpy(buffer, a);
+    strcat(buffer, b);
+    return buffer;
+}
+
 unsigned long tsc_strhash(const char *str) {
     // Jenkins one at a time hashing function as descripted in https://en.wikipedia.org/wiki/Jenkins_hash_function
     size_t i = 0;

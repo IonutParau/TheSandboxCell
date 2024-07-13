@@ -16,9 +16,9 @@ typedef struct tsc_cell {
     const char *texture;
     tsc_cellreg *data;
     struct tsc_celltable *celltable;
+    size_t flags;
     size_t lx;
     size_t ly;
-    size_t flags;
     char rot;
     char lrot;
     bool updated;

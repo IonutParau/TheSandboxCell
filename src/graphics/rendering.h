@@ -9,6 +9,7 @@ extern char currentRot;
 
 typedef union tsc_categorybutton {
     ui_button *cell;
+    ui_button *button;
     struct {
         ui_button *category;
         union tsc_categorybutton *items;

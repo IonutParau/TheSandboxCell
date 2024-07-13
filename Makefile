@@ -36,7 +36,7 @@ ifeq ($(MODE), RELEASE)
 endif
 
 ifeq ($(MODE), DEBUG)
-	CFLAGS += -g3 -Og
+	CFLAGS += -g3
 	# The linker might give us some more info idk
 	LFLAGS += -g3
 endif

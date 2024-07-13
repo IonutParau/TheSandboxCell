@@ -32,9 +32,11 @@ static int brushSize = 0;
 static tsc_categorybutton *tsc_createCellButtons(tsc_category *category) {
     tsc_categorybutton *buttons = malloc(sizeof(tsc_categorybutton) * category->itemc);
     for(size_t i = 0; i < category->itemc; i++) {
-        if(category->items[i].isCategory) {
+        if(category->items[i].kind == TSC_CATEGORY_SUBCATEGORY) {
             buttons[i].category = tsc_ui_newButtonState();
             buttons[i].items = tsc_createCellButtons(category->items[i].category);
+        } else if(category->items[i].kind == TSC_CATEGORY_BUTTON) {
+            buttons[i].button = tsc_ui_newButtonState();
         } else {
             buttons[i].cell = tsc_ui_newButtonState();
         }
@@ -50,6 +52,7 @@ void tsc_resetRendering() {
     renderingEmpty = textures_get(builtin.empty);
     currentId = builtin.mover;
     currentRot = 0;
+    isInitial = true;
 }
 
 void tsc_setupRendering() {
@@ -74,14 +77,24 @@ void tsc_setupRendering() {
     renderingCellButtons = tsc_createCellButtons(tsc_rootCategory());
 }
 
+static float tsc_updateInterp(float a, float b) {
+    if(tickDelay == 0) return b;
+    if(isGamePaused) return b;
+    if(a == -1) return b;
+    float t = tickTime / tickDelay;
+    return a + (b - a) * (t >= 1 ? 1 : t);
+}
+
 void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat) {
     if(cell->id == builtin.empty && cell->texture == NULL) return;
     Texture texture = textures_get(cell->texture == NULL ? cell->id : cell->texture);
     double size = renderingCamera.cellSize * (2 * gridRepeat + 1);
     Vector2 origin = {size / 2, size / 2};
     Rectangle src = {0, 0, texture.width, texture.height};
-    Rectangle dest = {x * renderingCamera.cellSize - renderingCamera.x + origin.x - renderingCamera.cellSize * gridRepeat,
-        y * renderingCamera.cellSize - renderingCamera.y + origin.y - renderingCamera.cellSize * gridRepeat,
+    float ix = tsc_updateInterp(cell->lx, x);
+    float iy = tsc_updateInterp(cell->ly, y);
+    Rectangle dest = {ix * renderingCamera.cellSize - renderingCamera.x + origin.x - renderingCamera.cellSize * gridRepeat,
+        iy * renderingCamera.cellSize - renderingCamera.y + origin.y - renderingCamera.cellSize * gridRepeat,
         size,
         size};
     Color color = WHITE;
@@ -130,9 +143,13 @@ static void tsc_buildCellbar(tsc_category *category, tsc_categorybutton *buttons
     int rowHeight = cellButton + padding * 2;
     tsc_ui_row({
         for(size_t i = 0; i < category->itemc; i++) {
-            if(category->items[i].isCategory) {
+            if(category->items[i].kind == TSC_CATEGORY_SUBCATEGORY) {
                 tsc_ui_image(category->items[i].category->icon, cellButton, cellButton);
                 tsc_ui_button(buttons[i].category);
+                tsc_ui_pad(padding, padding);
+            } else if(category->items[i].kind == TSC_CATEGORY_BUTTON) {
+                tsc_ui_image(category->items[i].button.icon, cellButton, cellButton);
+                tsc_ui_button(buttons[i].button);
                 tsc_ui_pad(padding, padding);
             } else {
                 tsc_ui_image(category->items[i].cellID, cellButton, cellButton);
@@ -143,7 +160,7 @@ static void tsc_buildCellbar(tsc_category *category, tsc_categorybutton *buttons
     });
     tsc_ui_translate(0, height - rowHeight - y);
     for(size_t i = 0; i < category->itemc; i++) {
-        if(category->items[i].isCategory && category->items[i].category->open) {
+        if(category->items[i].kind == TSC_CATEGORY_SUBCATEGORY && category->items[i].category->open) {
             tsc_buildCellbar(category->items[i].category, buttons[i].items, cellButton, padding, y + rowHeight);
         }
     }
@@ -151,7 +168,7 @@ static void tsc_buildCellbar(tsc_category *category, tsc_categorybutton *buttons
 
 static void tsc_updateCellbar(tsc_category *category, tsc_categorybutton *buttons) {
     for(size_t i = 0; i < category->itemc; i++) {
-        if(category->items[i].isCategory) {
+        if(category->items[i].kind == TSC_CATEGORY_SUBCATEGORY) {
             if(tsc_ui_checkbutton(buttons[i].category) == UI_BUTTON_PRESS) {
                 if(category->items[i].category->open) {
                     tsc_closeCategory(category->items[i].category);
@@ -160,6 +177,10 @@ static void tsc_updateCellbar(tsc_category *category, tsc_categorybutton *button
                 }
             }
             tsc_updateCellbar(category->items[i].category, buttons[i].items);
+        } else if(category->items[i].kind == TSC_CATEGORY_BUTTON) {
+            if(tsc_ui_checkbutton(buttons[i].button) == UI_BUTTON_PRESS) {
+                category->items[i].button.click(category->items[i].button.payload);
+            }
         } else {
             if(tsc_ui_checkbutton(buttons[i].cell) == UI_BUTTON_PRESS) {
                 currentId = category->items[i].cellID;
@@ -328,7 +349,7 @@ void tsc_handleRenderInputs() {
         currentRot %= 4;
     }
 
-    if(IsKeyPressed(KEY_L)) {
+    if(IsKeyPressed(KEY_L) && !isGameTicking) {
         const char *clipboard = GetClipboardText();
         if(clipboard != NULL) {
             printf("Loading %s\n", clipboard);

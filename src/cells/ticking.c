@@ -1,13 +1,15 @@
 #include "ticking.h"
 #include "../threads/tinycthread.h"
 #include "subticks.h"
+#include "grid.h"
 
 volatile bool isGamePaused = true;
 volatile bool isGameTicking = false;
 volatile double tickTime = 0.0;
-volatile double tickDelay = 0.0;
+volatile double tickDelay = 0.2;
 volatile bool multiTickPerFrame = true;
 volatile size_t gameTPS = 0;
+volatile bool isInitial = false;
 
 static mtx_t renderingUselessMutex;
 static cnd_t renderingTickUpdateSignal;
@@ -32,6 +34,10 @@ static int tsc_gridUpdateThread(void *_) {
         // high IQ code I wrote that I forgot to understand
         tickTime = 0.0;
         isGameTicking = true;
+        if(isInitial) {
+            isInitial = false;
+            tsc_copyGrid(tsc_getGrid("initial"), currentGrid);
+        }
         tsc_subtick_run();
         ticksInSecond++;
         time(&now);

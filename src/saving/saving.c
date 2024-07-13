@@ -26,8 +26,8 @@ void tsc_saving_encodeWithSmallest(tsc_saving_buffer *buffer, tsc_grid *grid) {
     size_t bestSize = SIZE_MAX;
 
     for(size_t i = 0; i < savingc; i++) {
-        tsc_saving_buffer tmp = tsc_saving_newBuffer(NULL);
         if(saving_arr[i].encode == NULL) continue;
+        tsc_saving_buffer tmp = tsc_saving_newBuffer(NULL);
         saving_arr[i].encode(&tmp, grid);
         if(tmp.len < bestSize) {
             bestSize = tmp.len;
@@ -55,7 +55,6 @@ void tsc_saving_decodeWith(const char *code, tsc_grid *grid, const char *name) {
 void tsc_saving_decodeWithAny(const char *code, tsc_grid *grid) {
     for(size_t i = 0; i < savingc; i++) {
         if(strncmp(saving_arr[i].header, code, strlen(saving_arr[i].header)) == 0) {
-            printf("Found saving format\n");
             if(saving_arr[i].decode == NULL) continue;
             saving_arr[i].decode(code, grid);
             return;

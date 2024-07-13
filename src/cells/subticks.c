@@ -430,6 +430,10 @@ static void tsc_subtick_reset(void *data) {
     for(size_t y = 0; y < currentGrid->height; y++) {
         tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
         cell->updated = false;
+        cell->lx = x;
+        cell->ly = y;
+        cell->lrot = cell->rot;
+        // TODO: cell reset method
     }
 }
 

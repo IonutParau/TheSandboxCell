@@ -9,6 +9,7 @@ double tsc_strhashimbalance();
 // hideapi
 int tsc_streql(const char *a, const char *b);
 char *tsc_strdup(const char *str);
+char *tsc_strcata(const char *a, const char *b);
 unsigned long tsc_strhash(const char *str);
 
 // Replaces the / with \ on Windows
