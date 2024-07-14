@@ -36,7 +36,7 @@ tsc_cell tsc_cell_create(const char *id, char rot) {
     // -1 means no interpolation please
     cell.lx = -1;
     cell.ly = -1;
-    cell.lrot = -1;
+    cell.addedRot = 0;
     return cell;
 }
 

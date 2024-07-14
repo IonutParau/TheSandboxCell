@@ -85,6 +85,15 @@ static float tsc_updateInterp(float a, float b) {
     return a + (b - a) * (t >= 1 ? 1 : t);
 }
 
+static float tsc_rotInterp(char rot, signed char added) {
+    if(tickDelay == 0) return rot;
+    if(isGamePaused) return rot;
+    float last = ((signed char)rot) - added;
+    float now = rot;
+    float t = tickTime / tickDelay;
+    return last + (now - last) * (t >= 1 ? 1 : t);
+}
+
 void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat) {
     if(cell->id == builtin.empty && cell->texture == NULL) return;
     Texture texture = textures_get(cell->texture == NULL ? cell->id : cell->texture);
@@ -93,6 +102,7 @@ void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat) 
     Rectangle src = {0, 0, texture.width, texture.height};
     float ix = tsc_updateInterp(cell->lx, x);
     float iy = tsc_updateInterp(cell->ly, y);
+    float irot = tsc_rotInterp(cell->rot, cell->addedRot);
     Rectangle dest = {ix * renderingCamera.cellSize - renderingCamera.x + origin.x - renderingCamera.cellSize * gridRepeat,
         iy * renderingCamera.cellSize - renderingCamera.y + origin.y - renderingCamera.cellSize * gridRepeat,
         size,
@@ -114,7 +124,7 @@ void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat) 
         dest.x = origin.x;
         dest.y = origin.y;
     }
-    DrawTexturePro(texture, src, dest, origin, cell->rot * 90, color);
+    DrawTexturePro(texture, src, dest, origin, irot * 90, color);
     if(gridRepeat > 0) {
         EndShaderMode();
         EndTextureMode();
@@ -394,7 +404,30 @@ void tsc_handleRenderInputs() {
         isGamePaused = !isGamePaused;
     }
 
-    if(!isGamePaused || isGameTicking) tickTime += delta;
+    float tickTimeScale = 1;
+    if(IsKeyDown(KEY_LEFT_SHIFT)) {
+        if(IsKeyDown(KEY_COMMA)) {
+            tickTimeScale /= 2;
+        }
+        if(IsKeyDown(KEY_PERIOD)) {
+            tickTimeScale /= 4;
+        }
+        if(IsKeyDown(KEY_SLASH)) {
+            tickTimeScale /= 16;
+        }
+    } else {
+        if(IsKeyDown(KEY_COMMA)) {
+            tickTimeScale *= 2;
+        }
+        if(IsKeyDown(KEY_PERIOD)) {
+            tickTimeScale *= 4;
+        }
+        if(IsKeyDown(KEY_SLASH)) {
+            tickTimeScale *= 16;
+        }
+    }
+
+    if(!isGamePaused || isGameTicking) tickTime += delta * tickTimeScale;
 
     if(!isGamePaused && !multiTickPerFrame) {
         if(tickTime >= tickDelay && !isGameTicking) {

@@ -6,7 +6,7 @@
 volatile bool isGamePaused = true;
 volatile bool isGameTicking = false;
 volatile double tickTime = 0.0;
-volatile double tickDelay = 0.2;
+volatile double tickDelay = 0.15;
 volatile bool multiTickPerFrame = true;
 volatile size_t gameTPS = 0;
 volatile bool isInitial = false;

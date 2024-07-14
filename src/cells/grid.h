@@ -20,7 +20,7 @@ typedef struct tsc_cell {
     size_t lx;
     size_t ly;
     char rot;
-    char lrot;
+    signed char addedRot;
     bool updated;
 } tsc_cell;
 

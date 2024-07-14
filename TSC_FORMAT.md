@@ -68,10 +68,12 @@ The grid must start out as empty.
 NOTE: Cells should be treated as both on the grid and on a big array list. These 2 don't have to be the same.
 
 Each opcode starts as a `byte`, but may take additional bytes as operands.
-- The opcode `255` means the cell is skipped. This could either mean an empty cell, or that the cell was put there by other operands before it. It does NOT
-push anything onto the cell array list, which means that all opcodes that look back also skip this cell.
+- The opcode `255` means the cell is skipped. This could either mean an empty cell, or that the cell was put there by other operands before it. It does
+push the cell there onto the cell array list, which means that all opcodes that look back don't skip this cell.
 - The opcodes `247` through `254` (inclusive) mean skipping in a row. After the opcode, a `opcode - 246` byte integer should be there to encode
-the amount of cells skipped, starting at 0. These cells also aren't pushed.
+the amount of cells skipped, starting at 0. These cells also are pushed.
+- The opcode `246` is followed by an 8-byte integer and specifies the flags that the next simple cell should have (one time use).
+- The opcode `245` should be followed by binary `cell data` and specifies the cell data of the next few cells (one time use).
 - The opcode `0` means put a simple cell. After it should be the binary encoding of a `cell` (defined later)
 - The opcodes `1` through `8` (inclusive) mean 1 cell length compressed. After the opcode are 2 integers (c and r) which are `opcode` bytes long.
 c is how many cells to look back (0 meaning the last cell put there), and r means how many times to copy it.
@@ -82,7 +84,7 @@ the bottom)
 - The opcodes `25` through `32` (inclusive) mean block compressed. After it are 4 integers (c, w, h and r) which are `opcode - 16`) bytes long.
 c is how many cells to look back, representing the bottom left corner of the block. w and h are the width and height of the block. r is how many times to repeat
 the block. This should put on the grid all rows of the block, but only push the top one `r` times. The other tiles are assumed to be later skipped, although
-the encoder can re-encode them if they so choose (though it is not recommended, as you are storing duplicate data).
+the encoder can re-encode them if they so choose (though it is not recommended, as you are storing duplicate data). It pushes the bottom row.
 
 ## Cell binary format
 
@@ -96,15 +98,13 @@ At a high level, the binary format of a cell can be viewed as:
 It and `maxn` (more on it in a bit) are calculated like so:
 ```lua
 -- id and background are indexes in the string intern table (they start at 1 and thus 1 is subtracted)
--- hasflags and hasdata are 0 if false and 1 if true
+-- hasflags and hasdata are 0 if false for foreground and background and 1 if true for foreground, 2 if true for background and 3 for both
 -- #ids is the length of the cell ID array
 -- #backgrounds is the length of the background ID array
 
-local n = rot + backgroundRot * 4 + hasflags * 16 + hasdata * 32 + id * 64 + background * 64 * #ids
+local n = rot + backgroundRot * 4 + hasflags * 16 + hasdata * 64 + id * 256 + background * 256 * #ids
 -- Each part is set to its highest value
 local maxn = 3 + 3 * 4 + 1 * 16 + 1 * 32 + (#ids-1) * 64 + (#backgrounds-1) * 64 * #ids
--- Can be simplified to
-local maxn = 63 + (#ids-1) * 64 + (#backgrounds-1) * 64 * #ids
 ```
 
 The length of the `cell type data` integer varies as well. It is the amount of bytes minimum to store `maxn`.

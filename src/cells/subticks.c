@@ -222,6 +222,7 @@ static void tsc_subtick_doClockwiseRotator(struct tsc_cell *cell, int x, int y, 
     if(toRot->id == builtin.empty) return;
     toRot->rot++;
     toRot->rot %= 4;
+    toRot->addedRot += 1;
 }
 
 static void tsc_subtick_doCounterClockwiseRotator(struct tsc_cell *cell, int x, int y, int ux, int uy, void *_) {
@@ -230,6 +231,7 @@ static void tsc_subtick_doCounterClockwiseRotator(struct tsc_cell *cell, int x, 
     if(toRot->id == builtin.empty) return;
     toRot->rot += 3;
     toRot->rot %= 4;
+    toRot->addedRot -= 1;
 }
 
 static void tsc_subtick_do(tsc_subtick_t *subtick) {
@@ -432,16 +434,29 @@ static void tsc_subtick_reset(void *data) {
         cell->updated = false;
         cell->lx = x;
         cell->ly = y;
-        cell->lrot = cell->rot;
+        cell->addedRot = 0;
         // TODO: cell reset method
     }
 }
 
 void tsc_subtick_run() {
-    // This absolutely evil hack will call the tsc_subtick_reset with a data pointer who's address is the x.
-    // I don't care about how horribly unsafe this is or how much better this could be in Rust,
-    // this is the fastest way to reset the grid in parallel.
-    workers_waitForTasksFlat(&tsc_subtick_reset, 0, 1, currentGrid->width);
+    char shouldBeParallel = 1;
+    #ifdef TSC_SINGLE_THREAD
+        shouldBeParallel = 0;
+    #endif
+    if(currentGrid->width * currentGrid->height < 10000) shouldBeParallel = 0;
+    if(shouldBeParallel) {
+        // This absolutely evil hack will call the tsc_subtick_reset with a data pointer who's address is the x.
+        // I don't care about how horribly unsafe this is or how much better this could be in Rust,
+        // this is the fastest way to reset the grid in parallel.
+        workers_waitForTasksFlat(&tsc_subtick_reset, 0, 1, currentGrid->width);
+    } else {
+        for(size_t i = 0; i < currentGrid->width; i++) {
+            // Cast it to bullshit
+            void *bullshit = (void *)i;
+            tsc_subtick_reset(bullshit);
+        }
+    }
 
     for(size_t i = 0; i < subticks.subc; i++) {
         tsc_subtick_do(subticks.subs + i);

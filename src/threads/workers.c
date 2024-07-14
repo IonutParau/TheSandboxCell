@@ -24,16 +24,16 @@ static worker_waitgroup_t workers_createWaitGroup() {
 }
 
 static void workers_addToWaitGroup(volatile worker_waitgroup_t *wg, size_t amount) {
-    atomic_fetch_add(&wg->count, amount);
+    atomic_fetch_add_explicit(&wg->count, amount, memory_order_relaxed);
 }
 
 static void workers_removeFromWaitGroup(volatile worker_waitgroup_t *wg) {
-    atomic_fetch_sub(&wg->count, 1);
+    atomic_fetch_sub_explicit(&wg->count, 1, memory_order_relaxed);
 }
 
 static void workers_waitForGroup(volatile worker_waitgroup_t *wg) {
     while(true) {
-        size_t amount = atomic_load(&wg->count);
+        size_t amount = atomic_load_explicit(&wg->count, memory_order_relaxed);
         if(amount == 0) break;
     }
 }
