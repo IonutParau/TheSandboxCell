@@ -24,11 +24,14 @@ typedef struct tsc_cell {
     bool updated;
 } tsc_cell;
 
+typedef struct tsc_grid tsc_grid;
+
 // Stores function pointers and payload for everything we might need from a modded cell.
 // Can be used in place of ID comparison (technically) but it's not much of a benefit.
 typedef struct tsc_celltable {
     void *payload;
     void (*update)(tsc_cell *cell, int x, int y, int ux, int uy, void *payload);
+    int (*canMove)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, void *payload);
 } tsc_celltable;
 
 tsc_celltable *tsc_cell_newTable(const char *id);

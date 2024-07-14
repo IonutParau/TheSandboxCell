@@ -13,6 +13,7 @@ const char *currentMod = NULL;
 
 void tsc_loadMod(const char *id) {
     currentMod = id;
+    tsc_initMod(id); // Actually initialize it with the modloader
 }
 
 const char *tsc_padWithModID(const char *id) {
@@ -32,6 +33,11 @@ bool tsc_hasMod(const char *id) {
 
 const char *tsc_currentModID() {
     return currentMod;
+}
+
+const char *tsc_registerCell(const char *id, const char *name, const char *description) {
+    const char *actualID = tsc_strintern(tsc_padWithModID(id));
+    return actualID;
 }
 
 tsc_category *rootCategory;

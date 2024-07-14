@@ -1,12 +1,17 @@
 # Actual TODO
 
-Things to actually do.
-- Give `textures_dev` a wall texture
+For v0.0.1:
+- Middle click to copy
+- Add selecting cells
+- V3 encoding
+- V1 & V2 decoding
+- DLL Mod Loader
+- Icons for loading, saving, set initial, restore initial
+
+For v0.0.2:
 - Optimize rendering using cell skipping and rectangle optimizations
-- Optimize `tsc_strintern`
 - Add more comments for people who want to contribute
 - Finish implementing `ui.c`
-- Add a cellbar
 - Add a main menu
 - Add a settings menu
 

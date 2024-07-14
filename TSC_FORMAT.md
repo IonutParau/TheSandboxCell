@@ -88,11 +88,7 @@ the encoder can re-encode them if they so choose (though it is not recommended, 
 
 ## Cell binary format
 
-At a high level, the binary format of a cell can be viewed as:
-```
-<cell type data><flags?><cell data?>
-```
-
+At a high level, the binary format of a cell can be viewed as a single interger, `Cell type data`.
 `Cell type data` is an integer that encodes the ID, background ID, rotation, background rotation, whether it has flags, whether it has cell data.
 
 It and `maxn` (more on it in a bit) are calculated like so:
@@ -102,14 +98,12 @@ It and `maxn` (more on it in a bit) are calculated like so:
 -- #ids is the length of the cell ID array
 -- #backgrounds is the length of the background ID array
 
-local n = rot + backgroundRot * 4 + hasflags * 16 + hasdata * 64 + id * 256 + background * 256 * #ids
+local n = rot + backgroundRot * 4 + id * 16 + background * #ids * 16
 -- Each part is set to its highest value
-local maxn = 3 + 3 * 4 + 1 * 16 + 1 * 32 + (#ids-1) * 64 + (#backgrounds-1) * 64 * #ids
+local maxn = 3 + 3 * 4 + (#ids-1) * 16 + (#backgrounds-1) * #ids * 16
 ```
 
 The length of the `cell type data` integer varies as well. It is the amount of bytes minimum to store `maxn`.
-
-`<flags?>` is only there if hasflags is `1`. If it is there, it is an 8 byte integer. If flags isn't there, you can assume flags are set to `0`.
 
 ### Cell data
 

@@ -412,10 +412,10 @@ const char *tsc_textures_load(tsc_resourcepack *pack, const char *id, const char
     snprintf(filepath, 1024, "mods/%s/textures/%s", tsc_currentModID(), file);
     tsc_pathfix(filepath);
 
-    const char *resource = tsc_padWithModID(id);
-    Texture texture = LoadTexture(file);
+    const char *resource = tsc_strintern(tsc_padWithModID(id));
+    Texture texture = LoadTexture(filepath);
     rp_resourceTablePut(pack->textures, resource, &texture);
-    return tsc_strintern(resource);
+    return resource;
 }
 
 const char *tsc_sound_load(tsc_resourcepack *pack, const char *id, const char *file) {
@@ -423,9 +423,8 @@ const char *tsc_sound_load(tsc_resourcepack *pack, const char *id, const char *f
     snprintf(filepath, 1024, "mods/%s/audio/%s", tsc_currentModID(), file);
     tsc_pathfix(filepath);
 
-    const char *resource = tsc_padWithModID(id);
-    resource = tsc_strintern(resource);
-    Sound sound = LoadSound(file);
+    const char *resource = tsc_strintern(tsc_padWithModID(id));
+    Sound sound = LoadSound(filepath);
     rp_resourceTablePut(pack->audio, resource, &sound);
     rp_registerSound(resource);
     return resource;

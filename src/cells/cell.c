@@ -132,7 +132,7 @@ static tsc_cell_table_arr cell_table_arr = {NULL, NULL, 0};
 
 tsc_celltable *tsc_cell_newTable(const char *id) {
     tsc_celltable *table = malloc(sizeof(tsc_celltable));
-    tsc_celltable empty = {NULL, NULL};
+    tsc_celltable empty = {NULL, NULL, NULL};
     *table = empty;
     size_t idx = cell_table_arr.tablec++;
     cell_table_arr.tables = realloc(cell_table_arr.tables, sizeof(tsc_celltable *) * cell_table_arr.tablec);
@@ -164,7 +164,10 @@ int tsc_cell_canMove(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, con
     if(cell->id == builtin.wall) return 0;
     if(cell->id == builtin.slide) return  dir % 2 == cell->rot % 2;
 
-    return 1;
+    tsc_celltable *celltable = tsc_cell_getTable(cell);
+    if(celltable == NULL) return 1;
+    if(celltable->canMove == NULL) return 1;
+    return celltable->canMove(grid, cell, x, y, dir, forceType, celltable->payload);
 }
 
 float tsc_cell_getBias(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType) {

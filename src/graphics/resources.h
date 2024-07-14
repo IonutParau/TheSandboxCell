@@ -6,8 +6,6 @@
 #include <raylib.h>
 #include <stddef.h>
 
-// hideapi
-
 // These are for the implementation.
 // You likely won't care.
 
@@ -43,9 +41,11 @@ typedef struct tsc_resourcepack {
 // If something isn't found, it is yoinked from here.
 // If somehting isn't found here, then you'll likely get segfaults (or errors).
 extern tsc_resourcepack *defaultResourcePack;
+tsc_resourcepack *tsc_getResourcePack(const char *id);
+
+// hideapi
 
 tsc_resourcepack *tsc_createResourcePack(const char *id);
-tsc_resourcepack *tsc_getResourcePack(const char *id);
 tsc_resourcepack *tsc_indexResourcePack(size_t idx);
 void tsc_enableResourcePack(tsc_resourcepack *pack);
 void tsc_disableResourcePack(tsc_resourcepack *pack);

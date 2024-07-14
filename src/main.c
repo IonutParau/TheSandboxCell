@@ -45,6 +45,9 @@ int main() {
         fprintf(stderr, "Default texture pack is missing.\n");
         return 1;
     }
+
+    tsc_loadAllMods();
+    
     tsc_enableResourcePack(defaultResourcePack);
     tsc_setupRendering();
 

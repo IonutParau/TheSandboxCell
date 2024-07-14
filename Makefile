@@ -4,14 +4,14 @@ CFLAGS=-c -fPIC
 ECFLAGS=
 
 LINKER=gcc
-LFLAGS=-lm -lpthread
+LFLAGS=-lm -lpthread -ldl
 # Extra linking flags (for cross-compiling)
 ELFLAGS=
 
 OUTPUT=thesandboxcell
 LIBRARY=libtsc.so
 
-objects=workers.o utils.o cell.o grid.o resources.o rendering.o subticks.o saving.o saving_buffer.o ui.o api.o tinycthread.o ticking.o
+objects=workers.o utils.o cell.o grid.o resources.o rendering.o subticks.o saving.o saving_buffer.o ui.o api.o tinycthread.o ticking.o modloader.o
 
 LINKRAYLIB=-lraylib -lGL -lpthread -ldl -lrt -lX11 -lm
 
@@ -117,5 +117,7 @@ ui.o: src/graphics/ui.c
 	$(CC) $(CFLAGS) src/graphics/ui.c -o ui.o
 api.o: src/api/api.c
 	$(CC) $(CFLAGS) src/api/api.c -o api.o
+modloader.o: src/api/modloader.c
+	$(CC) $(CFLAGS) src/api/modloader.c -o modloader.o
 tinycthread.o: src/threads/tinycthread.c
 	$(CC) $(CFLAGS) src/threads/tinycthread.c -o tinycthread.o

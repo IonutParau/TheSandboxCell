@@ -7,6 +7,8 @@
 // hideapi
 
 void tsc_loadMod(const char *id);
+void tsc_initMod(const char *id);
+void tsc_loadAllMods();
 const char *tsc_padWithModID(const char *id);
 
 // hideapi

@@ -28,7 +28,11 @@ void tsc_saving_encodeWithSmallest(tsc_saving_buffer *buffer, tsc_grid *grid) {
     for(size_t i = 0; i < savingc; i++) {
         if(saving_arr[i].encode == NULL) continue;
         tsc_saving_buffer tmp = tsc_saving_newBuffer(NULL);
-        saving_arr[i].encode(&tmp, grid);
+        if(saving_arr[i].encode(&tmp, grid) == 0) {
+            // Encoding failed.
+            tsc_saving_deleteBuffer(tmp);
+            continue;
+        }
         if(tmp.len < bestSize) {
             bestSize = tmp.len;
             tsc_saving_deleteBuffer(best);

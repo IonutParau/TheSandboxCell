@@ -66,6 +66,7 @@ if task == "generate" then
     useHeader(headers.ui)
     useHeader(headers.workers)
     useHeader(headers.utils)
+    useHeader(headers.api)
 
     local out = io.stdout
     for i=2,#arg do
@@ -76,9 +77,9 @@ if task == "generate" then
         end
     end
 
-    out:write("ifdef __cplusplus\n")
+    out:write("#ifdef __cplusplus\n")
     out:write("extern \"C\" {\n")
-    out:write("endif\n")
+    out:write("#endif\n")
 
     for _, header in ipairs(usedHeaders) do
         local file = io.open(fixPath(header), "r")
@@ -100,9 +101,9 @@ if task == "generate" then
         file:close()
     end
 
-    out:write("ifdef __cplusplus\n")
+    out:write("#ifdef __cplusplus\n")
     out:write("}\n")
-    out:write("endif\n")
+    out:write("#endif\n")
 
     if out ~= io.stdout then
         out:close()
@@ -197,6 +198,7 @@ if task == "compile" then
                 library,
                 "-r resources",
                 "-r shaders",
+                "mods",
             }
             if raylibDLL ~= nil then table.insert(files, raylibDLL) end
             os.execute("zip TheSandboxCell.zip " .. table.concat(files, " ") ..  " -9")
