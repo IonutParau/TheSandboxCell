@@ -305,6 +305,14 @@ static void tsc_handleCellPlace() {
 
     if(x < 0 || y < 0 || x >= currentGrid->width || y >= currentGrid->height) return;
 
+    if(IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
+        tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
+        if(cell != NULL) {
+            currentId = cell->id;
+            currentRot = cell->rot;
+        }
+    }
+
     if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         tsc_cell cell = tsc_cell_create(currentId, currentRot);
         for(int ox = -brushSize; ox <= brushSize; ox++) {

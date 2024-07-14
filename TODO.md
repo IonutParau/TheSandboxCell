@@ -1,11 +1,9 @@
 # Actual TODO
 
 For v0.0.1:
-- Middle click to copy
 - Add selecting cells
 - V3 encoding
 - V1 & V2 decoding
-- DLL Mod Loader
 - Icons for loading, saving, set initial, restore initial
 
 For v0.0.2:
