@@ -3,7 +3,6 @@
 For v0.0.1:
 - Optimize rendering using cell skipping and rectangle optimizations
 - Selecting cells (for Copy / Cut / Paste)
-- V3 encoding
 - V1 & V2 decoding
 - Icons for loading, saving, set initial, restore initial
 - Mod signals
