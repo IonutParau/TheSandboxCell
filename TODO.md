@@ -1,6 +1,7 @@
 # Actual TODO
 
 For v0.0.1:
+- Optimize rendering using cell skipping and rectangle optimizations
 - Selecting cells (for Copy / Cut / Paste)
 - V3 encoding
 - V1 & V2 decoding
@@ -8,7 +9,6 @@ For v0.0.1:
 - Mod signals
 
 For v0.0.2:
-- Optimize rendering using cell skipping and rectangle optimizations
 - Add more comments for people who want to contribute
 - Finish implementing `ui.c`
 - Add a main menu

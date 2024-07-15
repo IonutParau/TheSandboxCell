@@ -19,11 +19,12 @@ typedef struct camera_t {
 static camera_t renderingCamera;
 static Shader renderingRepeatingShader;
 static unsigned int renderingRepeatingScaleLoc;
-static Texture renderingEmpty;
 static RenderTexture renderingCellTexture;
 static int renderingCellBrushSize;
+static const char *renderingCellBrushId = NULL;
 static ui_frame *renderingGameUI;
 static tsc_categorybutton *renderingCellButtons = NULL;
+static double renderingApproximationSize = 4;
 
 const char *currentId = NULL;
 char currentRot = 0;
@@ -49,10 +50,11 @@ void tsc_resetRendering() {
     renderingCamera.y = 0;
     renderingCamera.cellSize = 32;
     renderingCamera.speed = 200;
-    renderingEmpty = textures_get(builtin.empty);
     currentId = builtin.mover;
     currentRot = 0;
     isInitial = true;
+    renderingCellBrushSize = 0;
+    renderingCellBrushId = NULL;
 }
 
 void tsc_setupRendering() {
@@ -60,7 +62,6 @@ void tsc_setupRendering() {
     renderingRepeatingShader = LoadShader(NULL, tsc_pathfixi("shaders/repeating.glsl"));
     renderingRepeatingScaleLoc = GetShaderLocation(renderingRepeatingShader, "scale");
     renderingCellTexture = LoadRenderTexture(1, 1);
-    renderingCellBrushSize = 0;
     renderingGameUI = tsc_ui_newFrame();
 
     // Why is this in setupRendering?
@@ -109,13 +110,25 @@ void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat) 
         size};
     Color color = WHITE;
     color.a = opacity * 255;
+    if(renderingCamera.cellSize < renderingApproximationSize) {
+        Color approx = textures_getApproximation(cell->texture == NULL ? cell->id : cell->texture);
+        approx = ColorAlphaBlend(approx, approx, color);
+        Vector2 origin = {size / 2, size / 2};
+        // My precious little hack
+        // Makes sense if you think about it... but I never think
+        dest.x -= renderingCamera.cellSize * gridRepeat - origin.x;
+        dest.y -= renderingCamera.cellSize * gridRepeat - origin.y;
+        DrawRectanglePro(dest, origin, 0, approx);
+        return;
+    }
     // Basic cells get super optimized rendering
     if(gridRepeat > 0) {
         // We need a render texture that is big enough
-        if(renderingCellBrushSize != gridRepeat) {
+        if(renderingCellBrushSize != gridRepeat || renderingCellBrushId != cell->id) {
             UnloadRenderTexture(renderingCellTexture);
             renderingCellTexture = LoadRenderTexture(size, size);
             renderingCellBrushSize = gridRepeat;
+            renderingCellBrushId = cell->id;
         }
         float repeat[] = {gridRepeat * 2 + 1, gridRepeat * 2 + 1};
         SetShaderValue(renderingRepeatingShader, renderingRepeatingScaleLoc, repeat, SHADER_UNIFORM_VEC2);
@@ -200,17 +213,22 @@ static void tsc_updateCellbar(tsc_category *category, tsc_categorybutton *button
 }
 
 void tsc_drawGrid() {
-    Texture empty = renderingEmpty;
-    float emptyScale[2] = {currentGrid->width, currentGrid->height};
-    SetShaderValue(renderingRepeatingShader, renderingRepeatingScaleLoc, emptyScale, SHADER_UNIFORM_VEC2);
-    BeginShaderMode(renderingRepeatingShader);
-    {
-        Rectangle emptySrc = {0, 0, empty.width, empty.height};
-        Rectangle emptyDest = {-renderingCamera.x, -renderingCamera.y, renderingCamera.cellSize * currentGrid->width, renderingCamera.cellSize * currentGrid->height};
-        Vector2 emptyOrigin = {0, 0};
-        DrawTexturePro(empty, emptySrc, emptyDest, emptyOrigin, 0, WHITE);
+    Vector2 emptyOrigin = {0, 0};
+    Rectangle emptyDest = {-renderingCamera.x, -renderingCamera.y, renderingCamera.cellSize * currentGrid->width, renderingCamera.cellSize * currentGrid->height};
+    if(renderingCamera.cellSize < renderingApproximationSize) {
+        Color approx = textures_getApproximation(builtin.empty);
+        DrawRectanglePro(emptyDest, emptyOrigin, 0, approx);
+    } else {
+        Texture empty = textures_get(builtin.empty);
+        float emptyScale[2] = {currentGrid->width, currentGrid->height};
+        SetShaderValue(renderingRepeatingShader, renderingRepeatingScaleLoc, emptyScale, SHADER_UNIFORM_VEC2);
+        BeginShaderMode(renderingRepeatingShader);
+        {
+            Rectangle emptySrc = {0, 0, empty.width, empty.height};
+            DrawTexturePro(empty, emptySrc, emptyDest, emptyOrigin, 0, WHITE);
+        }
+        EndShaderMode();
     }
-    EndShaderMode();
 
     int sx = tsc_cellScreenX(0);
     if(sx < 0) sx = 0;

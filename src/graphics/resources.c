@@ -18,6 +18,51 @@ size_t rp_allc = 0;
 tsc_resourcepack **rp_enabled = NULL;
 size_t rp_enabledc = 0;
 
+typedef struct tsc_texture_resource {
+    volatile Texture texture;
+    volatile Color approximation;
+} tsc_texture_resource;
+
+// Not good for BIG textures.
+static Color __attribute__((optimize("O0"))) tsc_texture_computeApproximation(Texture texture) {
+    // Copy to CPU the image buffer
+    Image image = LoadImageFromTexture(texture);
+    Color *colors = LoadImageColors(image);
+    double alphaSum = 0;
+    for(int x = 0; x < image.width; x++) {
+        for(int y = 0; y < image.height; y++) {
+            int i = y * image.width + x;
+            Color pixel = colors[i];
+            alphaSum += ((double)pixel.a) / 255;
+        }
+    }
+
+    double r, g, b, a = 0;
+    for(int x = 0; x < image.width; x++) {
+        for(int y = 0; y < image.height; y++) {
+            int i = y * image.width + x;
+            Color pixel = colors[i];
+            double red, green, blue, alpha = 0;
+            red = (double)pixel.r / 255;
+            green = (double)pixel.g / 255;
+            blue = (double)pixel.b / 255;
+            alpha = (double)pixel.a / 255;
+
+            r += red * alpha / alphaSum;
+            g += green * alpha / alphaSum;
+            b += blue * alpha / alphaSum;
+            a += alpha * alpha / alphaSum;
+        }
+    }
+
+    // Cleanup
+    UnloadImageColors(colors);
+    UnloadImage(image);
+
+    Color out = {r * 255, g * 255, b * 255, a * 255};
+    return out;
+}
+
 static tsc_resourcetable *rp_createResourceTable(size_t itemsize) {
     tsc_resourcetable *table = malloc(sizeof(tsc_resourcetable));
     table->itemsize = itemsize;
@@ -165,11 +210,13 @@ valid_extension:
             tsc_pathfix(buffer);
             printf("Loading %s\n", buffer);
             Texture texture = LoadTexture(buffer);
+            Color approximation = tsc_texture_computeApproximation(texture);
+            tsc_texture_resource resource = {texture, approximation};
             if(modid == NULL) {
-                rp_resourceTablePut(pack->textures, file, &texture);
+                rp_resourceTablePut(pack->textures, file, &resource);
             } else {
                 snprintf(buffer, bufsize, "%s:%s", modid, file);
-                rp_resourceTablePut(pack->textures, buffer, &texture);
+                rp_resourceTablePut(pack->textures, buffer, &resource);
             }
         }
     }
@@ -296,7 +343,7 @@ tsc_resourcepack *tsc_createResourcePack(const char *id) {
     pack->readme = NULL;
     pack->license = NULL;
     
-    pack->textures = rp_createResourceTable(sizeof(Texture));
+    pack->textures = rp_createResourceTable(sizeof(tsc_texture_resource));
     pack->audio = rp_createResourceTable(sizeof(Sound));
     pack->font = NULL;
 
@@ -364,8 +411,27 @@ start:;
     for(size_t i = 0; i < rp_enabledc; i++) {
         tsc_resourcepack *pack = tsc_indexEnabledResourcePack(rp_enabledc - i - 1);
         if(pack == NULL) continue;
-        Texture *texture = rp_resourceTableGet(pack->textures, key);
-        if(texture != NULL) return *texture;
+        tsc_texture_resource *texture = rp_resourceTableGet(pack->textures, key);
+        if(texture != NULL) return texture->texture;
+    }
+
+    if(tsc_streql(key, "fallback")) {
+        // Fallback texture is not found, panic.
+        fprintf(stderr, "fallback.png missing. Please ensure at least one enabled resource pack contains it\n");
+        exit(1);
+    }
+
+    key = tsc_strintern("fallback");
+    goto start;
+}
+
+Color textures_getApproximation(const char *key) {
+start:;
+    for(size_t i = 0; i < rp_enabledc; i++) {
+        tsc_resourcepack *pack = tsc_indexEnabledResourcePack(rp_enabledc - i - 1);
+        if(pack == NULL) continue;
+        tsc_texture_resource *texture = rp_resourceTableGet(pack->textures, key);
+        if(texture != NULL) return texture->approximation;
     }
 
     if(tsc_streql(key, "fallback")) {

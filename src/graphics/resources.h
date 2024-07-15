@@ -55,6 +55,7 @@ void tsc_disableResourcePack(tsc_resourcepack *pack);
 tsc_resourcepack *tsc_indexEnabledResourcePack(size_t idx);
 
 Texture textures_get(const char *key);
+Color textures_getApproximation(const char *key);
 
 Sound audio_get(const char *key);
 
