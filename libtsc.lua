@@ -43,6 +43,7 @@ if task == "generate" then
         utils = "src/utils.h",
         -- api.h is confusingly named by yours truly, but I don't care
         api = "src/api/api.h",
+        value = "src/api/value.h",
     }
 
     local usedHeaders = {}
@@ -67,6 +68,7 @@ if task == "generate" then
     useHeader(headers.workers)
     useHeader(headers.utils)
     useHeader(headers.api)
+    useHeader(headers.value)
 
     local out = io.stdout
     for i=2,#arg do

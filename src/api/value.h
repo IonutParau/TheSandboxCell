@@ -33,7 +33,7 @@ typedef struct tsc_array_t {
 typedef struct tsc_object_t {
     size_t refc;
     tsc_value *values;
-    const char **keys;
+    char **keys;
     size_t len;
 } tsc_object_t;
 
@@ -63,12 +63,13 @@ void tsc_retain(tsc_value value);
 void tsc_destroy(tsc_value value);
 
 tsc_value tsc_index(tsc_value list, size_t index);
-tsc_value tsc_setIndex(tsc_value list, size_t index);
+void tsc_setIndex(tsc_value list, size_t index, tsc_value value);
 tsc_value tsc_getKey(tsc_value object, const char *key);
-tsc_value tsc_setKey(tsc_value object, const char *key, tsc_value value);
+void tsc_setKey(tsc_value object, const char *key, tsc_value value);
 
 bool tsc_isInt(tsc_value value);
 bool tsc_isNumber(tsc_value value);
+bool tsc_isNumerical(tsc_value value);
 bool tsc_isBoolean(tsc_value value);
 bool tsc_isString(tsc_value value);
 bool tsc_isArray(tsc_value value);
@@ -76,7 +77,7 @@ bool tsc_isObject(tsc_value value);
 
 int64_t tsc_toInt(tsc_value value);
 double tsc_toNumber(tsc_value value);
-double tsc_toBoolean(tsc_value value);
+bool tsc_toBoolean(tsc_value value);
 const char *tsc_toString(tsc_value value);
 const char *tsc_toLString(tsc_value value, size_t *len);
 size_t tsc_getLength(tsc_value value);

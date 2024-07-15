@@ -11,7 +11,7 @@ ELFLAGS=
 OUTPUT=thesandboxcell
 LIBRARY=libtsc.so
 
-objects=workers.o utils.o cell.o grid.o resources.o rendering.o subticks.o saving.o saving_buffer.o ui.o api.o tinycthread.o ticking.o modloader.o
+objects=workers.o utils.o cell.o grid.o resources.o rendering.o subticks.o saving.o saving_buffer.o ui.o api.o tinycthread.o ticking.o modloader.o value.o
 
 LINKRAYLIB=-lraylib -lGL -lpthread -ldl -lrt -lX11 -lm
 
@@ -119,5 +119,7 @@ api.o: src/api/api.c
 	$(CC) $(CFLAGS) src/api/api.c -o api.o
 modloader.o: src/api/modloader.c
 	$(CC) $(CFLAGS) src/api/modloader.c -o modloader.o
+value.o: src/api/value.c
+	$(CC) $(CFLAGS) src/api/value.c -o value.o
 tinycthread.o: src/threads/tinycthread.c
 	$(CC) $(CFLAGS) src/threads/tinycthread.c -o tinycthread.o

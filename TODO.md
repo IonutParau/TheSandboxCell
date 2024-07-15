@@ -5,6 +5,7 @@ For v0.0.1:
 - V3 encoding
 - V1 & V2 decoding
 - Icons for loading, saving, set initial, restore initial
+- Mod signals
 
 For v0.0.2:
 - Optimize rendering using cell skipping and rectangle optimizations
