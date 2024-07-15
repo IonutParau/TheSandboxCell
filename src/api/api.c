@@ -208,6 +208,13 @@ static void tsc_loadButton(void *_) {
     }
 }
 
+static void tsc_saveButton(void *_) {
+    tsc_saving_buffer buffer = tsc_saving_newBuffer("");
+    tsc_saving_encodeWithSmallest(&buffer, currentGrid);
+    SetClipboardText(buffer.mem);
+    tsc_saving_deleteBuffer(buffer);
+}
+
 static void tsc_restoreInitial(void *_) {
     if(isGameTicking) return;
     tsc_copyGrid(currentGrid, tsc_getGrid("initial"));
@@ -224,6 +231,7 @@ void tsc_loadDefaultCellBar() {
     tsc_category *root = tsc_rootCategory();
 
     tsc_category *tools = tsc_newCategory("Tools", "Simple tools and buttons", "icon");
+    tsc_addButton(tools, "opengl ftw", tsc_saveButton, NULL);
     tsc_addButton(tools, "opengl ftw", tsc_loadButton, NULL);
     tsc_addButton(tools, "generator", tsc_setInitial, NULL);
     tsc_addButton(tools, "rotator_cw", tsc_restoreInitial, NULL);

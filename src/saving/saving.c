@@ -27,7 +27,7 @@ void tsc_saving_encodeWithSmallest(tsc_saving_buffer *buffer, tsc_grid *grid) {
 
     for(size_t i = 0; i < savingc; i++) {
         if(saving_arr[i].encode == NULL) continue;
-        tsc_saving_buffer tmp = tsc_saving_newBuffer(NULL);
+        tsc_saving_buffer tmp = tsc_saving_newBufferCapacity(NULL, 4096);
         if(saving_arr[i].encode(&tmp, grid) == 0) {
             // Encoding failed.
             tsc_saving_deleteBuffer(tmp);
@@ -67,6 +67,16 @@ void tsc_saving_decodeWithAny(const char *code, tsc_grid *grid) {
 }
 
 const char *saving_base74 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!$%&+-.=?^{}";
+
+static int tsc_saving_count74(int num) {
+    if(num == 0) return 1;
+    int n = 0;
+    while(num > 0) {
+        n++;
+        num = num / strlen(saving_base74);
+    }
+    return n;
+}
 
 static char *tsc_saving_encode74(int num) {
     if(num == 0) {
@@ -108,11 +118,13 @@ static int tsc_saving_decode74(const char *num) {
     return n;
 }
 
+
 // Caller owns memory
 // NULL if conversion fails (V3 does not support the cell)
 static char *tsc_v3_celltochar(tsc_cell *cell, bool hasBg) {
-    if(cell->data == NULL) return NULL; // Can not be stored accurately
-    if(cell->texture == NULL) return NULL; // Can not be stored accurately
+    if(cell->data != NULL) return NULL; // Can not be stored accurately
+    if(cell->texture != NULL) return NULL; // Can not be stored accurately
+    if(cell->flags != 0) return NULL; // Can not be stored accurately
     if(cell->id == builtin.empty) {
         return tsc_saving_encode74(72 + (hasBg ? 1 : 0));
     }
@@ -131,6 +143,7 @@ static char *tsc_v3_celltochar(tsc_cell *cell, bool hasBg) {
             goto success;
         }
     }
+    return NULL; // Can not be stored accurately
 success:
     return tsc_saving_encode74(id * 2 + (hasBg ? 1 : 0) + ((int)cell->rot) * 9 * 2);
 }
@@ -277,6 +290,100 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
     free(desc);
 }
 
+static void tsc_v3_writeRepeater(tsc_saving_buffer *buffer, int length, int back) {
+    char *elen = tsc_saving_encode74(length);
+    char *eback = tsc_saving_encode74(back-1);
+    if(length >= 74) {
+        tsc_saving_writeFormat(buffer, "(%s(%s)", eback, elen);
+    } else if(back > 74) {
+        tsc_saving_writeFormat(buffer, "(%s)%s", eback, elen);
+    } else {
+        tsc_saving_writeFormat(buffer, ")%s%s", eback, elen);
+    }
+    free(elen);
+    free(eback);
+}
+
+static int tsc_v3_weightOfRepeat(int length, int back) {
+    if(length >= 74) {
+        return 3 + tsc_saving_count74(back) + tsc_saving_count74(length);
+    }
+    if(back > 74) {
+        return 2 + tsc_saving_count74(back) + tsc_saving_count74(length);
+    }
+    return 1 + tsc_saving_count74(back) + tsc_saving_count74(length);
+}
+
+static int tsc_v3_encode(tsc_saving_buffer *buffer, tsc_grid *grid) {
+    tsc_saving_writeStr(buffer, "V3;");
+    char *ewidth = tsc_saving_encode74(grid->width);
+    char *eheight = tsc_saving_encode74(grid->height);
+    tsc_saving_writeFormat(buffer, "%s;%s;", ewidth, eheight);
+    free(ewidth);
+    free(eheight);
+
+    char *cells = malloc(sizeof(char) * grid->width * grid->height);
+    int ci = 0;
+    for(int y = grid->height-1; y >= 0; y--) {
+        for(int x = 0; x < grid->width; x++) {
+            tsc_cell *cell = tsc_grid_get(grid, x, y);
+            bool hasbg = false;
+
+            char *encoded = tsc_v3_celltochar(cell, hasbg);
+            if(encoded == NULL) {
+                free(cells);
+                return 0; // V3 can't encode this
+            }
+
+            // Should ONLY be one character
+            cells[ci] = *encoded;
+            ci++;
+            free(encoded);
+        }
+    }
+
+    int cell_len = grid->width * grid->height;
+    // Dispose of final empties, for compression.
+    while(cells[cell_len-1] == '{') {
+        cell_len--;
+    }
+
+    for(int i = 0; i < cell_len; i++) {
+        int bestback = -1;
+        int bestbacklen = 0;
+        for(int b = 1; b < i; b++) {
+            if(cells[i] == cells[i-b]) {
+                int len = 1;
+                while(i + len < cell_len) {
+                    if(cells[i+len] == cells[i-b+len]) {
+                        len++;
+                    } else {
+                        break;
+                    }
+                }
+                int weight = tsc_v3_weightOfRepeat(b, len);
+                if(len > bestbacklen && weight < len) {
+                    bestbacklen = len;
+                    bestback = b;
+                }
+            }
+        }
+
+        // Either no copy found or the copy would not save space
+        if(bestback == -1) {
+            tsc_saving_write(buffer, cells[i]);
+        } else {
+            tsc_v3_writeRepeater(buffer, bestbacklen, bestback);
+            i += bestbacklen - 1;
+        }
+    }
+    tsc_saving_write(buffer, ';');
+
+    tsc_saving_writeFormat(buffer, "%s;%s;", grid->title == NULL ? "" : grid->title, grid->desc == NULL ? "" : grid->desc);
+
+    return 1; // Yo it worked!
+}
+
 void tsc_saving_register(tsc_saving_format format) {
     size_t idx = savingc++;
     saving_arr = realloc(saving_arr, sizeof(tsc_saving_format) * savingc);
@@ -288,6 +395,6 @@ void tsc_saving_registerCore() {
     v3.name = "V3";
     v3.header = "V3;";
     v3.decode = tsc_v3_decode;
-    v3.encode = NULL;
+    v3.encode = tsc_v3_encode;
     tsc_saving_register(v3);
 }

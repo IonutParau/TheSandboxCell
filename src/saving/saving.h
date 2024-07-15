@@ -7,9 +7,11 @@
 typedef struct tsc_saving_buffer {
     char *mem;
     size_t len;
+    size_t cap;
 } tsc_saving_buffer;
 
 tsc_saving_buffer tsc_saving_newBuffer(const char *initial);
+tsc_saving_buffer tsc_saving_newBufferCapacity(const char *initial, size_t capacity);
 void tsc_saving_deleteBuffer(tsc_saving_buffer buffer);
 void tsc_saving_write(tsc_saving_buffer *buffer, char ch);
 void tsc_saving_writeStr(tsc_saving_buffer *buffer, const char *str);

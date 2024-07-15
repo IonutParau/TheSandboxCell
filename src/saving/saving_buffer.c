@@ -9,6 +9,27 @@ tsc_saving_buffer tsc_saving_newBuffer(const char *initial) {
     tsc_saving_buffer buffer;
     buffer.mem = tsc_strdup(initial);
     buffer.len = initial == NULL ? 0 : strlen(initial);
+    buffer.cap = buffer.len;
+    return buffer;
+}
+
+tsc_saving_buffer tsc_saving_newBufferCapacity(const char *initial, size_t capacity) {
+    size_t initlen = initial == NULL ? 0 : strlen(initial);
+    if(capacity < initlen) {
+        capacity = initlen;
+    }
+    tsc_saving_buffer buffer;
+    if(capacity != 0) {
+        buffer.mem = malloc(sizeof(char) * (capacity + 1));
+        if(initial != NULL) strcpy(buffer.mem, initial);
+        buffer.mem[capacity] = '\0';
+        buffer.len = initlen;
+        buffer.cap = capacity;
+    } else {
+        buffer.mem = NULL;
+        buffer.len = 0;
+        buffer.cap = 0;
+    }
     return buffer;
 }
 
@@ -16,22 +37,31 @@ void tsc_saving_deleteBuffer(tsc_saving_buffer buffer) {
     free(buffer.mem);
 }
 
-void tsc_saving_write(tsc_saving_buffer *buffer, char ch) {
-    size_t idx = buffer->len++;
-    buffer->mem = realloc(buffer->mem, sizeof(char) * (buffer->len + 1));
-    buffer->mem[idx] = ch;
-    buffer->mem[buffer->len] = '\0';
-}
-
 static char *tsc_saving_reserveFor(tsc_saving_buffer *buffer, size_t amount) {
+    while(buffer->len + amount > buffer->cap) {
+        if(buffer->cap != 0) {
+            buffer->cap *= 2;
+            buffer->mem = realloc(buffer->mem, sizeof(char) * (buffer->cap + 1));
+            buffer->mem[buffer->cap] = '\0';
+        } else {
+            buffer->cap = buffer->len + amount;
+            buffer->mem = malloc(sizeof(char) * (amount + 1));
+            buffer->mem[amount] = '\0';
+        }
+    }
     size_t idx = buffer->len;
     buffer->len += amount;
-    buffer->mem = realloc(buffer->mem, sizeof(char) * (buffer->len + 1));
     buffer->mem[buffer->len] = '\0';
     return buffer->mem + idx;
 }
 
+void tsc_saving_write(tsc_saving_buffer *buffer, char ch) {
+    char *amount = tsc_saving_reserveFor(buffer, 1);
+    *amount = ch;
+}
+
 void tsc_saving_writeStr(tsc_saving_buffer *buffer, const char *str) {
+    if(str == NULL) return;
    strcpy(tsc_saving_reserveFor(buffer, strlen(str)), str); 
 }
 
@@ -39,7 +69,9 @@ void tsc_saving_writeFormat(tsc_saving_buffer *buffer, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     int amount = vsnprintf(NULL, 0, fmt, args);
+    va_end(args);
     char *buf = tsc_saving_reserveFor(buffer, amount);
+    va_start(args, fmt);
     vsprintf(buf, fmt, args);
     va_end(args);
 }
