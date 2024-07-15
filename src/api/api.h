@@ -10,8 +10,12 @@ void tsc_loadMod(const char *id);
 void tsc_initMod(const char *id);
 void tsc_loadAllMods();
 const char *tsc_padWithModID(const char *id);
+void tsc_addCoreSplashes();
 
 // hideapi
+
+void tsc_addSplash(const char *splash, double weight);
+const char *tsc_randomSplash();
 
 // Check if mod exists
 bool tsc_hasMod(const char *id);

@@ -122,6 +122,7 @@ void tsc_nukeGrids() {
     free(gridStorage->grid);
     free(gridStorage->id);
     free(gridStorage);
+    gridStorage = NULL;
     tsc_deleteGrid(currentGrid);
     currentGrid = NULL;
 }

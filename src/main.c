@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "cells/grid.h"
 #include "cells/subticks.h"
 #include "saving/saving.h"
@@ -16,6 +17,8 @@ void doShit(void *thing) {
 }
 
 int main() {
+    srand(time(NULL));
+
     // Suppress raylib debug messages
     SetTraceLogLevel(LOG_ERROR);
 

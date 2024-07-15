@@ -1,7 +1,6 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <string.h>
 #include "api.h"
 #include "../utils.h"
@@ -35,7 +34,7 @@ static void tsc_initDLLMod(const char *id) {
         exit(1);
         return;
     }
-    void (__cdecl *init)(void) = GetProcAddress(library, sym);
+    void (__cdecl *init)(void) = (void (__cdecl *)(void))GetProcAddress(library, sym);
 #endif
 #ifdef linux
     void *library = dlopen(buffer, RTLD_NOW | RTLD_GLOBAL);

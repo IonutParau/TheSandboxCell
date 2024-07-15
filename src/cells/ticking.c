@@ -6,8 +6,9 @@
 volatile bool isGamePaused = true;
 volatile bool isGameTicking = false;
 volatile double tickTime = 0.0;
-volatile double tickDelay = 0.15;
+volatile double tickDelay = 0.0;
 volatile bool multiTickPerFrame = true;
+volatile bool onlyOneTick = true;
 volatile size_t gameTPS = 0;
 volatile bool isInitial = false;
 
@@ -25,7 +26,7 @@ static int tsc_gridUpdateThread(void *_) {
             cnd_wait(&renderingTickUpdateSignal, &renderingUselessMutex);
             mtx_unlock(&renderingUselessMutex);
         } else {
-            if(tickTime < tickDelay || isGamePaused) {
+            if((tickTime < tickDelay || isGamePaused) && !onlyOneTick) {
                 continue;
             }
         }
@@ -47,6 +48,7 @@ static int tsc_gridUpdateThread(void *_) {
             gameTPS = ticksInSecond / delta;
             ticksInSecond = 0;
         }
+        onlyOneTick = false;
         isGameTicking = false;
     }
 }

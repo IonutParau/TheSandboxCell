@@ -1,7 +1,7 @@
 # Actual TODO
 
 For v0.0.1:
-- Add selecting cells
+- Selecting cells (for Copy / Cut / Paste)
 - V3 encoding
 - V1 & V2 decoding
 - Icons for loading, saving, set initial, restore initial
@@ -13,18 +13,17 @@ For v0.0.2:
 - Add a main menu
 - Add a settings menu
 
-# Features which may be added (massively varying levels of may be)
+# Planned features
 
 - V1, V2, V3 decoding.
 - Spacing in subticks
-- Optional leak detector with garbage collector in debug builds
 - Basic cell bar
 - SBF1 encoding / decoding
 - Basic main menu
 - Basic editor menu
 - Basic settings menu
 - VX / SSF1 / TSC format support
-- Resource Pack support (shaders, texture packs, audio packs, ui themes, fonts) (unlikely to be fully implemented for some time)
+- Resource Pack support
 - Modding (WebAssembly, Lua, Python)
 - Mod Signals (Mod-to-Mod communication)
 
