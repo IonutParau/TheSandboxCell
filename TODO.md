@@ -24,7 +24,7 @@ For v0.0.2:
 - Basic settings menu
 - VX / SSF1 / TSC format support
 - Resource Pack support
-- Modding (WebAssembly, Lua, Python)
+- Modding (DLL, Lua, Python)
 - Mod Signals (Mod-to-Mod communication)
 
 # Overviews
