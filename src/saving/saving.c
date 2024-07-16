@@ -176,6 +176,7 @@ static char *tsc_v3_nextPart(const char *code, size_t *idx) {
     const char *mem = code + *idx;
     size_t len = 0;
     while(true) {
+        if(code[*idx] == '\0') break;
         if(code[*idx] == ';') {
             (*idx)++;
             break;
@@ -191,7 +192,28 @@ static char *tsc_v3_nextPart(const char *code, size_t *idx) {
     return buf;
 }
 
+static char *tsc_v3_nextPartUntil(const char *code, size_t *idx, char sep) {
+    const char *mem = code + *idx;
+    size_t len = 0;
+    while(true) {
+        if(code[*idx] == '\0') break;
+        if(code[*idx] == sep) {
+            (*idx)++;
+            break;
+        } else {
+            len++;
+            (*idx)++;
+        }
+    }
+    if(len == 0) return NULL;
+    char *buf = malloc(sizeof(char) * (len + 1));
+    buf[len] = '\0';
+    memcpy(buf, mem, sizeof(char) * len);
+    return buf;
+}
+
 static void tsc_v3_decode(const char *code, tsc_grid *grid) {
+    printf("%s\n", code);
     size_t index = 3;
     char *swidth = tsc_v3_nextPart(code, &index);
     char *sheight = tsc_v3_nextPart(code, &index);
@@ -202,7 +224,6 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
     tsc_clearGrid(grid, width, height);
 
     char *cells = tsc_v3_nextPart(code, &index);
-    printf("%s\n", cells);
     tsc_cell *cellArr = malloc(sizeof(tsc_cell) * width * height);
     size_t celli = 0;
     for(int i = 0; cells[i] != '\0'; i++) {
@@ -384,6 +405,73 @@ static int tsc_v3_encode(tsc_saving_buffer *buffer, tsc_grid *grid) {
     return 1; // Yo it worked!
 }
 
+void tsc_v2_decode(const char *code, tsc_grid *grid) {
+    size_t index = 3;
+    char *ewidth = tsc_v3_nextPart(code, &index);
+    char *eheight = tsc_v3_nextPart(code, &index);
+
+    int width = tsc_saving_decode74(ewidth);
+    free(ewidth);
+    int height = tsc_saving_decode74(eheight);
+    free(eheight);
+
+    tsc_clearGrid(grid, width, height);
+
+    char *cells = tsc_v3_nextPart(code, &index);
+
+    tsc_cell *cellArr = malloc(sizeof(tsc_cell) * width * height);
+    int celli = 0;
+    for(size_t i = 0; cells[i] != '\0'; i++) {
+        char c = cells[i];
+        char str[] = {c, '\0'};
+        if(c == ')') {
+            i++;
+            char count[] = {cells[i], '\0'};
+            int amount = tsc_saving_decode74(count);
+            for(int j = 0; j < amount; j++) {
+                // Unsafe copy but none of these cells have any managed memory.
+                cellArr[celli] = cellArr[celli-1];
+                celli++;
+            }
+        } else if(c == '(') {
+            i++;
+            char *count = tsc_v3_nextPartUntil(cells, &i, ')');
+            i--;
+            int amount = tsc_saving_decode74(count);
+            free(count);
+
+            for(int j = 0; j < amount; j++) {
+                cellArr[celli] = cellArr[celli-1];
+                celli++;
+            }
+        } else {
+            bool isbg = false;
+            cellArr[celli] = tsc_v3_chartocell(str, &isbg);
+            celli++;
+        }
+    }
+
+    free(cells);
+    int j = 0;
+    for(int y = height - 1; y >= 0; y--) {
+        for(int x = 0; x < width; x++) {
+            tsc_grid_set(grid, x, y, &cellArr[j]);
+            j++;
+            if(j == celli) goto ohno;
+        }
+    }
+ohno:
+    free(cellArr);
+
+    char *title = tsc_v3_nextPart(code, &index);
+    grid->title = tsc_strintern(title);
+    free(title);
+    
+    char *desc = tsc_v3_nextPart(code, &index);
+    grid->desc = tsc_strintern(desc);
+    free(desc);
+}
+
 void tsc_saving_register(tsc_saving_format format) {
     size_t idx = savingc++;
     saving_arr = realloc(saving_arr, sizeof(tsc_saving_format) * savingc);
@@ -397,4 +485,11 @@ void tsc_saving_registerCore() {
     v3.decode = tsc_v3_decode;
     v3.encode = tsc_v3_encode;
     tsc_saving_register(v3);
+
+    tsc_saving_format v2 = {};
+    v2.name = "V2";
+    v2.header = "V2;";
+    v2.decode = tsc_v2_decode;
+    v2.encode = NULL;
+    tsc_saving_register(v2);
 }

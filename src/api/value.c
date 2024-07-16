@@ -81,12 +81,113 @@ tsc_value tsc_object() {
     return v;
 }
 
+tsc_value tsc_cellPtr(tsc_cell *cell) {
+    tsc_value v;
+    v.tag = TSC_VALUE_CELLPTR;
+    v.cellptr = cell;
+    return v;
+}
+
+tsc_value tsc_ownedCell(tsc_cell *cell) {
+    tsc_value v;
+    v.tag = TSC_VALUE_OWNEDCELL;
+    tsc_ownedcell_t *owned = malloc(sizeof(tsc_ownedcell_t));
+    owned->refc = 1;
+    owned->cell = tsc_cell_clone(cell);
+    v.ownedcell = owned;
+    return v;
+}
+
 void tsc_retain(tsc_value value) {
-    // TODO: retain
+    if(value.tag == TSC_VALUE_STRING) {
+        value.string->refc++;
+        return;
+    }
+    if(value.tag == TSC_VALUE_ARRAY) {
+        value.array->refc++;
+        return;
+    }
+    if(value.tag == TSC_VALUE_OBJECT) {
+        value.object->refc++;
+        return;
+    }
+    if(value.tag == TSC_VALUE_OWNEDCELL) {
+        value.ownedcell->refc++;
+        return;
+    }
 }
 
 void tsc_destroy(tsc_value value) {
-    // TODO: destroy
+    if(value.tag == TSC_VALUE_STRING) {
+        value.string->refc--;
+        if(value.string->refc == 0) {
+            free(value.string->memory);
+            free(value.string);
+        }
+        return;
+    }
+    if(value.tag == TSC_VALUE_ARRAY) {
+        value.array->refc--;
+        if(value.array->refc == 0) {
+            for(size_t i = 0; i < value.array->valuec; i++) {
+                tsc_destroy(value.array->values[i]);
+            }
+            free(value.array->values);
+            free(value.array);
+        }
+        return;
+    }
+    if(value.tag == TSC_VALUE_OBJECT) {
+        value.object->refc--;
+        if(value.object->refc == 0) {
+            for(size_t i = 0; i < value.object->len; i++) {
+                tsc_destroy(value.object->values[i]);
+                free(value.object->keys[i]);
+            }
+            free(value.object->values);
+            free(value.object->keys);
+            free(value.object);
+        }
+        return;
+    }
+    if(value.tag == TSC_VALUE_OWNEDCELL) {
+        value.ownedcell->refc--;
+        if(value.ownedcell->refc == 0) {
+            tsc_cell_destroy(value.ownedcell->cell);
+            free(value.ownedcell);
+        }
+        return;
+    }
+}
+
+void tsc_ensureArgs(tsc_value args, int min) {
+    if(args.tag != TSC_VALUE_ARRAY) return;
+    if(args.array->valuec < min) {
+        args.array->values = realloc(args.array->values, sizeof(tsc_value) * min);
+        for(size_t i = args.array->valuec; i < min; i++) {
+            args.array->values[i] = tsc_null();
+        }
+        args.array->valuec = min;
+    }
+}
+
+void tsc_varArgs(tsc_value args, int min) {
+    if(args.tag != TSC_VALUE_ARRAY) return;
+    tsc_ensureArgs(args, min+1);
+    size_t len = tsc_getLength(args);
+    tsc_value varargs = tsc_array(len - min);
+    for(size_t i = min; i < len; i++) {
+        tsc_value val = tsc_index(args, i);
+        tsc_setIndex(varargs, i - min, val);
+        tsc_destroy(val); // setIndex retains.
+        tsc_destroy(val); // This frees too early. However, after this, we kill it.
+    }
+    // Unsafe delete everything else
+    // This works because we deleted everything before
+    args.array->valuec = min+1;
+    args.array->values = realloc(args.array->values, sizeof(tsc_value) * (min + 1));
+    tsc_setIndex(args, min, varargs);
+    tsc_destroy(varargs);
 }
 
 tsc_value tsc_index(tsc_value list, size_t index) {
@@ -179,6 +280,18 @@ bool tsc_isObject(tsc_value value) {
     return value.tag == TSC_VALUE_OBJECT;
 }
 
+bool tsc_isCellPtr(tsc_value cell) {
+    return cell.tag == TSC_VALUE_CELLPTR;
+}
+
+bool tsc_isOwnedCell(tsc_value cell) {
+    return cell.tag == TSC_VALUE_OWNEDCELL;
+}
+
+bool tsc_isCell(tsc_value cell) {
+    return tsc_isCellPtr(cell) || tsc_isOwnedCell(cell);
+}
+
 int64_t tsc_toInt(tsc_value value) {
     if(value.tag == TSC_VALUE_INT) return value.integer;
     if(value.tag == TSC_VALUE_NUMBER) return value.number;
@@ -234,4 +347,10 @@ const char *tsc_keyAt(tsc_value object, size_t index) {
     if(object.tag != TSC_VALUE_OBJECT) return NULL;
     if(index >= object.object->len) return NULL;
     return object.object->keys[index];
+}
+
+tsc_cell *tsc_toCell(tsc_value value) {
+    if(value.tag == TSC_VALUE_CELLPTR) return value.cellptr;
+    if(value.tag == TSC_VALUE_OWNEDCELL) return &value.ownedcell->cell;
+    return NULL;
 }

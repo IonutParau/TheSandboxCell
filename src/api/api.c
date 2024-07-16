@@ -143,7 +143,7 @@ void tsc_addCell(tsc_category *category, const char *cell) {
     category->itemc++;
 }
 
-void tsc_addButton(tsc_category *category, const char *icon, void (*click)(void *), void *payload) {
+void tsc_addButton(tsc_category *category, const char *icon, const char *name, const char *desc, void (*click)(void *), void *payload) {
     if(category->itemc == category->itemcap) {
         category->itemcap *= 2;
         category->items = realloc(category->items, sizeof(tsc_categoryitem) * category->itemcap);
@@ -152,6 +152,8 @@ void tsc_addButton(tsc_category *category, const char *icon, void (*click)(void 
     category->items[category->itemc].button.click = click;
     category->items[category->itemc].button.payload = payload;
     category->items[category->itemc].button.icon = tsc_strintern(icon);
+    category->items[category->itemc].button.name = tsc_strintern(name);
+    category->items[category->itemc].button.desc = tsc_strintern(desc);
     category->itemc++;
 }
 
@@ -211,7 +213,21 @@ static void tsc_loadButton(void *_) {
 static void tsc_saveButton(void *_) {
     tsc_saving_buffer buffer = tsc_saving_newBuffer("");
     tsc_saving_encodeWithSmallest(&buffer, currentGrid);
+    if(buffer.len == 0) {
+        tsc_sound_play(builtin.audio.explosion);
+    }
     SetClipboardText(buffer.mem);
+    tsc_saving_deleteBuffer(buffer);
+}
+
+static void tsc_saveV3Button(void *_) {
+    tsc_saving_buffer buffer = tsc_saving_newBuffer("");
+    int success = tsc_saving_encodeWith(&buffer, currentGrid, "V3");
+    if(success) {
+        SetClipboardText(buffer.mem);
+    } else {
+        tsc_sound_play(builtin.audio.explosion);
+    }
     tsc_saving_deleteBuffer(buffer);
 }
 
@@ -231,10 +247,11 @@ void tsc_loadDefaultCellBar() {
     tsc_category *root = tsc_rootCategory();
 
     tsc_category *tools = tsc_newCategory("Tools", "Simple tools and buttons", "icon");
-    tsc_addButton(tools, "opengl ftw", tsc_saveButton, NULL);
-    tsc_addButton(tools, "opengl ftw", tsc_loadButton, NULL);
-    tsc_addButton(tools, "generator", tsc_setInitial, NULL);
-    tsc_addButton(tools, "rotator_cw", tsc_restoreInitial, NULL);
+    tsc_addButton(tools, "save", "Save to Clipboard", "Saves the current grid to clipboard using the smallest format", tsc_saveButton, NULL);
+    tsc_addButton(tools, "save_v3", "Save to V3", "Saves the current grid using V3, which is supported by a lot more remakes. This can fail.", tsc_saveV3Button, NULL);
+    tsc_addButton(tools, "load", "Load from Clipboard", "Load a level code from clipboard", tsc_loadButton, NULL);
+    tsc_addButton(tools, "generator", "Set Initial", "Set the current grid state as the initial one", tsc_setInitial, NULL);
+    tsc_addButton(tools, "rotator_cw", "Restore Initial", "Restore the initial grid state", tsc_restoreInitial, NULL);
 
     tsc_addCategory(root, tools);
     tsc_addCell(root, builtin.mover);

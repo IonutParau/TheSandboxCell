@@ -276,8 +276,8 @@ void tsc_drawGrid() {
 
     tsc_ui_pushFrame(renderingGameUI);
     int height = GetScreenHeight();
-    int padding = 20;
-    int cellButton = 40;
+    int padding = 10;
+    int cellButton = 60;
     int rowHeight = cellButton + padding * 2;
     // Cellbar background
     tsc_ui_space(GetScreenWidth());

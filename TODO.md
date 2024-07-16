@@ -3,15 +3,17 @@
 For v0.0.1:
 - Optimize rendering using cell skipping and rectangle optimizations
 - Selecting cells (for Copy / Cut / Paste)
-- V1 & V2 decoding
+- V1 decoding
 - Icons for loading, saving, set initial, restore initial
 - Mod signals
 
 For v0.0.2:
+- Backgrounds
 - Add more comments for people who want to contribute
 - Finish implementing `ui.c`
 - Add a main menu
 - Add a settings menu
+- Modding with Lua and `config.json` (complicates the build step)
 
 # Planned features
 
