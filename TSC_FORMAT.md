@@ -74,6 +74,8 @@ cell and copy a horizontal slice of size (L+1)"
 compression, except it goes vertically instead of horizontally, starting at the bottom.
 - The opcodes `33` - `40` mean "block copy compressed" and are followed by 3 `opcode - 32` byte long integers (N, W & H). It goes back `N` cells, and copies a
 `W+1` x `L+1` block, starting at the bottomleft corner.
+- The opcodes `41` - `48` mean "set flag" which sets the flags of the last cell to the integer `opcode - 40` bytes long after it.
+- The opcode `49` means "set data" which sets the cell data of the last cell to what is encoded after this byte. See `Cell data`.
 
 ## Cell binary format
 
