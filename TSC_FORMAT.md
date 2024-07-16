@@ -1,4 +1,4 @@
-# TSC Saving Format - Draft 1
+# TSC Saving Format - Draft 2
 
 A highly compressable binary saving format for Cell Machine. It supports key-value pair cell data, cell flags, cell IDs (TSC cell ids),
 backgrounds and more. It uses little endian byte order (least significant byte comes first).
@@ -7,12 +7,10 @@ backgrounds and more. It uses little endian byte order (least significant byte c
 
 The text structure of `TSC;` is simple.
 ```
-TSC;<base74 width>;<base74 height>;<title;<description>;<base85 encoded deflate compressed binary cell data>
+TSC;<base74 width>;<base74 height>;<title;<description>;<base2048 encoded deflate compressed binary cell data>
 ```
 
-TSC's Base85 uses a modified key that is Markdown-safe, thus it can be freely shared on applications such as Discord which may process it as markdown.
-The key is `!"#$%&'{)x+,-.}0123456789;w<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[v]^yzabcdefghijklmnopqrstu`
-The index of the character represents its associated value, indexes starting at 0.
+See [this](https://github.com/qntm/base2048/tree/main) for more details.
 
 # The binary format
 
@@ -62,48 +60,36 @@ The grid must start out as empty.
 ### Coordinate space and rotations
 
 0 means right, 1 means down, 2 means left, 3 means up. +x is right, -x is left, +y is down, -y is up.
+When going "back", it goes to the left, unless the border is reached, in which case it goes up one row and out the other side.
 
 ### Opcode format
 
-NOTE: Cells should be treated as both on the grid and on a big array list. These 2 don't have to be the same.
-
 Each opcode starts as a `byte`, but may take additional bytes as operands.
-- The opcode `255` means the cell is skipped. This could either mean an empty cell, or that the cell was put there by other operands before it. It does
-push the cell there onto the cell array list, which means that all opcodes that look back don't skip this cell.
-- The opcodes `247` through `254` (inclusive) mean skipping in a row. After the opcode, a `opcode - 246` byte integer should be there to encode
-the amount of cells skipped, starting at 0. These cells also are pushed.
-- The opcode `246` is followed by an 8-byte integer and specifies the flags that the next simple cell should have (one time use).
-- The opcode `245` should be followed by binary `cell data` and specifies the cell data of the next few cells (one time use).
-- The opcode `0` means put a simple cell. After it should be the binary encoding of a `cell` (defined later)
-- The opcodes `1` through `8` (inclusive) mean 1 cell length compressed. After the opcode are 2 integers (c and r) which are `opcode` bytes long.
-c is how many cells to look back (0 meaning the last cell put there), and r means how many times to copy it.
-- The opcodes `9` through `16` (inclusive) mean slice copy compressed. After the opcode are 3 integers (c, l and r) which are `opcode - 8` bytes long.
-c is how many cells to look back, representing the start of the slice. l is the length of the slice. r is how many times to copy that slice.
-- The opcodes `17` through `24` (inclusive) mean vertical slice copy compressed. Just like slice copy compressed, except it copies it vertically (starting at
-the bottom)
-- The opcodes `25` through `32` (inclusive) mean block compressed. After it are 4 integers (c, w, h and r) which are `opcode - 16`) bytes long.
-c is how many cells to look back, representing the bottom left corner of the block. w and h are the width and height of the block. r is how many times to repeat
-the block. This should put on the grid all rows of the block, but only push the top one `r` times. The other tiles are assumed to be later skipped, although
-the encoder can re-encode them if they so choose (though it is not recommended, as you are storing duplicate data). It pushes the bottom row.
+- The opcode `0` means skip 1 cell
+- The opcodes `1` - `8` means skin `N+2` cells, where `N` is an `opcode` byte long integer immediately aftwards
+- The opcodes `9` - `16` are followed by a `cell data integer` that is `opcode - 8` bytes long immediately afterwards. They add that extra cell
+- The opcodes `17` - `24` mean "slice copy compressed" and are followed by 2 `opcode - 16` byte long integers (N & L). It means "go back (N+1) cells where last
+cell and copy a horizontal slice of size (L+1)"
+- The opcodes `25` - `32` mean "vertical slice copy compressed" and are followed by 2 `opcode - 24` byte long integers (N & L). It is like slice copy
+compression, except it goes vertically instead of horizontally, starting at the bottom.
+- The opcodes `33` - `40` mean "block copy compressed" and are followed by 3 `opcode - 32` byte long integers (N, W & H). It goes back `N` cells, and copies a
+`W+1` x `L+1` block, starting at the bottomleft corner.
 
 ## Cell binary format
 
 At a high level, the binary format of a cell can be viewed as a single interger, `Cell type data`.
-`Cell type data` is an integer that encodes the ID, background ID, rotation, background rotation, whether it has flags, whether it has cell data.
+`Cell type data` is an integer that encodes the ID, background ID, rotation, background rotation.
 
-It and `maxn` (more on it in a bit) are calculated like so:
+It can calculated like so:
 ```lua
 -- id and background are indexes in the string intern table (they start at 1 and thus 1 is subtracted)
--- hasflags and hasdata are 0 if false for foreground and background and 1 if true for foreground, 2 if true for background and 3 for both
 -- #ids is the length of the cell ID array
 -- #backgrounds is the length of the background ID array
 
 local n = rot + backgroundRot * 4 + id * 16 + background * #ids * 16
--- Each part is set to its highest value
-local maxn = 3 + 3 * 4 + (#ids-1) * 16 + (#backgrounds-1) * #ids * 16
 ```
 
-The length of the `cell type data` integer varies as well. It is the amount of bytes minimum to store `maxn`.
+It is recommended you use the right opcode for the smallest integer needed to store that value.
 
 ### Cell data
 
