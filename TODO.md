@@ -8,12 +8,13 @@ For v0.0.1:
 - Mod signals
 
 For v0.0.2:
+- Notification system (useful for error reporting, debugging, etc.)
 - Backgrounds
-- Add more comments for people who want to contribute
+- Add more comments for the headers in libtsc
 - Finish implementing `ui.c`
 - Add a main menu
 - Add a settings menu
-- Modding with Lua and `config.json` (complicates the build step)
+- Modding with Lua and `config.json` (complicates the build step of TSC)
 
 # Planned features
 

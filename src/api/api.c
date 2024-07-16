@@ -202,7 +202,7 @@ void tsc_closeCategory(tsc_category *category) {
 
 static void tsc_loadButton(void *_) {
     const char *clipboard = GetClipboardText();
-    if(clipboard == NULL) {
+    if(clipboard == NULL || strlen(clipboard) == 0) {
         tsc_sound_play(builtin.audio.explosion);
     } else {
         printf("Loading %s\n", clipboard);
@@ -224,7 +224,7 @@ static void tsc_saveV3Button(void *_) {
     tsc_saving_buffer buffer = tsc_saving_newBuffer("");
     int success = tsc_saving_encodeWith(&buffer, currentGrid, "V3");
     if(success) {
-        SetClipboardText(buffer.mem);
+    SetClipboardText(buffer.mem);
     } else {
         tsc_sound_play(builtin.audio.explosion);
     }
