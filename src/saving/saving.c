@@ -213,7 +213,6 @@ static char *tsc_v3_nextPartUntil(const char *code, size_t *idx, char sep) {
 }
 
 static void tsc_v3_decode(const char *code, tsc_grid *grid) {
-    printf("%s\n", code);
     size_t index = 3;
     char *swidth = tsc_v3_nextPart(code, &index);
     char *sheight = tsc_v3_nextPart(code, &index);
