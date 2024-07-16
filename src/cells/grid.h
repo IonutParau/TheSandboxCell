@@ -37,6 +37,10 @@ typedef struct tsc_celltable {
 tsc_celltable *tsc_cell_newTable(const char *id);
 tsc_celltable *tsc_cell_getTable(tsc_cell *cell);
 
+typedef struct tsc_texture_id_pool_t {
+    const char *icon;
+} tsc_texture_id_pool_t;
+
 typedef struct tsc_audio_id_pool_t {
     const char *destroy;
     const char *explosion;
@@ -54,6 +58,7 @@ typedef struct tsc_id_pool_t {
     const char *enemy; 
     const char *trash; 
     const char *wall;
+    tsc_texture_id_pool_t textures;
     tsc_audio_id_pool_t audio;
 } tsc_cell_id_pool_t;
 

@@ -5,6 +5,7 @@
 #include <raylib.h>
 #include "../utils.h"
 #include "../api/api.h"
+#include "../cells/grid.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -376,6 +377,11 @@ void tsc_enableResourcePack(tsc_resourcepack *pack) {
     size_t idx = rp_enabledc++;
     rp_enabled = realloc(rp_enabled, sizeof(tsc_resourcepack *) * rp_enabledc);
     rp_enabled[idx] = pack;
+
+    Texture icon = textures_get(builtin.textures.icon);
+    Image image = LoadImageFromTexture(icon);
+    SetWindowIcon(image);
+    UnloadImage(image);
 }
 
 void tsc_disableResourcePack(tsc_resourcepack *pack) {

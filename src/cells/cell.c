@@ -20,6 +20,8 @@ void tsc_init_builtin_ids() {
     builtin.empty = tsc_strintern("empty");
     builtin.wall = tsc_strintern("wall");
 
+    builtin.textures.icon = tsc_strintern("icon");
+
     builtin.audio.destroy = tsc_strintern("destroy");
     builtin.audio.explosion = tsc_strintern("explosion");
 }
