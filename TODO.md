@@ -2,12 +2,12 @@
 
 For v0.0.1:
 - Optimize rendering using cell skipping
-- Selecting cells (for Copy / Cut / Paste)
 - V1 decoding
 - Icons for set initial, restore initial
 - Mod signals
 
 For v0.0.2:
+- Tooltips
 - Notification system (useful for error reporting, debugging, etc.)
 - Backgrounds
 - Add more comments for the headers in libtsc
