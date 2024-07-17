@@ -8,6 +8,7 @@
 #include "../saving/saving.h"
 #include "../graphics/resources.h"
 #include "../cells/ticking.h"
+#include "../graphics/rendering.h"
 
 typedef struct tsc_splash_t {
     const char *splash;
@@ -243,6 +244,10 @@ static void tsc_setInitial(void *_) {
     isInitial = true;
 }
 
+static void tsc_pasteButton(void *_) {
+    tsc_pasteGridClipboard();
+}
+
 void tsc_loadDefaultCellBar() {
     tsc_category *root = tsc_rootCategory();
 
@@ -252,6 +257,7 @@ void tsc_loadDefaultCellBar() {
     tsc_addButton(tools, "load", "Load from Clipboard", "Load a level code from clipboard", tsc_loadButton, NULL);
     tsc_addButton(tools, "generator", "Set Initial", "Set the current grid state as the initial one", tsc_setInitial, NULL);
     tsc_addButton(tools, "rotator_cw", "Restore Initial", "Restore the initial grid state", tsc_restoreInitial, NULL);
+    tsc_addButton(tools, "paste", "Paste", "Paste the copied selection (drag with Middle Click to select)", tsc_pasteButton, NULL);
 
     tsc_addCategory(root, tools);
     tsc_addCell(root, builtin.mover);

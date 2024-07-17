@@ -36,6 +36,7 @@ typedef struct selection_t {
 typedef struct selection_btn_t {
     ui_button *copy;
     ui_button *cut;
+    ui_button *del;
 } selection_btn_t;
 
 typedef struct gridclip_t {
@@ -109,6 +110,7 @@ void tsc_resetRendering() {
     renderingCellBrushId = NULL;
     tsc_ui_clearButtonState(renderingSelectionButtons.copy);
     tsc_ui_clearButtonState(renderingSelectionButtons.cut);
+    tsc_ui_clearButtonState(renderingSelectionButtons.del);
     tsc_clearGridClipboard();
 }
 
@@ -119,6 +121,7 @@ void tsc_setupRendering() {
     renderingGameUI = tsc_ui_newFrame();
     renderingSelectionButtons.copy = tsc_ui_newButtonState();
     renderingSelectionButtons.cut = tsc_ui_newButtonState();
+    renderingSelectionButtons.del = tsc_ui_newButtonState();
     renderingGridClipboard.cells = NULL;
     renderingGridClipboard.width = 0;
     renderingGridClipboard.height = 0;
@@ -377,6 +380,9 @@ void tsc_drawGrid() {
             tsc_ui_image(builtin.textures.cut, selbtnsize, selbtnsize);
             tsc_ui_button(renderingSelectionButtons.cut);
             tsc_ui_pad(selbtnpad, selbtnpad);
+            tsc_ui_image(builtin.textures.del, selbtnsize, selbtnsize);
+            tsc_ui_button(renderingSelectionButtons.del);
+            tsc_ui_pad(selbtnpad, selbtnpad);
         });
         tsc_ui_translate(selx, sely + selh + selrowpad);
     }
@@ -483,6 +489,28 @@ static void tsc_cutSelection() {
             tsc_grid_set(currentGrid, fixed.sx + x, fixed.sy + y, &empty);
         }
     }
+    renderingIsPasting = true;
+}
+
+static void tsc_deleteSelection() {
+    renderingIsSelecting = false;
+    renderingIsDragging = false;
+    selection_t fixed = tsc_fixSelection(renderingSelection);
+    int width = fixed.ex - fixed.sx + 1;
+    int height = fixed.ey - fixed.sy + 1;
+    for(int x = 0; x < width; x++) {
+        for(int y = 0; y < height; y++) {
+            int i = y * width + x;
+            tsc_cell empty = tsc_cell_create(builtin.empty, 0);
+            tsc_grid_set(currentGrid, fixed.sx + x, fixed.sy + y, &empty);
+        }
+    }
+}
+
+void tsc_pasteGridClipboard() {
+    if(renderingGridClipboard.width == 0) return;
+    renderingIsSelecting = false;
+    renderingIsDragging = false;
     renderingIsPasting = true;
 }
 
@@ -649,6 +677,15 @@ void tsc_handleRenderInputs() {
     }
     if(IsKeyPressed(KEY_X) && IsKeyDown(KEY_LEFT_CONTROL)) {
         if(renderingIsSelecting) tsc_cutSelection();
+    }
+    if(tsc_ui_checkbutton(renderingSelectionButtons.del) == UI_BUTTON_PRESS) {
+        printf("Deleted selection\n");
+        tsc_ui_clearButtonState(renderingSelectionButtons.del);
+        tsc_clearGridClipboard();
+        tsc_deleteSelection();
+    }
+    if(IsKeyPressed(KEY_BACKSPACE) && IsKeyDown(KEY_LEFT_CONTROL)) {
+        if(renderingIsSelecting) tsc_deleteSelection();
     }
 
     if(renderingGridClipboard.width != 0 && IsKeyPressed(KEY_V) && IsKeyDown(KEY_LEFT_CONTROL)) {

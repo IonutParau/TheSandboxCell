@@ -22,5 +22,6 @@ int tsc_cellMouseX();
 int tsc_cellMouseY();
 void tsc_drawGrid();
 void tsc_handleRenderInputs();
+void tsc_pasteGridClipboard();
 
 #endif
