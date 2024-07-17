@@ -1,10 +1,10 @@
 # Actual TODO
 
 For v0.0.1:
-- Optimize rendering using cell skipping and rectangle optimizations
+- Optimize rendering using cell skipping
 - Selecting cells (for Copy / Cut / Paste)
 - V1 decoding
-- Icons for loading, saving, set initial, restore initial
+- Icons for set initial, restore initial
 - Mod signals
 
 For v0.0.2:

@@ -26,7 +26,7 @@ int main() {
 
     tsc_init_builtin_ids();
 
-    tsc_grid *grid = tsc_createGrid("main", 100, 100, NULL, NULL);
+    tsc_grid *grid = tsc_createGrid("main", 1000, 1000, NULL, NULL);
     tsc_switchGrid(grid);
     tsc_grid *initial = tsc_createGrid("initial", grid->width, grid->height, NULL, NULL);
     tsc_copyGrid(initial, grid);
@@ -38,6 +38,9 @@ int main() {
     InitWindow(800, 600, "The Sandbox Cell");
     SetWindowState(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
     SetWindowMonitor(0);
+
+    // L + ratio
+    SetExitKey(KEY_NULL);
 
     InitAudioDevice();
    

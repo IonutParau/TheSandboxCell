@@ -21,6 +21,8 @@ void tsc_init_builtin_ids() {
     builtin.wall = tsc_strintern("wall");
 
     builtin.textures.icon = tsc_strintern("icon");
+    builtin.textures.copy = tsc_strintern("copy");
+    builtin.textures.cut = tsc_strintern("cut");
 
     builtin.audio.destroy = tsc_strintern("destroy");
     builtin.audio.explosion = tsc_strintern("explosion");

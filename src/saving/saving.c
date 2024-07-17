@@ -5,6 +5,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+// Damn you Nathan and your massive vault solves
+#include "../threads/tinycthread.h"
+#include "../threads/workers.h"
+#include "../utils.h"
 
 static tsc_saving_format *saving_arr = NULL;
 static size_t savingc = 0;
@@ -371,6 +375,7 @@ static int tsc_v3_encode(tsc_saving_buffer *buffer, tsc_grid *grid) {
     for(int i = 0; i < cell_len; i++) {
         int bestback = -1;
         int bestbacklen = 0;
+
         for(int b = 1; b < i; b++) {
             if(cells[i] == cells[i-b]) {
                 int len = 1;
@@ -382,7 +387,8 @@ static int tsc_v3_encode(tsc_saving_buffer *buffer, tsc_grid *grid) {
                     }
                 }
                 int weight = tsc_v3_weightOfRepeat(b, len);
-                if(len > bestbacklen && weight < len) {
+                if(weight > len) continue;
+                if(len > bestbacklen) {
                     bestbacklen = len;
                     bestback = b;
                 }
@@ -397,6 +403,7 @@ static int tsc_v3_encode(tsc_saving_buffer *buffer, tsc_grid *grid) {
             i += bestbacklen - 1;
         }
     }
+
     tsc_saving_write(buffer, ';');
 
     tsc_saving_writeFormat(buffer, "%s;%s;", grid->title == NULL ? "" : grid->title, grid->desc == NULL ? "" : grid->desc);

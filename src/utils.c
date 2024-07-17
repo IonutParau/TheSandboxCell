@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #ifdef linux
 #include <dirent.h>
@@ -139,6 +140,16 @@ unsigned long tsc_strhash(const char *str) {
     hash ^= hash >> 1;
     hash += hash << 15;
     return hash;
+}
+
+void tsc_memswap(void *a, void *b, size_t len) {
+    uint8_t *aBytes = (uint8_t*)a;
+    uint8_t *bBytes = (uint8_t*)b;
+    for(size_t i = 0; i < len; i++) {
+        uint8_t swp = aBytes[i];
+        aBytes[i] = bBytes[i];
+        bBytes[i] = swp;
+    }
 }
 
 void tsc_pathfix(char *path) {

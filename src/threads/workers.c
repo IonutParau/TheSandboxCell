@@ -1,4 +1,42 @@
 #include "workers.h"
+#ifdef TSC_USE_OPENMP
+#include "omp.h"
+
+void workers_setup(int count) {
+    // Do nothing: OpenMP does it automagically
+}
+
+void workers_setupBest() {
+    // OpenMP will do this regardless
+}
+
+void workers_addTask(worker_task_t *task, void *data) {
+    // Useless, who cares.
+}
+
+void workers_waitForTasks(worker_task_t *task, void **dataArr, size_t len) {
+    #pragma omp parallel for
+    for(size_t i = 0; i < len; i++) {
+        task(dataArr[i]);
+    }
+}
+
+void workers_waitForTasksFlat(worker_task_t *task, void *dataArr, size_t dataSize, size_t len) {
+    #pragma omp parallel for
+    for(size_t i = 0; i < len; i++) {
+        void *data = dataArr + i * dataSize;
+        task(data);
+    }
+}
+
+int workers_amount() {
+    // Not by me. See https://stackoverflow.com/questions/4706494/openmp-get-total-number-of-running-threads for details
+    int num_threads = 0;
+    #pragma omp parallel reduction(+:num_threads)
+    num_threads += 1;
+    return num_threads;
+}
+#else
 #include "tinycthread.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -156,3 +194,4 @@ void workers_waitForTasksFlat(worker_task_t *task, void *dataArr, size_t dataSiz
 int workers_amount() {
     return workers_count;
 }
+#endif

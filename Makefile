@@ -15,6 +15,11 @@ objects=workers.o utils.o cell.o grid.o resources.o rendering.o subticks.o savin
 
 LINKRAYLIB=-lraylib -lGL -lpthread -ldl -lrt -lX11 -lm
 
+ifdef OPENMP
+	CFLAGS += -DTSC_USE_OPENMP -fopenmp
+	LFLAGS += -l$(OPENMP)
+endif
+
 ifeq ($(MODE), TURBO)
 	CFLAGS += -DTSC_TURBO -Ofast
 	ifeq ($(CC), gcc)

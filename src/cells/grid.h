@@ -39,6 +39,8 @@ tsc_celltable *tsc_cell_getTable(tsc_cell *cell);
 
 typedef struct tsc_texture_id_pool_t {
     const char *icon;
+    const char *copy;
+    const char *cut;
 } tsc_texture_id_pool_t;
 
 typedef struct tsc_audio_id_pool_t {

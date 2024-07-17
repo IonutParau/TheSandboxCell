@@ -12,6 +12,8 @@ char *tsc_strdup(const char *str);
 char *tsc_strcata(const char *a, const char *b);
 unsigned long tsc_strhash(const char *str);
 
+void tsc_memswap(void *a, void *b, size_t len);
+
 // Replaces the / with \ on Windows
 void tsc_pathfix(char *path);
 const char *tsc_pathfixi(const char *path);
