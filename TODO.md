@@ -1,7 +1,6 @@
 # Actual TODO
 
 For v0.0.1:
-- Optimize rendering using cell skipping
 - V1 decoding
 - Icons for set initial, restore initial
 - Mod signals
@@ -9,7 +8,9 @@ For v0.0.1:
 For v0.0.2:
 - Tooltips
 - Notification system (useful for error reporting, debugging, etc.)
+- Optimize rendering using cell skipping
 - Backgrounds
+- Chunk System
 - Add more comments for the headers in libtsc
 - Finish implementing `ui.c`
 - Add a main menu
