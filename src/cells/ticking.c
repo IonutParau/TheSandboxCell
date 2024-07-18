@@ -10,7 +10,7 @@ volatile double tickDelay = 0.0;
 volatile bool multiTickPerFrame = true;
 volatile bool onlyOneTick = true;
 volatile size_t gameTPS = 0;
-volatile bool isInitial = false;
+volatile bool isInitial = true;
 
 static mtx_t renderingUselessMutex;
 static cnd_t renderingTickUpdateSignal;
@@ -30,6 +30,8 @@ static int tsc_gridUpdateThread(void *_) {
                 continue;
             }
         }
+        // Fixed SO MANY BUGS
+        if(isGamePaused) continue;
         // Nothing here is thread-safe except the waiting
         // The only thing keeping this from exploding is
         // high IQ code I wrote that I forgot to understand
