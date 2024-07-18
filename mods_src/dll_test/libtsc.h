@@ -39,6 +39,13 @@ typedef struct tsc_celltable {
 tsc_celltable *tsc_cell_newTable(const char *id);
 tsc_celltable *tsc_cell_getTable(tsc_cell *cell);
 
+typedef struct tsc_texture_id_pool_t {
+    const char *icon;
+    const char *copy;
+    const char *cut;
+    const char *del;
+} tsc_texture_id_pool_t;
+
 typedef struct tsc_audio_id_pool_t {
     const char *destroy;
     const char *explosion;
@@ -56,6 +63,7 @@ typedef struct tsc_id_pool_t {
     const char *enemy; 
     const char *trash; 
     const char *wall;
+    tsc_texture_id_pool_t textures;
     tsc_audio_id_pool_t audio;
 } tsc_cell_id_pool_t;
 
@@ -169,6 +177,7 @@ typedef struct tsc_saving_buffer {
 } tsc_saving_buffer;
 
 tsc_saving_buffer tsc_saving_newBuffer(const char *initial);
+tsc_saving_buffer tsc_saving_newBufferCapacity(const char *initial, size_t capacity);
 void tsc_saving_deleteBuffer(tsc_saving_buffer buffer);
 void tsc_saving_write(tsc_saving_buffer *buffer, char ch);
 void tsc_saving_writeStr(tsc_saving_buffer *buffer, const char *str);
@@ -197,41 +206,12 @@ void tsc_saving_registerCore();
 #ifndef TSC_RESOURCES_H
 #define TSC_RESOURCES_H
 
-// WIP
-
 #include <raylib.h>
 #include <stddef.h>
 
-// These are for the implementation.
-// You likely won't care.
 
-typedef struct tsc_resourcearray {
-    size_t len;
-    const char **ids;
-    void *memory;
-    size_t itemsize;
-} tsc_resourcearray;
-
-typedef struct tsc_resourcetable {
-    size_t arrayc;
-    tsc_resourcearray *arrays;
-    size_t *hashes;
-    size_t itemsize;
-} tsc_resourcetable;
-
-// Actual API
-
-typedef struct tsc_resourcepack {
-    const char *id;
-    const char *name;
-    const char *description;
-    const char *author;
-    const char *readme;
-    const char *license;
-    tsc_resourcetable *textures;
-    tsc_resourcetable *audio;
-    Font *font;
-} tsc_resourcepack;
+typedef struct tsc_resourcepack
+tsc_resourcepack;
 
 // This is highly important shit
 // If something isn't found, it is yoinked from here.
@@ -388,6 +368,8 @@ char *tsc_strdup(const char *str);
 char *tsc_strcata(const char *a, const char *b);
 unsigned long tsc_strhash(const char *str);
 
+void tsc_memswap(void *a, void *b, size_t len);
+
 // Replaces the / with \ on Windows
 void tsc_pathfix(char *path);
 const char *tsc_pathfixi(const char *path);
@@ -427,6 +409,8 @@ typedef struct tsc_cellbutton {
     void *payload;
     void (*click)(void *payload);
     const char *icon;
+    const char *name;
+    const char *desc;
 } tsc_cellbutton;
 
 #define TSC_CATEGORY_CELL 0
@@ -457,7 +441,7 @@ tsc_category *tsc_rootCategory();
 tsc_category *tsc_newCategory(const char *title, const char *description, const char *icon);
 void tsc_addCategory(tsc_category *category, tsc_category *toAdd);
 void tsc_addCell(tsc_category *category, const char *cell);
-void tsc_addButton(tsc_category *category, const char *icon, void (*click)(void *), void *payload);
+void tsc_addButton(tsc_category *category, const char *icon, const char *name, const char *description, void (*click)(void *), void *payload);
 tsc_category *tsc_getCategory(tsc_category *category, const char *path);
 
 #ifndef TSC_VALUE_H
@@ -477,6 +461,8 @@ tsc_category *tsc_getCategory(tsc_category *category, const char *path);
 #define TSC_VALUE_CSTRING 5
 #define TSC_VALUE_ARRAY 6
 #define TSC_VALUE_OBJECT 7
+#define TSC_VALUE_CELLPTR 8
+#define TSC_VALUE_OWNEDCELL 9
 
 typedef struct tsc_value tsc_value;
 
@@ -499,6 +485,11 @@ typedef struct tsc_object_t {
     size_t len;
 } tsc_object_t;
 
+typedef struct tsc_ownedcell_t {
+    size_t refc;
+    tsc_cell cell;
+} tsc_ownedcell_t;
+
 typedef struct tsc_value {
     size_t tag;
     union {
@@ -509,6 +500,8 @@ typedef struct tsc_value {
         const char *cstring;
         tsc_array_t *array;
         tsc_object_t *object;
+        tsc_cell *cellptr;
+        tsc_ownedcell_t *ownedcell;
     };
 } tsc_value;
 
@@ -521,8 +514,13 @@ tsc_value tsc_lstring(const char *str, size_t len);
 tsc_value tsc_cstring(const char *str);
 tsc_value tsc_array(size_t len);
 tsc_value tsc_object();
+tsc_value tsc_cellPtr(tsc_cell *cell);
+tsc_value tsc_ownedCell(tsc_cell *cell);
 void tsc_retain(tsc_value value);
 void tsc_destroy(tsc_value value);
+
+void tsc_ensureArgs(tsc_value args, int min);
+void tsc_varArgs(tsc_value args, int min);
 
 tsc_value tsc_index(tsc_value list, size_t index);
 void tsc_setIndex(tsc_value list, size_t index, tsc_value value);
@@ -536,6 +534,9 @@ bool tsc_isBoolean(tsc_value value);
 bool tsc_isString(tsc_value value);
 bool tsc_isArray(tsc_value value);
 bool tsc_isObject(tsc_value value);
+bool tsc_isCellPtr(tsc_value cell);
+bool tsc_isOwnedCell(tsc_value cell);
+bool tsc_isCell(tsc_value cell);
 
 int64_t tsc_toInt(tsc_value value);
 double tsc_toNumber(tsc_value value);
@@ -544,6 +545,7 @@ const char *tsc_toString(tsc_value value);
 const char *tsc_toLString(tsc_value value, size_t *len);
 size_t tsc_getLength(tsc_value value);
 const char *tsc_keyAt(tsc_value object, size_t index);
+tsc_cell *tsc_toCell(tsc_value value);
 
 #endif
 #ifdef __cplusplus

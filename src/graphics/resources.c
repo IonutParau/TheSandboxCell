@@ -191,6 +191,7 @@ static void rp_init_textures(tsc_resourcepack *pack, const char *path, const cha
                 }
                 free(dirpath);
                 tsc_freedirfiles(mods);
+                continue;
             }
             // Copy because buffer is re-used when recursing.
             char *dirpath = tsc_strdup(buffer);
@@ -269,6 +270,7 @@ static void rp_init_sounds(tsc_resourcepack *pack, const char *path, const char 
                 }
                 free(dirpath);
                 tsc_freedirfiles(mods);
+                continue;
             }
             // Copy because buffer is re-used when recursing.
             char *dirpath = tsc_strdup(buffer);
@@ -305,6 +307,45 @@ valid_extension:
     tsc_freedirfiles(files);
 }
 
+static void rp_init_music(tsc_resourcepack *pack, const char *path) {
+    static char buffer[2048];
+    size_t bufsize = 2048;
+
+    size_t filec;
+    char **files = tsc_dirfiles(path, &filec);
+    
+    for(size_t i = 0; i < filec; i++) {
+        char *file = files[i];
+        const char *ext = tsc_fextension(file);
+        if(ext == NULL) {
+            snprintf(buffer, bufsize, "%s/%s", path, file);
+            tsc_pathfix(buffer);
+            // Copy because buffer is re-used when recursing.
+            char *dirpath = tsc_strdup(buffer);
+            rp_init_music(pack, dirpath);
+            free(dirpath);
+            continue;
+        } else {
+            const char *exts[] = {
+                "wav", "ogg", "mp3",
+            };
+            size_t extc = sizeof(exts) / sizeof(const char *);
+            for(size_t i = 0; i < extc; i++) {
+                if(tsc_streql(exts[i], ext)) goto valid_extension;
+            }
+            continue; // if not valid, skip.
+valid_extension:
+            snprintf(buffer, bufsize, "%s/%s.%s", path, file, ext);
+            tsc_pathfix(buffer);
+            printf("Loading %s\n", buffer);
+            // tsc_fextension mutated file such that it contains the file name.
+            tsc_music_load(pack, file, buffer);
+        }
+    }
+
+    tsc_freedirfiles(files);
+}
+
 // Shoves everything into pack that is obtainable.
 static void rp_init(tsc_resourcepack *pack) {
     // 2kb for a filepath is very extreme.
@@ -333,6 +374,10 @@ static void rp_init(tsc_resourcepack *pack) {
         pack->font = malloc(sizeof(Font));
         *pack->font = LoadFontEx(path, 32, NULL, 0);
     }
+
+    snprintf(path, bufsize, "%s/music", rpPath);
+    tsc_pathfix(path);
+    rp_init_music(pack, path);
 }
 
 tsc_resourcepack *tsc_createResourcePack(const char *id) {
@@ -347,6 +392,8 @@ tsc_resourcepack *tsc_createResourcePack(const char *id) {
     pack->textures = rp_createResourceTable(sizeof(tsc_texture_resource));
     pack->audio = rp_createResourceTable(sizeof(Sound));
     pack->font = NULL;
+    pack->musictrack = NULL;
+    pack->trackcount = 0;
 
     // Add the toppings
     rp_init(pack);
@@ -522,4 +569,73 @@ void tsc_sound_playQueue() {
         if(IsSoundPlaying(sound)) continue; // fixes my eardrums
         PlaySound(sound);
     }
+}
+
+void tsc_music_load(tsc_resourcepack *pack, const char *name, const char *file) {
+    // name must be valid forever so this is a quick hack
+    name = tsc_strintern(name);
+    tsc_music_t music;
+    music.name = name;
+    music.music = LoadMusicStream(file);
+    music.music.looping = false;
+    music.source = pack;
+
+    size_t idx = pack->trackcount++;
+    pack->musictrack = realloc(pack->musictrack, sizeof(tsc_music_t) * pack->trackcount);
+    pack->musictrack[idx] = music;
+}
+
+tsc_music_t tsc_music_getRandom() {
+    tsc_music_t *enabledMusic = NULL;
+    size_t len = 0;
+
+    for(size_t i = 0; i < rp_enabledc; i++) {
+        tsc_resourcepack *pack = rp_enabled[i];
+        len += pack->trackcount;
+    }
+    
+    if(len == 0) {
+        tsc_music_t notfound;
+        // notfound.music is undefined
+        notfound.name = NULL;
+        notfound.source = NULL;
+        return notfound;
+    }
+
+    enabledMusic = malloc(sizeof(tsc_music_t) * len);
+    size_t j = 0;
+    
+    for(size_t i = 0; i < rp_enabledc; i++) {
+        tsc_resourcepack *pack = rp_enabled[i];
+        for(size_t k = 0; k < pack->trackcount; k++) {
+            enabledMusic[j] = pack->musictrack[k];
+            j++;
+        }
+    }
+
+    int idx = rand() % len;
+    tsc_music_t choice = enabledMusic[idx];
+    free(enabledMusic);
+    return choice;
+}
+
+static tsc_music_t currentTrack = {NULL, {0}, NULL};
+
+void tsc_music_playOrKeep() {
+    if(currentTrack.name == NULL) {
+        currentTrack = tsc_music_getRandom();
+    }
+
+    // If it is STILL NULL, then somehow no music exists so do nothing
+    if(currentTrack.name == NULL) return;
+    // That epic banger is still blasting so we can't stop it
+    if(IsMusicStreamPlaying(currentTrack.music)) {
+        UpdateMusicStream(currentTrack.music);
+        return;
+    }
+
+    currentTrack = tsc_music_getRandom();
+    SetMusicVolume(currentTrack.music, 0.5);
+    PlayMusicStream(currentTrack.music);
+    printf("Playing music track %s from %s\n", currentTrack.name, currentTrack.source->id);
 }

@@ -1,13 +1,19 @@
 #ifndef TSC_RESOURCES_H
 #define TSC_RESOURCES_H
 
-// WIP
-
 #include <raylib.h>
 #include <stddef.h>
 
+// hideapi
+
 // These are for the implementation.
 // You likely won't care.
+
+typedef struct tsc_music_t {
+    const char *name;
+    Music music;
+    struct tsc_resourcepack *source;
+} tsc_music_t;
 
 typedef struct tsc_resourcearray {
     size_t len;
@@ -25,7 +31,11 @@ typedef struct tsc_resourcetable {
 
 // Actual API
 
-typedef struct tsc_resourcepack {
+// hideapi
+
+typedef struct tsc_resourcepack
+// hideapi
+{
     const char *id;
     const char *name;
     const char *description;
@@ -35,7 +45,11 @@ typedef struct tsc_resourcepack {
     tsc_resourcetable *textures;
     tsc_resourcetable *audio;
     Font *font;
-} tsc_resourcepack;
+    tsc_music_t *musictrack;
+    size_t trackcount;
+}
+// hideapi
+tsc_resourcepack;
 
 // This is highly important shit
 // If something isn't found, it is yoinked from here.
@@ -65,12 +79,14 @@ Font font_get();
 
 const char *tsc_textures_load(tsc_resourcepack *pack, const char *id, const char *file);
 const char *tsc_sound_load(tsc_resourcepack *pack, const char *id, const char *file);
-void tsc_music_load(const char *name, const char *file);
 
 void tsc_sound_play(const char *id);
 
 // hideapi
+void tsc_music_load(tsc_resourcepack *pack, const char *name, const char *file);
 void tsc_sound_playQueue();
+tsc_music_t tsc_music_getRandom();
+void tsc_music_playOrKeep();
 // hideapi
 
 #endif

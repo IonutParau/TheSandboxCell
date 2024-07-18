@@ -72,6 +72,8 @@ int main() {
             SetMasterVolume(0.2);
         }
         tsc_sound_playQueue();
+        // This handles all music stuff.
+        tsc_music_playOrKeep();
     }
 
     CloseWindow();
