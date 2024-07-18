@@ -15,7 +15,7 @@ For v0.0.2:
 - Finish implementing `ui.c`
 - Add a main menu
 - Add a settings menu
-- Modding with Lua and `config.json` (complicates the build step of TSC)
+- `config.json` and custom `platforms` support.
 
 # Planned features
 
