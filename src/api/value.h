@@ -102,4 +102,32 @@ size_t tsc_getLength(tsc_value value);
 const char *tsc_keyAt(tsc_value object, size_t index);
 tsc_cell *tsc_toCell(tsc_value value);
 
+typedef tsc_value (tsc_signal_t)(tsc_value args);
+
+#define TSC_VALUE_UNION 1024
+#define TSC_VALUE_OPTIONAL 1025
+#define TSC_VALUE_TUPLE 1026
+
+typedef struct tsc_typeinfo_t {
+    size_t tag;
+    union {
+        struct tsc_typeinfo_t *child;
+        struct {
+            struct tsc_typeinfo_t *children;
+            size_t childCount;
+        };
+        struct {
+            const char **keys;
+            struct tsc_typeinfo_t *values;
+            size_t pairCount;
+        };
+    };
+} tsc_typeinfo_t;
+
+// TODO: define typeInfo
+const char *tsc_setupSignal(const char *id, tsc_signal_t *signal, tsc_typeinfo_t *typeInfo);
+tsc_typeinfo_t *tsc_getSignalInfo(const char *id);
+tsc_signal_t *tsc_getSignal(const char *id);
+tsc_value tsc_callSignal(tsc_signal_t *signal, tsc_value *argv, size_t argc);
+
 #endif

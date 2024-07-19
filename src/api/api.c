@@ -32,6 +32,7 @@ void tsc_addSplash(const char *splash, double weight) {
 }
 
 void tsc_addCoreSplashes() {
+    tsc_addSplash("Beware of viruses lurking in mods!", 10);
     tsc_addSplash("When in doubt, nuke it", 2);
     tsc_addSplash("Optimized by nerds for nerds", 0.5);
     tsc_addSplash("tim travl", 1);
@@ -42,16 +43,23 @@ void tsc_addCoreSplashes() {
     tsc_addSplash("Who needs mods when you have speed", 10);
 #endif
     tsc_addSplash("Check out Create Mod", 1);
-    tsc_addSplash("tpc bad", 0.25);
-    tsc_addSplash("cellua bad", 0.25);
-    tsc_addSplash("kell buggy", 0.25);
-    tsc_addSplash("yo my name is Jeremy", 0.25);
-    tsc_addSplash("Pesky Windows", 0.25);
-    tsc_addSplash("Photon dev helped", 0.25);
-    tsc_addSplash("go suck an egg with your small brain", 0.25);
-    tsc_addSplash("PhoenixCM", 0.25);
-    tsc_addSplash("Program in C", 0.25);
-    tsc_addSplash("No memory leaks ever seen", 0.25);
+    tsc_addSplash("tpc bad", 1);
+    tsc_addSplash("cellua bad", 1);
+    tsc_addSplash("kell buggy", 1);
+    tsc_addSplash("yo my name is Jeremy", 1);
+    tsc_addSplash("Pesky Windows", 1);
+    tsc_addSplash("Photon dev helped", 1);
+    tsc_addSplash("go suck an egg with your small brain", 0.01);
+    tsc_addSplash("PhoenixCM", 1);
+    tsc_addSplash("Program in C, program in C", 0.05);
+    tsc_addSplash("No memory leaks ever seen", 1);
+    tsc_addSplash("Segmentation Fault (Core Dumped)", 1);
+    tsc_addSplash("Cancer cause new cells", 1);
+    tsc_addSplash("Mods, give him more cells (cancer)", 1);
+    tsc_addSplash("Free & Open Source Software", 1);
+    tsc_addSplash("\"🔥\" - k_lemon", 1);
+    tsc_addSplash("Mods, nuke his grid", 1);
+    tsc_addSplash("Mods, use 100% of his CPU", 1);
 }
 
 const char *tsc_randomSplash() {
