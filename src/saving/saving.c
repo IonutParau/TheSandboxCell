@@ -478,6 +478,76 @@ ohno:
     free(desc);
 }
 
+void tsc_v1_decode(const char *code, tsc_grid *grid) {
+    size_t index = 3;
+    char *ewidth = tsc_v3_nextPart(code, &index);
+    char *eheight = tsc_v3_nextPart(code, &index);
+
+    int width = atoi(ewidth);
+    int height = atoi(eheight);
+
+    tsc_clearGrid(grid, width, height);
+
+    free(ewidth);
+    free(eheight);
+
+    char *placeables = tsc_v3_nextPart(code, &index);
+    // TODO: placeables
+    free(placeables);
+
+    const char *ids[] = {
+        builtin.generator, builtin.rotator_cw, builtin.rotator_ccw,
+        builtin.mover, builtin.slide, builtin.push, builtin.wall,
+        builtin.enemy, builtin.trash,
+    };
+    size_t idc = sizeof(ids) / sizeof(const char *);
+
+    char *cells = tsc_v3_nextPart(code, &index);
+    size_t celli = 0;
+    while(cells[celli] != '\0') {
+        char *celldata = tsc_v3_nextPartUntil(cells, &celli, ',');
+        size_t celldatai = 0;
+
+        // we free ASAP for performance.
+        // This allows the free list to reuse memory for us automatically
+        // If you think this code isn't readable,
+        // I promise you, you haven't seen shit yet.
+
+        char *strid = tsc_v3_nextPartUntil(celldata, &celldatai, '.');
+        int ididx = atoi(strid);
+        free(strid);
+
+        const char *id = ididx < idc ? ids[ididx] : builtin.empty;
+        
+        char *strrot = tsc_v3_nextPartUntil(celldata, &celldatai, '.');
+        int rot = atoi(strrot);
+        rot %= 4;
+        free(strrot);
+        
+        char *strx = tsc_v3_nextPartUntil(celldata, &celldatai, '.');
+        int x = atoi(strx);
+        free(strx);
+        
+        char *stry = tsc_v3_nextPartUntil(celldata, &celldatai, '.');
+        int y = height - atoi(stry) - 1;
+        free(stry);
+
+        tsc_cell cell = tsc_cell_create(id, rot);
+        tsc_grid_set(grid, x, y, &cell);
+
+        free(celldata);
+    }
+    free(cells);
+
+    char *title = tsc_v3_nextPart(code, &index);
+    grid->title = tsc_strintern(title);
+    free(title);
+
+    char *desc = tsc_v3_nextPart(code, &index);
+    grid->desc = tsc_strintern(desc);
+    free(desc);
+}
+
 void tsc_saving_register(tsc_saving_format format) {
     size_t idx = savingc++;
     saving_arr = realloc(saving_arr, sizeof(tsc_saving_format) * savingc);
@@ -498,4 +568,11 @@ void tsc_saving_registerCore() {
     v2.decode = tsc_v2_decode;
     v2.encode = NULL;
     tsc_saving_register(v2);
+    
+    tsc_saving_format v1 = {};
+    v1.name = "V1";
+    v1.header = "V1;";
+    v1.decode = tsc_v1_decode;
+    v1.encode = NULL;
+    tsc_saving_register(v1);
 }

@@ -1,7 +1,6 @@
 # Actual TODO
 
 For v0.0.1:
-- V1 decoding
 - Icons for set initial, restore initial
 - Mod signals
 

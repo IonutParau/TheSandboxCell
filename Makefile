@@ -23,7 +23,7 @@ endif
 ifeq ($(MODE), TURBO)
 	CFLAGS += -DTSC_TURBO -Ofast
 	ifeq ($(CC), gcc)
-		CFLAGS += -flto
+		CFLAGS += -flto=auto
 	endif
 	LFLAGS += -Ofast
 endif
@@ -31,7 +31,7 @@ endif
 ifeq ($(MODE), RELEASE)
 	CFLAGS += -O3
 	ifeq ($(CC), gcc)
-		CFLAGS += -flto
+		CFLAGS += -flto=auto
 	endif
 	# No LTO with clang, because it keeps causing linking issues
 	#ifeq ($(CC), clang)
