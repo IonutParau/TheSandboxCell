@@ -254,21 +254,33 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
 
             for(char i = 0; i < 2; i++) {
                 if(i == 1) {
+                    size_t j = 0;
                     for(size_t x = 0; x < currentGrid->width; x++) {
-                        buffer[x].x = x;
-                        buffer[x].rot = 1;
-                        buffer[x].subtick = subtick;
+                        if(!tsc_grid_checkColumn(currentGrid, x)) {
+                            continue;
+                        }
+                        buffer[j].x = x;
+                        buffer[j].rot = 1;
+                        buffer[j].subtick = subtick;
+                        j++;
                     }
 
-                    workers_waitForTasksFlat(&tsc_subtick_worker, buffer, sizeof(tsc_updateinfo_t), currentGrid->width);
+                    workers_waitForTasksFlat(&tsc_subtick_worker, buffer, sizeof(tsc_updateinfo_t), j);
                 } else {
+                    size_t j = 0;
                     for(size_t y = 0; y < currentGrid->height; y++) {
-                        buffer[y].x = y;
-                        buffer[y].rot = 0;
-                        buffer[y].subtick = subtick;
+                        if(!tsc_grid_checkRow(currentGrid, y)) {
+                            continue;
+                        }
+                        buffer[j].x = y;
+                        buffer[j].rot = 0;
+                        buffer[j].subtick = subtick;
+                        j++;
                     }
 
-                    workers_waitForTasksFlat(&tsc_subtick_worker, buffer, sizeof(tsc_updateinfo_t), currentGrid->height);
+                    printf("Running left-right tracked with %lu tasks\n", j);
+
+                    workers_waitForTasksFlat(&tsc_subtick_worker, buffer, sizeof(tsc_updateinfo_t), j);
                 }
             }
             return;

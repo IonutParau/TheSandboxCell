@@ -7,6 +7,7 @@
 
 tsc_grid *currentGrid = NULL;
 tsc_gridStorage *gridStorage = NULL;
+size_t gridChunkSize = 25;
 
 tsc_grid *tsc_getGrid(const char *name) {
     if(gridStorage == NULL) return NULL;
@@ -39,6 +40,20 @@ tsc_grid *tsc_createGrid(const char *id, int width, int height, const char *titl
     grid->height = height;
     grid->title = tsc_strintern(title);
     grid->desc = tsc_strintern(description);
+
+    // that + is to fight integer division rounding
+    int chunkWidth = width / gridChunkSize + (width % gridChunkSize == 0 ? 0 : 1);
+    int chunkHeight = height / gridChunkSize + (height % gridChunkSize == 0 ? 0 : 1);
+    printf("%d x %d grid has %d x %d chunkgrid\n", width, height, chunkWidth, chunkHeight);
+
+    grid->chunkwidth = chunkWidth;
+    grid->chunkheight = chunkHeight;
+
+    grid->chunkdata = malloc(sizeof(bool) * chunkWidth * chunkHeight);
+    for(int i = 0; i < chunkWidth * chunkHeight; i++) {
+        grid->chunkdata[i] = false;
+    }
+
     grid->refc = 1;
     size_t len = width * height;
     grid->cells = malloc(sizeof(tsc_cell) * len);
@@ -62,6 +77,7 @@ void tsc_deleteGrid(tsc_grid *grid) {
         tsc_cell_destroy(grid->cells[i]);
     }
     free(grid->cells);
+    free(grid->chunkdata);
     free(grid);
 }
 
@@ -74,26 +90,12 @@ void tsc_switchGrid(tsc_grid *grid) {
 }
 
 void tsc_copyGrid(tsc_grid *dest, tsc_grid *src) {
-    if(dest->width == src->width && dest->height == src->height) {
-        for(size_t x = 0; x < src->width; x++) {
-            for(size_t y = 0; y < src->height; y++) {
-                tsc_grid_set(dest, x, y, tsc_grid_get(src, x, y));
-            }
-        }
-        return;
-    }
-    // Kill grid
-    for(size_t x = 0; x < dest->width; x++) {
-        for(size_t y = 0; y < dest->height; y++) {
-            tsc_cell_destroy(*tsc_grid_get(dest, x, y));
-        }
-    }
-    // Resize and copy
-    dest->width = src->width;
-    dest->height = src->height;
-    dest->cells = realloc(dest->cells, sizeof(tsc_cell) * dest->width * dest->height);
+    tsc_clearGrid(dest, src->width, src->height);
     for(size_t i = 0; i < dest->width * dest->height; i++) {
         dest->cells[i] = tsc_cell_clone(src->cells + i);
+    }
+    for(int i = 0; i < dest->chunkwidth * dest->chunkheight; i++) {
+        dest->chunkdata[i] = src->chunkdata[i];
     }
 }
 
@@ -105,6 +107,14 @@ void tsc_clearGrid(tsc_grid *grid, int width, int height) {
     }
     size_t len = width * height;
     grid->cells = realloc(grid->cells, sizeof(tsc_cell) * len);
+    int chunkWidth = width / gridChunkSize + (width % gridChunkSize == 0 ? 0 : 1);
+    int chunkHeight = height / gridChunkSize + (height % gridChunkSize == 0 ? 0 : 1);
+    grid->chunkdata = realloc(grid->chunkdata, sizeof(bool) * chunkWidth * chunkHeight);
+    grid->chunkwidth = chunkWidth;
+    grid->chunkheight = chunkHeight;
+    for(int i = 0; i < chunkWidth * chunkHeight; i++) {
+        grid->chunkdata[i] = false;
+    }
     grid->width = width;
     grid->height = height;
     for(size_t i = 0; i < len; i++) {
@@ -138,6 +148,9 @@ void tsc_grid_set(tsc_grid *grid, int x, int y, tsc_cell *cell) {
     tsc_cell *old = tsc_grid_get(grid, x, y);
     tsc_cell_destroy(*old);
     *old = copy;
+    if(copy.id != builtin.empty) {
+        tsc_grid_enableChunk(grid, x, y);
+    }
 }
 
 int tsc_grid_frontX(int x, char dir) {
@@ -162,6 +175,41 @@ int tsc_grid_shiftY(int y, char dir, int amount) {
     if(dir == 1) return y + amount;
     if(dir == 3) return y - amount;
     return y;
+}
+
+void tsc_grid_enableChunk(tsc_grid *grid, int x, int y) {
+    if(tsc_grid_get(grid, x, y) == NULL) return;
+    int cx = x / gridChunkSize;
+    int cy = y / gridChunkSize;
+    grid->chunkdata[cy * grid->chunkwidth + cx] = true;
+}
+
+void tsc_grid_disableChunk(tsc_grid *grid, int x, int y) {
+    if(tsc_grid_get(grid, x, y) == NULL) return;
+    int cx = x / gridChunkSize;
+    int cy = y / gridChunkSize;
+    grid->chunkdata[cy * grid->chunkwidth + cx] = false;
+}
+
+bool tsc_grid_checkChunk(tsc_grid *grid, int x, int y) {
+    if(tsc_grid_get(grid, x, y) == NULL) return false;
+    int cx = x / gridChunkSize;
+    int cy = y / gridChunkSize;
+    return grid->chunkdata[cy * grid->chunkwidth + cx];
+}
+
+bool tsc_grid_checkRow(tsc_grid *grid, int y) {
+    for(int x = 0; x < grid->width; x += gridChunkSize) {
+        if(tsc_grid_checkChunk(grid, x, y)) return true;
+    }
+    return false;
+}
+
+bool tsc_grid_checkColumn(tsc_grid *grid, int x) {
+    for(int y = 0; y < grid->height; y += gridChunkSize) {
+        if(tsc_grid_checkChunk(grid, x, y)) return true;
+    }
+    return false;
 }
 
 int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell *replacement) {
@@ -206,6 +254,7 @@ int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell
     // Move using tsc_cell_swap
     for(int i = 0; i < amount; i++) {
         tsc_cell_swap(tsc_grid_get(grid, x, y), &replacecell);
+        tsc_grid_enableChunk(grid, x, y);
         x = tsc_grid_frontX(x, dir);
         y = tsc_grid_frontY(y, dir);
     }

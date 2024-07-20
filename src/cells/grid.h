@@ -17,8 +17,8 @@ typedef struct tsc_cell {
     tsc_cellreg *data;
     struct tsc_celltable *celltable;
     size_t flags;
-    size_t lx;
-    size_t ly;
+    int lx;
+    int ly;
     char rot;
     signed char addedRot;
     bool updated;
@@ -87,6 +87,9 @@ typedef struct tsc_grid {
     const char *title;
     const char *desc;
     size_t refc;
+    bool *chunkdata;
+    int chunkwidth;
+    int chunkheight;
 } tsc_grid;
 
 typedef struct tsc_gridStorage {
@@ -98,6 +101,7 @@ typedef struct tsc_gridStorage {
 extern tsc_grid *currentGrid;
 // hideapi
 extern tsc_gridStorage *gridStorage;
+extern size_t gridChunkSize;
 // hideapi
 
 tsc_grid *tsc_getGrid(const char *name);
@@ -115,6 +119,11 @@ int tsc_grid_frontX(int x, char dir);
 int tsc_grid_frontY(int y, char dir);
 int tsc_grid_shiftX(int x, char dir, int amount);
 int tsc_grid_shiftY(int y, char dir, int amount);
+void tsc_grid_enableChunk(tsc_grid *grid, int x, int y);
+void tsc_grid_disableChunk(tsc_grid *grid, int x, int y);
+bool tsc_grid_checkChunk(tsc_grid *grid, int x, int y);
+bool tsc_grid_checkRow(tsc_grid *grid, int y);
+bool tsc_grid_checkColumn(tsc_grid *grid, int x);
 
 // Cell interactions 
 
