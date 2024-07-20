@@ -278,8 +278,6 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                         j++;
                     }
 
-                    printf("Running left-right tracked with %lu tasks\n", j);
-
                     workers_waitForTasksFlat(&tsc_subtick_worker, buffer, sizeof(tsc_updateinfo_t), j);
                 }
             }
