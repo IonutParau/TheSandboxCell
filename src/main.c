@@ -26,7 +26,7 @@ int main() {
 
     tsc_init_builtin_ids();
 
-    tsc_grid *grid = tsc_createGrid("main", 1000, 1000, NULL, NULL);
+    tsc_grid *grid = tsc_createGrid("main", 512, 512, NULL, NULL);
     tsc_switchGrid(grid);
     tsc_grid *initial = tsc_createGrid("initial", grid->width, grid->height, NULL, NULL);
     tsc_copyGrid(initial, grid);

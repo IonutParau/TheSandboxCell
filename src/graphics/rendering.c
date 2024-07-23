@@ -331,7 +331,7 @@ void tsc_drawGrid() {
 
         Rectangle rect = {selx, sely, selw, selh};
 
-        DrawRectangleRoundedLinesEx(rect, 0, 6, selthickness, WHITE);
+        DrawRectangleLinesEx(rect, selthickness, WHITE);
         DrawRectangle(selx, sely, selw, selh, GetColor(0x00000066));
     } else if(renderingIsPasting) {
         int mx = tsc_cellMouseX();
