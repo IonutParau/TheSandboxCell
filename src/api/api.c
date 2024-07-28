@@ -214,7 +214,6 @@ static void tsc_loadButton(void *_) {
     if(clipboard == NULL || strlen(clipboard) == 0) {
         tsc_sound_play(builtin.audio.explosion);
     } else {
-        printf("Loading %s\n", clipboard);
         tsc_saving_decodeWithAny(clipboard, currentGrid);
     }
 }

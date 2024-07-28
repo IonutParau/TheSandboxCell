@@ -596,7 +596,6 @@ void tsc_handleRenderInputs() {
     if(IsKeyPressed(KEY_L) && !isGameTicking) {
         const char *clipboard = GetClipboardText();
         if(clipboard != NULL) {
-            printf("Loading %s\n", clipboard);
             tsc_saving_decodeWithAny(clipboard, currentGrid);
         }
     }
