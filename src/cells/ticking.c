@@ -23,7 +23,6 @@ static int tsc_gridUpdateThread(void *_) {
     size_t ticksInSecond = 0;
     time(&last);
     while(true) {
-        printf("%i\n", (int)onlyOneTick);
         if(!multiTickPerFrame) {
             cnd_wait(&renderingTickUpdateSignal, &renderingUselessMutex);
             mtx_unlock(&renderingUselessMutex);
