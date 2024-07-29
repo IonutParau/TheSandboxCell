@@ -715,7 +715,7 @@ void tsc_handleRenderInputs() {
         isGamePaused = !isGamePaused;
     }
 
-    if(IsKeyPressed(KEY_R) && IsKeyDown(KEY_LEFT_CONTROL)) {
+    if(IsKeyPressed(KEY_R)) {
         if(isGamePaused && !isGameTicking) {
             tsc_copyGrid(currentGrid, tsc_getGrid("initial"));
             isInitial = true;
