@@ -2,13 +2,14 @@
 #include "../threads/tinycthread.h"
 #include "subticks.h"
 #include "grid.h"
+#include <stdio.h>
 
 volatile bool isGamePaused = true;
 volatile bool isGameTicking = false;
 volatile double tickTime = 0.0;
 volatile double tickDelay = 0.0;
 volatile bool multiTickPerFrame = true;
-volatile bool onlyOneTick = true;
+volatile bool onlyOneTick = false;
 volatile size_t gameTPS = 0;
 volatile bool isInitial = true;
 
@@ -22,6 +23,7 @@ static int tsc_gridUpdateThread(void *_) {
     size_t ticksInSecond = 0;
     time(&last);
     while(true) {
+        printf("%i\n", (int)onlyOneTick);
         if(!multiTickPerFrame) {
             cnd_wait(&renderingTickUpdateSignal, &renderingUselessMutex);
             mtx_unlock(&renderingUselessMutex);
@@ -31,7 +33,7 @@ static int tsc_gridUpdateThread(void *_) {
             }
         }
         // Fixed SO MANY BUGS
-        if(isGamePaused) continue;
+        //if(isGamePaused) continue;
         // Nothing here is thread-safe except the waiting
         // The only thing keeping this from exploding is
         // high IQ code I wrote that I forgot to understand
