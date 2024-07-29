@@ -715,6 +715,13 @@ void tsc_handleRenderInputs() {
         isGamePaused = !isGamePaused;
     }
 
+    if(IsKeyPressed(KEY_R) && IsKeyDown(KEY_LEFT_CONTROL)) {
+        if(isGamePaused && !isGameTicking) {
+            tsc_copyGrid(currentGrid, tsc_getGrid("initial"));
+            isInitial = true;
+        }
+    }
+
     float tickTimeScale = 1;
     if(IsKeyDown(KEY_LEFT_SHIFT)) {
         if(IsKeyDown(KEY_COMMA)) {
