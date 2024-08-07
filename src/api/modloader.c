@@ -37,7 +37,7 @@ static void tsc_initDLLMod(const char *id) {
     void (__cdecl *init)(void) = (void (__cdecl *)(void))GetProcAddress(library, sym);
 #endif
 #ifdef linux
-    void *library = dlopen(buffer, RTLD_NOW | RTLD_GLOBAL);
+    void *library = dlopen(buffer, RTLD_NOW | RTLD_DEEPBIND);
     if(library == NULL) {
         fprintf(stderr, "Unable to open %s\n", dlerror());
         exit(1);
