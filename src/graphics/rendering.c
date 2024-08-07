@@ -324,10 +324,19 @@ void tsc_drawGrid() {
         int width = fixedSel.ex - fixedSel.sx + 1;
         int height = fixedSel.ey - fixedSel.sy + 1;
 
+        if(selbtnsize < 32) {
+            selbtnsize = 32;
+            selbtnpad = 8;
+        }
+
         selx = fixedSel.sx * renderingCamera.cellSize - renderingCamera.x;
         sely = fixedSel.sy * renderingCamera.cellSize - renderingCamera.y;
         selw = width * renderingCamera.cellSize;
         selh = height * renderingCamera.cellSize;
+        
+        int units = 2 * 3 + 2;
+        selbtnsize = (float)selh / units;
+        selbtnpad = selbtnsize / 4;
 
         Rectangle rect = {selx, sely, selw, selh};
 
