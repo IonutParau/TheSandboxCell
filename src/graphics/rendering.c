@@ -301,6 +301,8 @@ void tsc_drawGrid() {
     if(ex >= currentGrid->width) ex = currentGrid->width-1;
     int ey = tsc_cellScreenY(GetScreenHeight());
     if(ey >= currentGrid->height) ey = currentGrid->height-1;
+    if(ex < sx) ex = sx;
+    if(ey < sy) ey = sy;
 
     for(size_t x = sx; x <= ex; x++) {
         for(size_t y = sy; y <= ey; y++) {
