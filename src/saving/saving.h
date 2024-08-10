@@ -31,6 +31,7 @@ typedef struct tsc_saving_format {
 int tsc_saving_encodeWith(tsc_saving_buffer *buffer, tsc_grid *grid, const char *name);
 void tsc_saving_encodeWithSmallest(tsc_saving_buffer *buffer, tsc_grid *grid);
 void tsc_saving_decodeWith(const char *code, tsc_grid *grid, const char *name);
+const char *tsc_saving_identify(const char *code);
 void tsc_saving_decodeWithAny(const char *code, tsc_grid *grid);
 
 void tsc_saving_register(tsc_saving_format format);

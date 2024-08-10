@@ -2,14 +2,15 @@
 
 For v0.0.1:
 - Icons for set initial, restore initial
-- Mod signals
+- Optimize rendering using cell grouping
+- Chunk System
+- Subtick spacing
 
 For v0.0.2:
+- JSON parser library (tscjson)
 - Tooltips
 - Notification system (useful for error reporting, debugging, etc.)
-- Optimize rendering using cell skipping
 - Backgrounds
-- Chunk System
 - Add more comments for the headers in libtsc
 - Finish implementing `ui.c`
 - Add a main menu

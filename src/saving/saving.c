@@ -70,6 +70,15 @@ void tsc_saving_decodeWithAny(const char *code, tsc_grid *grid) {
     }
 }
 
+const char *tsc_saving_identify(const char *code) {
+    for(size_t i = 0; i < savingc; i++) {
+        if(strncmp(saving_arr[i].header, code, strlen(saving_arr[i].header)) == 0) {
+            return saving_arr[i].name;
+        }
+    }
+    return NULL;
+}
+
 const char *saving_base74 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!$%&+-.=?^{}";
 
 static int tsc_saving_count74(int num) {
