@@ -15,6 +15,7 @@ For v0.0.2:
 - Add a main menu
 - Add a settings menu
 - `config.json` and custom `platforms` support.
+- `pack.json` file in Resource Packs
 
 For v0.1:
 - Switch from Raylib to SDL2 (will be HARD)
@@ -43,11 +44,13 @@ Clarifying the ambiguous stuff
 
 ## Resource Pack Support
 
-A `pack.yaml` file would contain the following (though some information can be omitted)
-```yaml
-name: My Resource Pack
-description: A resource pack
-author: The Creator
+A `pack.json` file would contain the following (though some information can be omitted)
+```json
+{
+    "name": "My Resource Pack".
+    "description": "A resource pack",
+    "author": "The Creator",
+}
 ```
 
 NOTE: Not everything in here might actually be implemented.
@@ -75,10 +78,12 @@ It would just be the font.
 
 ### UI Themes
 
-In `ui.yaml`, UI theme information would be specified.
+In `ui.json`, UI theme information would be specified.
 
 ```yaml
-text: "FFFFFF"
+{
+    "text": "FFFFFF",
+}
 ```
 
 ## Mod Signals
@@ -86,7 +91,7 @@ text: "FFFFFF"
 ```c
 // Overall representation of a signal
 // Payload would store stuff like Lua runtime for Lua mods or WebAssembly information for WebAssembly mods.
-tsc_value signal(void *payload, tsc_frame *frame) {
+tsc_value signal(void *payload, tsc_value *args) {
     // Helper functions for the internal implementation.
     return tsc_null();
 }
@@ -114,11 +119,12 @@ struct tsc_value {
 
 ## Modding (Config)
 
-```yaml
-name: MyMod
-description: The mod
-# lua / python / wasm
-platform: lua
+```json
+{
+    "name": "MyMod",
+    "description": "The mod",
+    "platform": "lua",
+}
 ```
 
 ## Modding (Lua)
@@ -129,13 +135,13 @@ local actualID = TSC.AddCell {
     "Name",
     "Description here",
     -- Universal texture
-    texture = "textures/id.png",
+    texture = "id.png",
     -- Explicit texture pack textures
     texture = {
         -- Fallback
-        default = "textures/id.png",
+        default = "id.png",
         -- Presumably with textures_dev's style
-        dev = "textures/id_dev.png",
+        photon = "id_photon.png",
     },
     -- VTable stuff
     update = function(cell, x, y)
@@ -184,7 +190,6 @@ cell:owned() -- Returns if the cell is a pointer or a copy (from :clone())
 cell:canMove(x, y, dir, forceType)
 TSC.Cell.create()
 
--- Mod config will specify the export library name
 function TSC.Exports.doStuff(a, b, c)
     print(a, b, c)
 end
@@ -207,7 +212,7 @@ class MyCell:
     # Texture pack specific
     texture = {
         "default": "textures/id.png",
-        "dev": "textures/id_dev.png",
+        "photon": "textures/id_photon.png",
     }
 
     # VTable stuff
@@ -224,7 +229,3 @@ val = library.bmod.doSomething(1, 2, "stuff")
 
 # Everything else similar to Lua but more pythonic
 ```
-
-## Modding (WebAssembly)
-
-I have no idea yet. This is gonna be very challenging
