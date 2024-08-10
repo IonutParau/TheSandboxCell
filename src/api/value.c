@@ -2,6 +2,7 @@
 #include <string.h>
 #include "../utils.h"
 #include "value.h"
+#include "api.h"
 
 tsc_value tsc_null() {
     tsc_value v;
@@ -352,4 +353,84 @@ tsc_cell *tsc_toCell(tsc_value value) {
     if(value.tag == TSC_VALUE_CELLPTR) return value.cellptr;
     if(value.tag == TSC_VALUE_OWNEDCELL) return &value.ownedcell->cell;
     return NULL;
+}
+
+static tsc_typeinfo_t *tsc_cloneTypeInfo(tsc_typeinfo_t *typeInfo) {
+    tsc_typeinfo_t *copy = malloc(sizeof(tsc_typeinfo_t));
+    copy->tag = typeInfo->tag;
+    if(copy->tag == TSC_VALUE_ARRAY || copy->tag == TSC_VALUE_OPTIONAL) {
+        copy->child = tsc_cloneTypeInfo(typeInfo->child);
+    } else if(copy->tag == TSC_VALUE_TUPLE || copy->tag == TSC_VALUE_UNION) {
+        copy->childCount = typeInfo->childCount;
+        copy->children = malloc(sizeof(tsc_typeinfo_t) * copy->childCount);
+        for(int i = 0; i < copy->childCount; i++) {
+            tsc_typeinfo_t *child = tsc_cloneTypeInfo(&typeInfo->children[i]);
+            copy->children[i] = *child;
+            free(child);
+        }
+    } else if(copy->tag == TSC_VALUE_OBJECT) {
+        copy->pairCount = typeInfo->pairCount;
+        for(int i = 0; i < typeInfo->pairCount; i++) {
+            char *key = tsc_strdup(typeInfo->keys[i]);
+            copy->keys[i] = key;
+            tsc_typeinfo_t *child = tsc_cloneTypeInfo(&typeInfo->children[i]);
+            copy->values[i] = *child;
+            free(child);
+        }
+    }
+    return copy;
+}
+
+typedef struct tsc_signalStore {
+    const char **ids;
+    tsc_signal_t **signals;
+    tsc_typeinfo_t **info;
+    size_t len;
+} tsc_signalStore;
+
+tsc_signalStore tsc_signals = {NULL, NULL, 0};
+
+const char *tsc_setupSignal(const char *id, tsc_signal_t *signal, tsc_typeinfo_t *typeInfo) {
+    // beautiful code I know
+    id = tsc_strintern(tsc_padWithModID(id));
+
+    // Make it OWNED by US
+    if(typeInfo != NULL) typeInfo = tsc_cloneTypeInfo(typeInfo);
+
+    size_t idx = tsc_signals.len++;
+    tsc_signals.ids = realloc(tsc_signals.ids, sizeof(const char *) * tsc_signals.len);
+    tsc_signals.signals = realloc(tsc_signals.signals, sizeof(tsc_signal_t *) * tsc_signals.len);
+    tsc_signals.info = realloc(tsc_signals.info, sizeof(tsc_typeinfo_t *) * tsc_signals.len);
+    tsc_signals.ids[idx] = id;
+    tsc_signals.signals[idx] = signal;
+    tsc_signals.info[idx] = typeInfo;
+    return id;
+}
+
+tsc_typeinfo_t *tsc_getSignalInfo(const char *id) {
+    for(int i = 0; i < tsc_signals.len; i++) {
+        if(tsc_signals.ids[i] == id) {
+            return tsc_signals.info[i];
+        }
+    }
+    return NULL;
+}
+
+tsc_signal_t *tsc_getSignal(const char *id) {
+    for(int i = 0; i < tsc_signals.len; i++) {
+        if(tsc_signals.ids[i] == id) {
+            return tsc_signals.signals[i];
+        }
+    }
+    return NULL;
+}
+
+tsc_value tsc_callSignal(tsc_signal_t *signal, tsc_value *argv, size_t argc) {
+    tsc_value args = tsc_array(argc);
+    for(int i = 0; i < argc; i++) {
+        tsc_setIndex(args, i, argv[i]);
+        tsc_destroy(argv[i]);
+    }
+
+    return signal(args);
 }
