@@ -29,7 +29,7 @@ void tsc_init_builtin_ids() {
     builtin.audio.explosion = tsc_strintern("explosion");
 }
 
-tsc_cell tsc_cell_create(const char *id, char rot) {
+tsc_cell __attribute__((hot)) tsc_cell_create(const char *id, char rot) {
     tsc_cell cell;
     cell.id = id;
     cell.texture = NULL;
@@ -45,7 +45,7 @@ tsc_cell tsc_cell_create(const char *id, char rot) {
     return cell;
 }
 
-tsc_cell tsc_cell_clone(tsc_cell *cell) {
+tsc_cell __attribute__((hot)) tsc_cell_clone(tsc_cell *cell) {
     tsc_cell copy = *cell;
     if(cell->data == NULL) return copy;
 
@@ -60,7 +60,7 @@ tsc_cell tsc_cell_clone(tsc_cell *cell) {
     return copy;
 }
 
-void tsc_cell_destroy(tsc_cell cell) {
+void __attribute__((hot)) tsc_cell_destroy(tsc_cell cell) {
     if(cell.data == NULL) return;
 
     for(size_t i = 0; i < cell.data->len; i++) {

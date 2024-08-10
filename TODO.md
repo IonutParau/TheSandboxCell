@@ -16,6 +16,13 @@ For v0.0.2:
 - Add a settings menu
 - `config.json` and custom `platforms` support.
 
+For v0.1:
+- Switch from Raylib to SDL2 (will be HARD)
+- TSC Saving Format Encoder / Decoder
+- Lua platform
+- Python platform
+- Simplify build step in make (by making it make sub-projects too)
+
 # Planned features
 
 - V1, V2, V3 decoding.
