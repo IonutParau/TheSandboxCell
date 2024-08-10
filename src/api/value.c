@@ -179,8 +179,7 @@ void tsc_varArgs(tsc_value args, int min) {
     for(size_t i = min; i < len; i++) {
         tsc_value val = tsc_index(args, i);
         tsc_setIndex(varargs, i - min, val);
-        tsc_destroy(val); // setIndex retains.
-        tsc_destroy(val); // This frees too early. However, after this, we kill it.
+        tsc_setIndex(args, i, tsc_null());
     }
     // Unsafe delete everything else
     // This works because we deleted everything before
