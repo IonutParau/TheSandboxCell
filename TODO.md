@@ -2,9 +2,9 @@
 
 For v0.0.1:
 - Icons for set initial, restore initial
-- Chunk System
 
 For v0.0.2:
+- Chunk System
 - JSON parser library (tscjson)
 - Tooltips
 - Notification system (useful for error reporting, debugging, etc.)
