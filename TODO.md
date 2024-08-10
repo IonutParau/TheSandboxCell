@@ -1,8 +1,5 @@
 # Actual TODO
 
-For v0.0.1:
-- Icons for set initial, restore initial
-
 For v0.0.2:
 - Chunk System
 - JSON parser library (tscjson)

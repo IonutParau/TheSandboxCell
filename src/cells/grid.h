@@ -42,6 +42,8 @@ typedef struct tsc_texture_id_pool_t {
     const char *copy;
     const char *cut;
     const char *del;
+    const char *setinitial;
+    const char *restoreinitial;
 } tsc_texture_id_pool_t;
 
 typedef struct tsc_audio_id_pool_t {
