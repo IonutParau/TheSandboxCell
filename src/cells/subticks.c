@@ -252,33 +252,35 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
         if(parallel) {
             tsc_updateinfo_t *buffer = subticks_getBuffer(currentGrid->width < currentGrid->height ? currentGrid->height : currentGrid->width);
 
-            for(char i = 0; i < 2; i++) {
-                if(i == 1) {
-                    size_t j = 0;
-                    for(size_t x = 0; x < currentGrid->width; x++) {
-                        if(!tsc_grid_checkColumn(currentGrid, x)) {
-                            continue;
+            for(char space = 0; space <= spacing; space++) {
+                for(char i = 0; i < 2; i++) {
+                    if(i == 1) {
+                        size_t j = 0;
+                        for(size_t x = space; x < currentGrid->width; x += 1 + spacing) {
+                            if(!tsc_grid_checkColumn(currentGrid, x)) {
+                                continue;
+                            }
+                            buffer[j].x = x;
+                            buffer[j].rot = 1;
+                            buffer[j].subtick = subtick;
+                            j++;
                         }
-                        buffer[j].x = x;
-                        buffer[j].rot = 1;
-                        buffer[j].subtick = subtick;
-                        j++;
-                    }
 
-                    workers_waitForTasksFlat(&tsc_subtick_worker, buffer, sizeof(tsc_updateinfo_t), j);
-                } else {
-                    size_t j = 0;
-                    for(size_t y = 0; y < currentGrid->height; y++) {
-                        if(!tsc_grid_checkRow(currentGrid, y)) {
-                            continue;
+                        workers_waitForTasksFlat(&tsc_subtick_worker, buffer, sizeof(tsc_updateinfo_t), j);
+                    } else {
+                        size_t j = 0;
+                        for(size_t y = space; y < currentGrid->height; y += 1 + spacing) {
+                            if(!tsc_grid_checkRow(currentGrid, y)) {
+                                continue;
+                            }
+                            buffer[j].x = y;
+                            buffer[j].rot = 0;
+                            buffer[j].subtick = subtick;
+                            j++;
                         }
-                        buffer[j].x = y;
-                        buffer[j].rot = 0;
-                        buffer[j].subtick = subtick;
-                        j++;
-                    }
 
-                    workers_waitForTasksFlat(&tsc_subtick_worker, buffer, sizeof(tsc_updateinfo_t), j);
+                        workers_waitForTasksFlat(&tsc_subtick_worker, buffer, sizeof(tsc_updateinfo_t), j);
+                    }
                 }
             }
             return;
@@ -363,14 +365,18 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
     
     if(mode == TSC_SUBMODE_NEIGHBOUR) {
         if(parallel) {
-            // TODO: reuse buffers (possibly buffers stored in grid?)
             tsc_updateinfo_t *buffer = subticks_getBuffer(currentGrid->width);
-            for(size_t x = 0; x < currentGrid->width; x++) {
-                buffer[x].x = x;
-                buffer[x].subtick = subtick;
-            }
+            for(char space = 0; space <= spacing; space++) {
+                int j = 0;
+                for(size_t x = space; x < currentGrid->width; x += 1 + spacing) {
+                    if(!tsc_grid_checkColumn(currentGrid, x)) continue;
+                    buffer[j].x = x;
+                    buffer[j].subtick = subtick;
+                    j++;
+                }
 
-            workers_waitForTasksFlat(&tsc_subtick_worker, buffer, sizeof(tsc_updateinfo_t), currentGrid->width);
+                workers_waitForTasksFlat(&tsc_subtick_worker, buffer, sizeof(tsc_updateinfo_t), j);
+            }
             return;
         }
         // Single-threaded
@@ -406,12 +412,17 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
     if(mode == TSC_SUBMODE_TICKED) {
         if(parallel) {
             tsc_updateinfo_t *buffer = subticks_getBuffer(currentGrid->width);
-            for(size_t x = 0; x < currentGrid->width; x++) {
-                buffer[x].x = x;
-                buffer[x].subtick = subtick;
-            }
+            for(char space = 0; 0 <= spacing; space++) {
+                int j = 0;
+                for(size_t x = space; x < currentGrid->width; x += 1 + spacing) {
+                    if(!tsc_grid_checkColumn(currentGrid, x)) continue;
+                    buffer[j].x = x;
+                    buffer[j].subtick = subtick;
+                    j++;
+                }
 
-            workers_waitForTasksFlat(&tsc_subtick_worker, buffer, sizeof(tsc_updateinfo_t), currentGrid->width);
+                workers_waitForTasksFlat(&tsc_subtick_worker, buffer, sizeof(tsc_updateinfo_t), j);
+            }
             return;
         }
         // Single-threaded

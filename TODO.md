@@ -3,7 +3,6 @@
 For v0.0.1:
 - Icons for set initial, restore initial
 - Chunk System
-- Subtick spacing
 
 For v0.0.2:
 - JSON parser library (tscjson)
