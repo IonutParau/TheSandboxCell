@@ -22,9 +22,10 @@ static unsigned int renderingRepeatingScaleLoc;
 static RenderTexture renderingCellTexture;
 static int renderingCellBrushSize;
 static const char *renderingCellBrushId = NULL;
+static char renderingCellBrushRot = -1;
 static ui_frame *renderingGameUI;
 static tsc_categorybutton *renderingCellButtons = NULL;
-static double renderingApproximationSize = 4;
+static double renderingApproximationSize = 8;
 
 typedef struct selection_t {
     int sx;
@@ -161,14 +162,14 @@ static float tsc_rotInterp(char rot, signed char added) {
 static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat) {
     if(cell->id == builtin.empty && cell->texture == NULL) return;
     Texture texture = textures_get(cell->texture == NULL ? cell->id : cell->texture);
-    double size = renderingCamera.cellSize * (2 * gridRepeat + 1);
+    double size = renderingCamera.cellSize * gridRepeat;
     Vector2 origin = {size / 2, size / 2};
     Rectangle src = {0, 0, texture.width, texture.height};
     float ix = tsc_updateInterp(cell->lx, x);
     float iy = tsc_updateInterp(cell->ly, y);
     float irot = tsc_rotInterp(cell->rot, cell->addedRot);
-    Rectangle dest = {ix * renderingCamera.cellSize - renderingCamera.x + origin.x - renderingCamera.cellSize * gridRepeat,
-        iy * renderingCamera.cellSize - renderingCamera.y + origin.y - renderingCamera.cellSize * gridRepeat,
+    Rectangle dest = {ix * renderingCamera.cellSize - renderingCamera.x + origin.x,
+        iy * renderingCamera.cellSize - renderingCamera.y + origin.y,
         size,
         size};
     Color color = WHITE;
@@ -179,34 +180,36 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
         Vector2 origin = {size / 2, size / 2};
         // My precious little hack
         // Makes sense if you think about it... but I never think
-        dest.x -= renderingCamera.cellSize * gridRepeat - origin.x;
-        dest.y -= renderingCamera.cellSize * gridRepeat - origin.y;
+        //dest.x += origin.x;
+        //dest.y += origin.y;
         DrawRectanglePro(dest, origin, 0, approx);
         return;
     }
     // Basic cells get super optimized rendering
-    if(gridRepeat > 0) {
+    if(gridRepeat > 1) {
         // We need a render texture that is big enough
-        if(renderingCellBrushSize != gridRepeat || renderingCellBrushId != cell->id) {
+        if(renderingCellBrushSize != gridRepeat || renderingCellBrushId != cell->id || renderingCellBrushRot != cell->rot) {
             UnloadRenderTexture(renderingCellTexture);
             renderingCellTexture = LoadRenderTexture(size, size);
             renderingCellBrushSize = gridRepeat;
             renderingCellBrushId = cell->id;
+            renderingCellBrushRot = cell->rot;
         }
-        float repeat[] = {gridRepeat * 2 + 1, gridRepeat * 2 + 1};
+        float repeat[] = {gridRepeat, gridRepeat};
         SetShaderValue(renderingRepeatingShader, renderingRepeatingScaleLoc, repeat, SHADER_UNIFORM_VEC2);
         BeginTextureMode(renderingCellTexture);
         BeginShaderMode(renderingRepeatingShader);
         dest.x = origin.x;
         dest.y = origin.y;
     }
-    DrawTexturePro(texture, src, dest, origin, irot * 90, color);
-    if(gridRepeat > 0) {
+    // weird hack
+    DrawTexturePro(texture, src, dest, origin, irot * 90 * (1-(gridRepeat > 1)*2), color);
+    if(gridRepeat > 1) {
         EndShaderMode();
         EndTextureMode();
         // Weird hack science can not explain
-        DrawTexture(renderingCellTexture.texture, -renderingCamera.x + (x - gridRepeat) * renderingCamera.cellSize,
-                -renderingCamera.y + (y - gridRepeat) * renderingCamera.cellSize, color);
+        DrawTexture(renderingCellTexture.texture, -renderingCamera.x + ix * renderingCamera.cellSize,
+                -renderingCamera.y + iy * renderingCamera.cellSize, color);
     }
 }
 
@@ -304,11 +307,26 @@ void tsc_drawGrid() {
     if(ex < sx) ex = sx;
     if(ey < sy) ey = sy;
 
-    for(size_t x = sx; x <= ex; x++) {
-        for(size_t y = sy; y <= ey; y++) {
+    int maxRenderCount = 1000;
+    int skipLevel = 1;
+    int maxSkipLevel = 4;
+    int renderCount = (ex - sx + 1) * (ey - sy + 1);
+    while(renderCount > maxRenderCount && skipLevel < maxSkipLevel) {
+        skipLevel++;
+        renderCount /= 4;
+    }
+    if(renderingCamera.cellSize >= renderingApproximationSize) {
+        skipLevel = 1;
+    }
+
+    for(size_t x = sx; x <= ex; x = (x+skipLevel) - x % skipLevel) {
+        for(size_t y = sy; y <= ey; y = (y+skipLevel) - y % skipLevel) {
+            int repeat = skipLevel;
+            if(x + repeat >= currentGrid->width) repeat = currentGrid->width - x;
+            if(y + repeat >= currentGrid->height) repeat = currentGrid->height - y;
             tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
             if(cell == NULL) break;
-            tsc_drawCell(cell, x, y, 1, 0);
+            tsc_drawCell(cell, x, y, 1, repeat);
         }
     }
 
@@ -356,8 +374,13 @@ void tsc_drawGrid() {
     } else {
         int cmx = tsc_cellMouseX();
         int cmy = tsc_cellMouseY();
+        cmx = cmx - brushSize;
+        cmy = cmy - brushSize;
         tsc_cell cell = tsc_cell_create(currentId, currentRot);
-        tsc_drawCell(&cell, cmx, cmy, 0.5, brushSize);
+        cell.lx = cmx;
+        cell.ly = cmy;
+        cell.addedRot = 0;
+        tsc_drawCell(&cell, cmx, cmy, 0.5, brushSize*2+1);
     }
 
     static char buffer[256];
@@ -413,6 +436,7 @@ void tsc_drawGrid() {
 int tsc_cellMouseX() {
     double x = GetMouseX();
     x += renderingCamera.x;
+    if(x < 0) x -= renderingCamera.cellSize; // accounts for rounding error
     x /= renderingCamera.cellSize;
     return x;
 }
@@ -420,6 +444,7 @@ int tsc_cellMouseX() {
 int tsc_cellMouseY() {
     double y = GetMouseY();
     y += renderingCamera.y;
+    if(y < 0) y -= renderingCamera.cellSize; // accounts for rounding error
     y /= renderingCamera.cellSize;
     return y;
 }

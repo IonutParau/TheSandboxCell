@@ -2,7 +2,6 @@
 
 For v0.0.1:
 - Icons for set initial, restore initial
-- Optimize rendering using cell grouping
 - Chunk System
 - Subtick spacing
 
