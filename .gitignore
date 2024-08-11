@@ -4,6 +4,7 @@
 *.dll
 *.exe
 thesandboxcell
+test_thesandboxcell
 *.png~
 # Music used for debugging
 ILLEGAL_*.*

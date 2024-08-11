@@ -44,7 +44,6 @@ tsc_grid *tsc_createGrid(const char *id, int width, int height, const char *titl
     // that + is to fight integer division rounding
     int chunkWidth = width / gridChunkSize + (width % gridChunkSize == 0 ? 0 : 1);
     int chunkHeight = height / gridChunkSize + (height % gridChunkSize == 0 ? 0 : 1);
-    printf("%d x %d grid has %d x %d chunkgrid\n", width, height, chunkWidth, chunkHeight);
 
     grid->chunkwidth = chunkWidth;
     grid->chunkheight = chunkHeight;

@@ -84,6 +84,8 @@ endif
 CFLAGS += $(ECFLAGS)
 LFLAGS += $(ELFLAGS)
 
+tests=test_saving.o
+
 all: library main.o
 ifeq ($(MODE), TURBO)
 	$(LINKER) -o $(OUTPUT) main.o $(objects) $(LINKRAYLIB) $(LFLAGS)
@@ -91,13 +93,19 @@ else
 	$(LINKER) -o $(OUTPUT) main.o -L. -l:./$(LIBRARY) $(LINKRAYLIB) $(LFLAGS)
 endif
 clean:
-	rm $(objects) $(LIBRARY) $(OUTPUT) main.o
+	rm $(objects) $(LIBRARY) $(OUTPUT) $(tests) main.o testing.o
+test: library $(tests) testing.o
+	$(LINKER) -o test_$(OUTPUT) $(tests) testing.o -L. -l:./$(LIBRARY) $(LINKRAYLIB) $(LFLAGS)
 fresh: clean all
 	
 library: $(objects)
 	$(LINKER) -o $(LIBRARY) -shared $(objects) $(LFLAGS)
 main.o: src/main.c
 	$(CC) $(CFLAGS) src/main.c -o main.o
+testing.o: src/testing.c
+	$(CC) $(CFLAGS) src/testing.c -o testing.o
+test_saving.o: src/saving/test_saving.c
+	$(CC) $(CFLAGS) src/saving/test_saving.c -o test_saving.o
 workers.o: src/threads/workers.c
 	$(CC) $(CFLAGS) src/threads/workers.c -o workers.o
 utils.o: src/utils.c
