@@ -2,6 +2,8 @@
 
 For v0.0.2:
 - Chunk System
+- Fix some rendering artifacts from Cell Skipping (not major things just minor annoyances often)
+- Brush size changes faster if zoomed out
 - JSON parser library (tscjson)
 - Tooltips
 - Notification system (useful for error reporting, debugging, etc.)
