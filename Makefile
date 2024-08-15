@@ -93,7 +93,7 @@ else
 	$(LINKER) -o $(OUTPUT) main.o -L. -l:./$(LIBRARY) $(LINKRAYLIB) $(LFLAGS)
 endif
 clean:
-	rm $(objects) $(LIBRARY) $(OUTPUT) $(tests) main.o testing.o
+	rm -f $(objects) $(LIBRARY) $(OUTPUT) $(tests) main.o testing.o test_$(OUTPUT)
 test: library $(tests) testing.o
 	$(LINKER) -o test_$(OUTPUT) $(tests) testing.o -L. -l:./$(LIBRARY) $(LINKRAYLIB) $(LFLAGS)
 fresh: clean all

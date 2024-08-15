@@ -8,3 +8,4 @@ test_thesandboxcell
 *.png~
 # Music used for debugging
 ILLEGAL_*.*
+mods/*/
