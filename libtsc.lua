@@ -139,8 +139,6 @@ if task == "compile" then
     local raylibDLL
     local mode = "release"
     local step = "library"
-    local library = target == "linux" and "libtsc.so" or "libtsc.dll"
-    local exe = target == "linux" and "thesandboxcell" or "thesandboxcell.exe"
     local bundle = false
 
     for i=2,#arg do
@@ -166,6 +164,9 @@ if task == "compile" then
             bundle = true
         end
     end
+    
+    local library = target == "linux" and "libtsc.so" or "libtsc.dll"
+    local exe = target == "linux" and "thesandboxcell" or "thesandboxcell.exe"
 
     local linkRaylib = ""
 
