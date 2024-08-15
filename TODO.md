@@ -12,13 +12,16 @@ For v0.0.2:
 - Add a settings menu
 - `config.json` and custom `platforms` support.
 - `pack.json` file in Resource Packs
+- Blueprints
+- (maybe) Ability to compile the game on Windows using *magic*
 
 For v0.1:
 - Switch from Raylib to SDL2 (will be HARD)
 - TSC Saving Format Encoder / Decoder
 - Lua platform
 - Python platform
-- Simplify build step in make (by making it make sub-projects too)
+- Simplify build step in make (by making it make sub-projects too, but it catastrophically overcomplicates cross-compilation)
+- Better build instructions
 
 # Planned features
 

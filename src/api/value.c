@@ -41,7 +41,7 @@ tsc_value tsc_lstring(const char *str, size_t len) {
     tsc_string_t *string = malloc(sizeof(tsc_string_t));
     string->refc = 1;
     // Null terminator is guaranteed.
-    string->memory = malloc(sizeof(char) * (len) + 1);
+    string->memory = malloc(sizeof(char) * (len + 1));
     memcpy(string->memory, str, sizeof(char) * len);
     string->memory[len] = '\0';
     string->len = len;
