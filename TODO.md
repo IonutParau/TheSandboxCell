@@ -5,6 +5,8 @@ For v0.0.2:
 - Fix some rendering artifacts from Cell Skipping (not major things just minor annoyances often)
 - Brush size changes faster if zoomed out
 - JSON parser library (tscjson)
+- Rework categories to allow left click to select "main" cell and right click to open.
+- Allow rows to have wrap around.
 - Tooltips
 - Notification system (useful for error reporting, debugging, etc.)
 - Backgrounds
@@ -15,15 +17,22 @@ For v0.0.2:
 - `config.json` and custom `platforms` support.
 - `pack.json` file in Resource Packs
 - Blueprints
+- Maximum width and height to rows and columns which allow wrapping
 - (maybe) Ability to compile the game on Windows using *magic*
+- Try to settle for a stable ABI
+- Lua 5.4 platform
 
 For v0.1:
-- Switch from Raylib to SDL2 (will be HARD)
 - TSC Saving Format Encoder / Decoder
-- Lua platform
-- Python platform
+- Python3 platform
+- (maybe) LuaJIT platform
 - Simplify build step in make (by making it make sub-projects too, but it catastrophically overcomplicates cross-compilation)
 - Better build instructions
+- Settle for a stable ABI
+
+Maybe one day:
+- Switch from Raylib to SDL2 (will be HARD)
+- Schemacell platform
 
 # Planned features
 
