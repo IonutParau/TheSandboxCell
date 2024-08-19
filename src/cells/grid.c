@@ -270,3 +270,51 @@ int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell
     // +1 cuz replacement. This also means 0 only happens if pushing failed
     return amount + 1;
 }
+
+int tsc_grid_pull(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell *replacement) {
+    int m = 0;
+
+    while(true) {
+        tsc_cell *current = tsc_grid_get(grid, x, y);
+        if(current == NULL) return m;
+
+        if(current->id == builtin.empty) {
+            if(replacement != NULL) tsc_grid_set(grid, x, y, replacement);
+            return m;
+        }
+
+        if(!tsc_cell_canMove(grid, current, x, y, dir, "pull")) {
+            return m;
+        }
+
+        int fx = tsc_grid_frontX(x, dir);
+        int fy = tsc_grid_frontY(y, dir);
+        tsc_cell *front = tsc_grid_get(grid, fx, fy);
+        if(front == NULL) return m;
+
+        if(tsc_cell_isTrash(grid, front, fx, fy, dir, "pull", current)) {
+           tsc_cell_onTrash(grid, front, fx, fy, dir, "pull", current);
+        } else if(tsc_cell_isAcid(grid, current, x, y, dir, "pull", front)) {
+            tsc_cell_onAcid(grid, current, x, y, dir, "pull", front);
+            tsc_grid_set(grid, fx, fy, current);
+        } else if(front->id == builtin.empty) {
+            tsc_grid_set(grid, fx, fy, current);
+        } else {
+            return m;
+        }
+        
+        tsc_cell empty = tsc_cell_create(builtin.empty, 0);
+        tsc_grid_set(grid, x, y, &empty);
+
+        x = tsc_grid_shiftX(x, dir, -1);
+        y = tsc_grid_shiftY(y, dir, -1);
+    }
+}
+
+int tsc_grid_grab(tsc_grid *grid, int x, int y, char dir, char side, double force, tsc_cell *replacement) {
+    return 0;
+}
+
+bool tsc_grid_nudge(tsc_grid *grid, int x, int y, char dir, tsc_cell *replacement) {
+    return false;
+}

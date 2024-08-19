@@ -139,5 +139,11 @@ void tsc_cell_onAcid(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, con
 
 // Returns how many cells were pushed.
 int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell *replacement);
+// Returns how many cells were pulled.
+int tsc_grid_pull(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell *replacement);
+// Returns how many cells were grabbed.
+int tsc_grid_grab(tsc_grid *grid, int x, int y, char dir, char side, double force, tsc_cell *replacement);
+// Returns whether the cell was nudged.
+bool tsc_grid_nudge(tsc_grid *grid, int x, int y, char dir, tsc_cell *replacement);
 
 #endif
