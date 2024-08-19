@@ -258,11 +258,25 @@ static void tsc_buildCellbar(tsc_category *category, tsc_categorybutton *buttons
 static void tsc_updateCellbar(tsc_category *category, tsc_categorybutton *buttons) {
     for(size_t i = 0; i < category->itemc; i++) {
         if(category->items[i].kind == TSC_CATEGORY_SUBCATEGORY) {
-            if(tsc_ui_checkbutton(buttons[i].category) == UI_BUTTON_PRESS) {
-                if(category->items[i].category->open) {
+            if(category->items[i].category->usedAsCell) {
+                char state = tsc_ui_checkbutton(buttons[i].category);
+                if(state == UI_BUTTON_PRESS) {
+                    currentId = category->items[i].category->icon;
                     tsc_closeCategory(category->items[i].category);
-                } else {
-                    tsc_openCategory(category->items[i].category);
+                } else if(state == UI_BUTTON_RIGHTPRESS) {
+                    if(category->items[i].category->open) {
+                        tsc_closeCategory(category->items[i].category);
+                    } else {
+                        tsc_openCategory(category->items[i].category);
+                    }
+                }
+            } else {
+                if(tsc_ui_checkbutton(buttons[i].category) == UI_BUTTON_PRESS) {
+                    if(category->items[i].category->open) {
+                        tsc_closeCategory(category->items[i].category);
+                    } else {
+                        tsc_openCategory(category->items[i].category);
+                    }
                 }
             }
             tsc_updateCellbar(category->items[i].category, buttons[i].items);
@@ -732,16 +746,19 @@ void tsc_handleRenderInputs() {
     }
 
     float mouseWheel = GetMouseWheelMove();
+    int amount = 32.0 / renderingCamera.cellSize;
+    if(amount < 1) amount = 1;
     if(mouseWheel > 0) {
         if(IsKeyDown(KEY_LEFT_CONTROL)) {
-            brushSize++;
+            brushSize += amount;
         } else {
             tsc_setZoomLevel(renderingCamera.cellSize * 2);
         }
     }
     if(mouseWheel < 0) {
         if(IsKeyDown(KEY_LEFT_CONTROL)) {
-            if(brushSize > 0) brushSize--;
+            if(brushSize >= amount) brushSize -= amount;
+            else brushSize = 0;
         } else {
             tsc_setZoomLevel(renderingCamera.cellSize / 2);
         }

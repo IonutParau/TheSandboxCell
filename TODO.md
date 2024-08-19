@@ -3,10 +3,7 @@
 For v0.0.2:
 - Chunk System
 - Fix some rendering artifacts from Cell Skipping (not major things just minor annoyances often)
-- Brush size changes faster if zoomed out
 - JSON parser library (tscjson)
-- Rework categories to allow left click to select "main" cell and right click to open.
-- Allow rows to have wrap around.
 - Tooltips
 - Notification system (useful for error reporting, debugging, etc.)
 - Backgrounds
@@ -20,7 +17,12 @@ For v0.0.2:
 - Maximum width and height to rows and columns which allow wrapping
 - (maybe) Ability to compile the game on Windows using *magic*
 - Try to settle for a stable ABI
+- Add helper methods (tsc_grid_pull, tsc_grid_grab, tsc_grid_nudge)
+- Generator optimizations and general purpose bit-optimizations for tiles (tsc_opt_define, tsc_opt_check, tsc_opt_set)
 - Lua 5.4 platform
+- Allow for the custom subtick mode which also has an array of arrays of ints where the first int determines the iteration order and the 2nd determines
+the allowed rotations
+- Some safety asserts in the V-series decoders
 
 For v0.1:
 - TSC Saving Format Encoder / Decoder

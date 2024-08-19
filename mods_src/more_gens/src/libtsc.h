@@ -19,8 +19,8 @@ typedef struct tsc_cell {
     tsc_cellreg *data;
     struct tsc_celltable *celltable;
     size_t flags;
-    size_t lx;
-    size_t ly;
+    int lx;
+    int ly;
     char rot;
     signed char addedRot;
     bool updated;
@@ -44,6 +44,8 @@ typedef struct tsc_texture_id_pool_t {
     const char *copy;
     const char *cut;
     const char *del;
+    const char *setinitial;
+    const char *restoreinitial;
 } tsc_texture_id_pool_t;
 
 typedef struct tsc_audio_id_pool_t {
@@ -86,6 +88,9 @@ typedef struct tsc_grid {
     const char *title;
     const char *desc;
     size_t refc;
+    bool *chunkdata;
+    int chunkwidth;
+    int chunkheight;
 } tsc_grid;
 
 typedef struct tsc_gridStorage {
@@ -111,6 +116,11 @@ int tsc_grid_frontX(int x, char dir);
 int tsc_grid_frontY(int y, char dir);
 int tsc_grid_shiftX(int x, char dir, int amount);
 int tsc_grid_shiftY(int y, char dir, int amount);
+void tsc_grid_enableChunk(tsc_grid *grid, int x, int y);
+void tsc_grid_disableChunk(tsc_grid *grid, int x, int y);
+bool tsc_grid_checkChunk(tsc_grid *grid, int x, int y);
+bool tsc_grid_checkRow(tsc_grid *grid, int y);
+bool tsc_grid_checkColumn(tsc_grid *grid, int x);
 
 // Cell interactions 
 
@@ -160,6 +170,7 @@ typedef struct tsc_subtick_manager_t {
 extern tsc_subtick_manager_t subticks;
 
 void tsc_subtick_add(tsc_subtick_t subtick);
+void tsc_subtick_addCell(tsc_subtick_t *subtick, const char *id);
 tsc_subtick_t *tsc_subtick_find(const char *name);
 void tsc_subtick_addCore();
 void tsc_subtick_run();
@@ -197,6 +208,7 @@ typedef struct tsc_saving_format {
 int tsc_saving_encodeWith(tsc_saving_buffer *buffer, tsc_grid *grid, const char *name);
 void tsc_saving_encodeWithSmallest(tsc_saving_buffer *buffer, tsc_grid *grid);
 void tsc_saving_decodeWith(const char *code, tsc_grid *grid, const char *name);
+const char *tsc_saving_identify(const char *code);
 void tsc_saving_decodeWithAny(const char *code, tsc_grid *grid);
 
 void tsc_saving_register(tsc_saving_format format);
@@ -222,7 +234,6 @@ tsc_resourcepack *tsc_getResourcePack(const char *id);
 
 const char *tsc_textures_load(tsc_resourcepack *pack, const char *id, const char *file);
 const char *tsc_sound_load(tsc_resourcepack *pack, const char *id, const char *file);
-void tsc_music_load(const char *name, const char *file);
 
 void tsc_sound_play(const char *id);
 
@@ -235,14 +246,17 @@ void tsc_sound_play(const char *id);
 #include <stddef.h>
 #include <stdbool.h>
 
-#define WIDTH(x) (((x) / 100.0) * GetScreenWidth())
-#define HEIGHT(y) (((y) / 100.0) * GetScreenHeight())
+#define WIDTH(x) (((double)(x) / 100.0) * GetScreenWidth())
+#define HEIGHT(y) (((double)(y) / 100.0) * GetScreenHeight())
 
 typedef struct ui_frame ui_frame;
 
 #define UI_BUTTON_CLICK 1
 #define UI_BUTTON_PRESS 2
 #define UI_BUTTON_LONGPRESS 3
+#define UI_BUTTON_RIGHTCLICK 4
+#define UI_BUTTON_RIGHTPRESS 5
+#define UI_BUTTON_RIGHTLONGPRESS 6
 
 typedef struct ui_button {
     float pressTime;
@@ -251,6 +265,7 @@ typedef struct ui_button {
     int shrinking;
     bool wasClicked;
     bool clicked;
+    bool rightClick;
 } ui_button;
 
 #define UI_INPUT_DEFAULT 0
@@ -390,6 +405,9 @@ void tsc_freedirfiles(char **dirfiles);
 // Cell Categories + mod ID stuff.
 // This file is very confusingly named, but fuck you
 
+#ifndef TSC_API_H
+#define TSC_API_H
+
 #include <stddef.h>
 #include <stdbool.h>
 
@@ -435,15 +453,19 @@ typedef struct tsc_category {
     size_t itemcap;
     struct tsc_category *parent;
     bool open;
+    bool usedAsCell;
 } tsc_category;
 
 tsc_category *tsc_rootCategory();
 tsc_category *tsc_newCategory(const char *title, const char *description, const char *icon);
+tsc_category *tsc_newCellGroup(const char *title, const char *description, const char *mainCell);
 void tsc_addCategory(tsc_category *category, tsc_category *toAdd);
 void tsc_addCell(tsc_category *category, const char *cell);
 void tsc_addButton(tsc_category *category, const char *icon, const char *name, const char *description, void (*click)(void *), void *payload);
 tsc_category *tsc_getCategory(tsc_category *category, const char *path);
 
+
+#endif
 #ifndef TSC_VALUE_H
 #define TSC_VALUE_H
 
@@ -546,6 +568,34 @@ const char *tsc_toLString(tsc_value value, size_t *len);
 size_t tsc_getLength(tsc_value value);
 const char *tsc_keyAt(tsc_value object, size_t index);
 tsc_cell *tsc_toCell(tsc_value value);
+
+typedef tsc_value (tsc_signal_t)(tsc_value args);
+
+#define TSC_VALUE_UNION 1024
+#define TSC_VALUE_OPTIONAL 1025
+#define TSC_VALUE_TUPLE 1026
+
+typedef struct tsc_typeinfo_t {
+    size_t tag;
+    union {
+        struct tsc_typeinfo_t *child;
+        struct {
+            struct tsc_typeinfo_t *children;
+            size_t childCount;
+        };
+        struct {
+            const char **keys;
+            struct tsc_typeinfo_t *values;
+            size_t pairCount;
+        };
+    };
+} tsc_typeinfo_t;
+
+// TODO: define typeInfo
+const char *tsc_setupSignal(const char *id, tsc_signal_t *signal, tsc_typeinfo_t *typeInfo);
+tsc_typeinfo_t *tsc_getSignalInfo(const char *id);
+tsc_signal_t *tsc_getSignal(const char *id);
+tsc_value tsc_callSignal(tsc_signal_t *signal, tsc_value *argv, size_t argc);
 
 #endif
 #ifdef __cplusplus

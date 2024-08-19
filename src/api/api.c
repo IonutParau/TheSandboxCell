@@ -124,6 +124,21 @@ tsc_category *tsc_newCategory(const char *title, const char *description, const 
     category->items = malloc(sizeof(tsc_categoryitem) * category->itemcap);
     category->parent = NULL;
     category->open = false;
+    category->usedAsCell = false;
+    return category;
+}
+
+tsc_category *tsc_newCellGroup(const char *title, const char *description, const char *mainCell) {
+    tsc_category *category = malloc(sizeof(tsc_category));
+    category->title = title;
+    category->description = description;
+    category->icon = mainCell;
+    category->itemc = 0;
+    category->itemcap = 20;
+    category->items = malloc(sizeof(tsc_categoryitem) * category->itemcap);
+    category->parent = NULL;
+    category->open = false;
+    category->usedAsCell = true;
     return category;
 }
 
@@ -193,6 +208,11 @@ tsc_category *tsc_getCategory(tsc_category *category, const char *path) {
 }
 
 void tsc_openCategory(tsc_category *category) {
+    if(category != NULL && category->parent != NULL) {
+        for(size_t i = 0; i < category->parent->itemc; i++) {
+            if(category->parent->items[i].kind == TSC_CATEGORY_SUBCATEGORY) tsc_closeCategory(category->parent->items[i].category);
+        }
+    }
 start:
     if(category == NULL) return;
     if(category->open) return;
@@ -267,13 +287,23 @@ void tsc_loadDefaultCellBar() {
     tsc_addButton(tools, "paste", "Paste", "Paste the copied selection (drag with Middle Click to select)", tsc_pasteButton, NULL);
 
     tsc_addCategory(root, tools);
-    tsc_addCell(root, builtin.mover);
-    tsc_addCell(root, builtin.generator);
-    tsc_addCell(root, builtin.push);
-    tsc_addCell(root, builtin.slide);
-    tsc_addCell(root, builtin.rotator_cw);
-    tsc_addCell(root, builtin.rotator_ccw);
-    tsc_addCell(root, builtin.wall);
-    tsc_addCell(root, builtin.enemy);
-    tsc_addCell(root, builtin.trash);
+    tsc_category *movers = tsc_newCellGroup("Movers", "Cells that move by themselves and may also move other cells", builtin.mover);
+    tsc_addCell(movers, builtin.mover);
+    tsc_addCategory(root, movers);
+    tsc_category *generators = tsc_newCellGroup("Generators", "Cells that create other cells", builtin.generator);
+    tsc_addCell(generators, builtin.generator);
+    tsc_addCategory(root, generators);
+    tsc_category *pushables = tsc_newCellGroup("Pushables", "Cells that dont move by themselves but can be pushed", builtin.push);
+    tsc_addCell(pushables, builtin.push);
+    tsc_addCell(pushables, builtin.slide);
+    tsc_addCell(pushables, builtin.wall);
+    tsc_addCategory(root, pushables);
+    tsc_category *rotators = tsc_newCellGroup("Rotators", "Cells that rotate other nearby cells", builtin.rotator_cw);
+    tsc_addCell(rotators, builtin.rotator_cw);
+    tsc_addCell(rotators, builtin.rotator_ccw);
+    tsc_addCategory(root, rotators);
+    tsc_category *destroyers = tsc_newCellGroup("Destroyers", "Cells that destroy other cells", builtin.trash);
+    tsc_addCell(destroyers, builtin.enemy);
+    tsc_addCell(destroyers, builtin.trash);
+    tsc_addCategory(root, destroyers);
 }

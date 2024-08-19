@@ -352,9 +352,10 @@ start:
         button->clicked = false;
         int mx = GetMouseX();
         int my = GetMouseY();
-        if(IsMouseButtonDown(MOUSE_BUTTON_LEFT) && mx >= x && my >= y && mx <= x + width && my <= y + height) {
+        if((IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) && mx >= x && my >= y && mx <= x + width && my <= y + height) {
             button->clicked = true;
             button->pressTime += delta;
+            button->rightClick = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
         } else {
             button->pressTime = 0;
         }
@@ -714,14 +715,26 @@ int tsc_ui_button(ui_button *state) {
 }
 
 int tsc_ui_checkbutton(ui_button *state) {
-    if(state->clicked && !state->wasClicked) {
-        return UI_BUTTON_CLICK;
-    }
-    if(!state->clicked && state->wasClicked && state->pressTime < state->longPressTime) {
-        return UI_BUTTON_PRESS;
-    }
-    if(!state->clicked && state->wasClicked && state->pressTime >= state->longPressTime) {
-        return UI_BUTTON_LONGPRESS;
+    if(state->rightClick) {
+        if(state->clicked && !state->wasClicked) {
+            return UI_BUTTON_RIGHTCLICK;
+        }
+        if(!state->clicked && state->wasClicked && state->pressTime < state->longPressTime) {
+            return UI_BUTTON_RIGHTPRESS;
+        }
+        if(!state->clicked && state->wasClicked && state->pressTime >= state->longPressTime) {
+            return UI_BUTTON_RIGHTLONGPRESS;
+        }
+    } else {
+        if(state->clicked && !state->wasClicked) {
+            return UI_BUTTON_CLICK;
+        }
+        if(!state->clicked && state->wasClicked && state->pressTime < state->longPressTime) {
+            return UI_BUTTON_PRESS;
+        }
+        if(!state->clicked && state->wasClicked && state->pressTime >= state->longPressTime) {
+            return UI_BUTTON_LONGPRESS;
+        }
     }
     return 0;
 }

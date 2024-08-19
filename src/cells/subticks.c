@@ -66,6 +66,12 @@ void tsc_subtick_add(tsc_subtick_t subtick) {
     tsc_subtick_sort(0, subticks.subc - 1);
 }
 
+void tsc_subtick_addCell(tsc_subtick_t *subtick, const char *cell) {
+    size_t idx = subtick->idc++;
+    subtick->ids = realloc(subtick->ids, subtick->idc * sizeof(const char *));
+    subtick->ids[idx] = cell;
+}
+
 // Names must be interned because I said so
 tsc_subtick_t *tsc_subtick_find(const char *name) {
     for(size_t i = 0; i < subticks.subc; i++) {

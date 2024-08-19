@@ -533,7 +533,10 @@ const char *tsc_textures_load(tsc_resourcepack *pack, const char *id, const char
 
     const char *resource = tsc_strintern(tsc_padWithModID(id));
     Texture texture = LoadTexture(filepath);
-    rp_resourceTablePut(pack->textures, resource, &texture);
+    tsc_texture_resource tex;
+    tex.texture = texture;
+    tex.approximation = tsc_texture_computeApproximation(texture);
+    rp_resourceTablePut(pack->textures, resource, &tex);
     return resource;
 }
 

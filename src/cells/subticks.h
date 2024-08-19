@@ -32,6 +32,7 @@ typedef struct tsc_subtick_manager_t {
 extern tsc_subtick_manager_t subticks;
 
 void tsc_subtick_add(tsc_subtick_t subtick);
+void tsc_subtick_addCell(tsc_subtick_t *subtick, const char *id);
 tsc_subtick_t *tsc_subtick_find(const char *name);
 void tsc_subtick_addCore();
 void tsc_subtick_run();

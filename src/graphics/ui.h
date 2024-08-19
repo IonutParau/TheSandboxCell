@@ -5,14 +5,17 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#define WIDTH(x) (((x) / 100.0) * GetScreenWidth())
-#define HEIGHT(y) (((y) / 100.0) * GetScreenHeight())
+#define WIDTH(x) (((double)(x) / 100.0) * GetScreenWidth())
+#define HEIGHT(y) (((double)(y) / 100.0) * GetScreenHeight())
 
 typedef struct ui_frame ui_frame;
 
 #define UI_BUTTON_CLICK 1
 #define UI_BUTTON_PRESS 2
 #define UI_BUTTON_LONGPRESS 3
+#define UI_BUTTON_RIGHTCLICK 4
+#define UI_BUTTON_RIGHTPRESS 5
+#define UI_BUTTON_RIGHTLONGPRESS 6
 
 typedef struct ui_button {
     float pressTime;
@@ -21,6 +24,7 @@ typedef struct ui_button {
     int shrinking;
     bool wasClicked;
     bool clicked;
+    bool rightClick;
 } ui_button;
 
 #define UI_INPUT_DEFAULT 0

@@ -1,6 +1,9 @@
 // Cell Categories + mod ID stuff.
 // This file is very confusingly named, but fuck you
 
+#ifndef TSC_API_H
+#define TSC_API_H
+
 #include <stddef.h>
 #include <stdbool.h>
 
@@ -55,10 +58,12 @@ typedef struct tsc_category {
     size_t itemcap;
     struct tsc_category *parent;
     bool open;
+    bool usedAsCell;
 } tsc_category;
 
 tsc_category *tsc_rootCategory();
 tsc_category *tsc_newCategory(const char *title, const char *description, const char *icon);
+tsc_category *tsc_newCellGroup(const char *title, const char *description, const char *mainCell);
 void tsc_addCategory(tsc_category *category, tsc_category *toAdd);
 void tsc_addCell(tsc_category *category, const char *cell);
 void tsc_addButton(tsc_category *category, const char *icon, const char *name, const char *description, void (*click)(void *), void *payload);
@@ -69,3 +74,5 @@ void tsc_openCategory(tsc_category *category);
 void tsc_closeCategory(tsc_category *category);
 void tsc_loadDefaultCellBar();
 // hideapi
+
+#endif

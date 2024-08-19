@@ -198,7 +198,6 @@ static char *tsc_v3_nextPart(const char *code, size_t *idx) {
             (*idx)++;
         }
     }
-    if(len == 0) return NULL;
     char *buf = malloc(sizeof(char) * (len + 1));
     buf[len] = '\0';
     memcpy(buf, mem, sizeof(char) * len);
