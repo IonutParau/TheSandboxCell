@@ -20,19 +20,11 @@ void more_movers_init() {
     tsc_category *movers = tsc_getCategory(tsc_rootCategory(), "Movers");
     assert(movers != NULL);
 
-    tsc_subtick_t *moversSub = tsc_subtick_find(tsc_strintern("movers"));
+    tsc_subtick_t *moversSub = tsc_subtick_find("movers");
     tsc_subtick_addCell(moversSub, more_movers_ids.fan);
     
-    tsc_subtick_t pullerSubtick;
-    pullerSubtick.priority = 3.1;
-    pullerSubtick.idc = 0;
-    pullerSubtick.ids = NULL;
-    pullerSubtick.name = tsc_strintern("movers");
-    pullerSubtick.mode = TSC_SUBMODE_TRACKED;
-    pullerSubtick.spacing = 0;
-    pullerSubtick.parallel = true;
-    tsc_subtick_addCell(&pullerSubtick, more_movers_ids.puller);
-    tsc_subtick_add(pullerSubtick);
+    tsc_subtick_t *pullerSubtick = tsc_subtick_addTracked("pullers", 3.1, 0, true);
+    tsc_subtick_addCell(pullerSubtick, more_movers_ids.puller);
 
     tsc_addCell(movers, more_movers_ids.fan);
     tsc_addCell(movers, more_movers_ids.puller);

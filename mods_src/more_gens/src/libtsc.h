@@ -33,7 +33,7 @@ typedef struct tsc_grid tsc_grid;
 typedef struct tsc_celltable {
     void *payload;
     void (*update)(tsc_cell *cell, int x, int y, int ux, int uy, void *payload);
-    int (*canMove)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, void *payload);
+    int (*canMove)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, void *payload);
 } tsc_celltable;
 
 tsc_celltable *tsc_cell_newTable(const char *id);
@@ -124,32 +124,48 @@ bool tsc_grid_checkColumn(tsc_grid *grid, int x);
 
 // Cell interactions 
 
-int tsc_cell_canMove(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType);
-float tsc_cell_getBias(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType);
+int tsc_cell_canMove(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force);
+float tsc_cell_getBias(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force);
 int tsc_cell_canGenerate(tsc_grid *grid, tsc_cell *cell, int x, int y, tsc_cell *generator, int gx, int gy, char dir);
-int tsc_cell_isTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, tsc_cell *eating);
-void tsc_cell_onTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, tsc_cell *eating);
-int tsc_cell_isAcid(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, tsc_cell *dissolving);
-void tsc_cell_onAcid(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, tsc_cell *dissolving);
+int tsc_cell_isTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, tsc_cell *eating);
+void tsc_cell_onTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, tsc_cell *eating);
+int tsc_cell_isAcid(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy);
+void tsc_cell_onAcid(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy);
 
 // Returns how many cells were pushed.
 int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell *replacement);
+// Returns how many cells were pulled.
+int tsc_grid_pull(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell *replacement);
+// Returns how many cells were grabbed.
+int tsc_grid_grab(tsc_grid *grid, int x, int y, char dir, char side, double force, tsc_cell *replacement);
+// Returns whether the cell was nudged.
+bool tsc_grid_nudge(tsc_grid *grid, int x, int y, char dir, tsc_cell *replacement);
 
 #endif
 #ifndef TSC_SUBTICKS_H
 #define TSC_SUBTICKS_H
 
 #include <stddef.h>
+#include <stdbool.h>
 
 #define TSC_SUBMODE_TICKED 0
 #define TSC_SUBMODE_TRACKED 1
 #define TSC_SUBMODE_NEIGHBOUR 2
+#define TSC_SUBMODE_CUSTOM 3
+
+typedef struct tsc_subtick_custom_order {
+    int order;
+    int rotc;
+    int *rots;
+} tsc_subtick_custom_order;
 
 typedef struct tsc_subtick_t {
     const char **ids;
     size_t idc;
     const char *name;
-    void *payload;
+    union {
+        tsc_subtick_custom_order **customOrder;
+    };
     double priority;
     char mode;
     char parallel;
@@ -169,9 +185,13 @@ typedef struct tsc_subtick_manager_t {
 
 extern tsc_subtick_manager_t subticks;
 
-void tsc_subtick_add(tsc_subtick_t subtick);
+tsc_subtick_t *tsc_subtick_add(tsc_subtick_t subtick);
 void tsc_subtick_addCell(tsc_subtick_t *subtick, const char *id);
 tsc_subtick_t *tsc_subtick_find(const char *name);
+tsc_subtick_t *tsc_subtick_addTicked(const char *name, double priority, char spacing, bool parallel);
+tsc_subtick_t *tsc_subtick_addTracked(const char *name, double priority, char spacing, bool parallel);
+tsc_subtick_t *tsc_subtick_addNeighbour(const char *name, double priority, char spacing, bool parallel);
+tsc_subtick_t *tsc_subtick_addCustom(const char *name, double priority, char spacing, bool parallel, tsc_subtick_custom_order *orders, size_t orderc);
 void tsc_subtick_addCore();
 void tsc_subtick_run();
 

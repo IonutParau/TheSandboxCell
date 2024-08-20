@@ -225,6 +225,8 @@ int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell
 
     int cx = x;
     int cy = y;
+    int lx = x;
+    int ly = y;
     tsc_cell replacecell = tsc_cell_clone(replacement);
     while(true) {
         tsc_cell *cell = tsc_grid_get(grid, cx, cy);
@@ -233,36 +235,43 @@ int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell
             amount++;
             break;
         }
-        force += tsc_cell_getBias(grid, cell, cx, cy, dir, "push");
+        force += tsc_cell_getBias(grid, cell, cx, cy, dir, "push", force);
         if(force <= 0) return 0;
-        if(!tsc_cell_canMove(grid, cell, cx, cy, dir, "push")) return 0;
-        if(tsc_cell_isAcid(grid, cell, cx, cy, dir, "push", replacement)) {
+        if(!tsc_cell_canMove(grid, cell, cx, cy, dir, "push", force)) return 0;
+        if(tsc_cell_isAcid(grid, replacement, dir, "push", force, cell, cx, cy)) {
             mode = 1;
             break;
         }
-        if(tsc_cell_isTrash(grid, cell, cx, cy, dir, "push", replacement)) {
+        if(tsc_cell_isTrash(grid, cell, cx, cy, dir, "push", force, replacement)) {
             mode = 2;
             break;
         }
         replacement = cell;
+        lx = cx;
+        ly = cy;
         cx = tsc_grid_frontX(cx, dir);
         cy = tsc_grid_frontY(cy, dir);
         amount++;
     }
 
+    lx = x;
+    ly = y;
+
     // Move using tsc_cell_swap
     for(int i = 0; i < amount; i++) {
         tsc_cell_swap(tsc_grid_get(grid, x, y), &replacecell);
         tsc_grid_enableChunk(grid, x, y);
+        lx = x;
+        ly = y;
         x = tsc_grid_frontX(x, dir);
         y = tsc_grid_frontY(y, dir);
     }
 
     if(mode == 1) {
-        tsc_cell_onAcid(grid, tsc_grid_get(grid, x, y), x, y, dir, "push", &replacecell);     
+        tsc_cell_onAcid(grid, &replacecell, dir, "push", force, tsc_grid_get(grid, x, y), x, y);
     }
     if(mode == 2) {
-        tsc_cell_onTrash(grid, tsc_grid_get(grid, x, y), x, y, dir, "push", &replacecell);     
+        tsc_cell_onTrash(grid, tsc_grid_get(grid, x, y), x, y, dir, "push", force, &replacecell);     
     }
     
     tsc_cell_destroy(replacecell);
@@ -283,20 +292,21 @@ int tsc_grid_pull(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell
             return m;
         }
 
-        if(!tsc_cell_canMove(grid, current, x, y, dir, "pull")) {
+        if(!tsc_cell_canMove(grid, current, x, y, dir, "pull", force)) {
             return m;
         }
+
+        force += tsc_cell_getBias(grid, current, x, y, dir, "pull", force);
 
         int fx = tsc_grid_frontX(x, dir);
         int fy = tsc_grid_frontY(y, dir);
         tsc_cell *front = tsc_grid_get(grid, fx, fy);
         if(front == NULL) return m;
 
-        if(tsc_cell_isTrash(grid, front, fx, fy, dir, "pull", current)) {
-           tsc_cell_onTrash(grid, front, fx, fy, dir, "pull", current);
-        } else if(tsc_cell_isAcid(grid, current, x, y, dir, "pull", front)) {
-            tsc_cell_onAcid(grid, current, x, y, dir, "pull", front);
-            tsc_grid_set(grid, fx, fy, current);
+        if(tsc_cell_isTrash(grid, front, fx, fy, dir, "pull", force, current)) {
+           tsc_cell_onTrash(grid, front, fx, fy, dir, "pull", force, current);
+        } else if(tsc_cell_isAcid(grid, current, dir, "pull", force, front, fx, fy)) {
+            tsc_cell_onAcid(grid, current, dir, "pull", force, front, fx, fy);
         } else if(front->id == builtin.empty) {
             tsc_grid_set(grid, fx, fy, current);
         } else {

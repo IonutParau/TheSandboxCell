@@ -13,16 +13,15 @@ For v0.0.2:
 - Add a settings menu
 - `config.json` and custom `platforms` support.
 - `pack.json` file in Resource Packs
-- Blueprints
 - Maximum width and height to rows and columns which allow wrapping
 - (maybe) Ability to compile the game on Windows using *magic*
 - Try to settle for a stable ABI
-- Add helper methods (tsc_grid_pull, tsc_grid_grab, tsc_grid_nudge)
+- Add helper methods (tsc_grid_grab, tsc_grid_nudge)
 - Generator optimizations and general purpose bit-optimizations for tiles (tsc_opt_define, tsc_opt_check, tsc_opt_set)
 - Lua 5.4 platform
-- Allow for the custom subtick mode which also has an array of arrays of ints where the first int determines the iteration order and the 2nd determines
-the allowed rotations
+- Allow for the custom subtick mode (20% done)
 - Some safety asserts in the V-series decoders
+- Add payload to saving functions
 
 For v0.1:
 - TSC Saving Format Encoder / Decoder
@@ -30,7 +29,8 @@ For v0.1:
 - (maybe) LuaJIT platform
 - Simplify build step in make (by making it make sub-projects too, but it catastrophically overcomplicates cross-compilation)
 - Better build instructions
-- Settle for a stable ABI
+- (definitely) Settle for a stable ABI
+- Blueprints
 
 Maybe one day:
 - Switch from Raylib to SDL2 (will be HARD)

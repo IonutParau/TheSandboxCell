@@ -31,7 +31,7 @@ typedef struct tsc_grid tsc_grid;
 typedef struct tsc_celltable {
     void *payload;
     void (*update)(tsc_cell *cell, int x, int y, int ux, int uy, void *payload);
-    int (*canMove)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, void *payload);
+    int (*canMove)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, void *payload);
 } tsc_celltable;
 
 tsc_celltable *tsc_cell_newTable(const char *id);
@@ -78,6 +78,7 @@ tsc_cell tsc_cell_clone(tsc_cell *cell);
 void tsc_cell_swap(tsc_cell *a, tsc_cell *b);
 void tsc_cell_destroy(tsc_cell cell);
 const char *tsc_cell_get(const tsc_cell *cell, const char *key);
+const char *tsc_cell_nthKey(const tsc_cell *cell, size_t idx);
 void tsc_cell_set(tsc_cell *cell, const char *key, const char *value);
 size_t tsc_cell_getFlags(tsc_cell *cell);
 void tsc_cell_setFlags(tsc_cell *cell, size_t flags);
@@ -129,13 +130,13 @@ bool tsc_grid_checkColumn(tsc_grid *grid, int x);
 
 // Cell interactions 
 
-int tsc_cell_canMove(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType);
-float tsc_cell_getBias(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType);
+int tsc_cell_canMove(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force);
+float tsc_cell_getBias(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force);
 int tsc_cell_canGenerate(tsc_grid *grid, tsc_cell *cell, int x, int y, tsc_cell *generator, int gx, int gy, char dir);
-int tsc_cell_isTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, tsc_cell *eating);
-void tsc_cell_onTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, tsc_cell *eating);
-int tsc_cell_isAcid(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, tsc_cell *dissolving);
-void tsc_cell_onAcid(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, tsc_cell *dissolving);
+int tsc_cell_isTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, tsc_cell *eating);
+void tsc_cell_onTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, tsc_cell *eating);
+int tsc_cell_isAcid(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy);
+void tsc_cell_onAcid(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy);
 
 // Returns how many cells were pushed.
 int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell *replacement);

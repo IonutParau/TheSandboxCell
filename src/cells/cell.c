@@ -63,17 +63,18 @@ tsc_cell __attribute__((hot)) tsc_cell_clone(tsc_cell *cell) {
 }
 
 void __attribute__((hot)) tsc_cell_destroy(tsc_cell cell) {
-    if(cell.data == NULL) return;
-
-    for(size_t i = 0; i < cell.data->len; i++) {
-        free(cell.data->values[i]);
+    if(cell.data != NULL) {
+        for(size_t i = 0; i < cell.data->len; i++) {
+            free(cell.data->values[i]);
+        }
+        free(cell.data->keys);
+        free(cell.data->values);
+        free(cell.data);
     }
-    free(cell.data->keys);
-    free(cell.data->values);
-    free(cell.data);
 }
 
 const char *tsc_cell_get(const tsc_cell *cell, const char *key) {
+    if(cell->data == NULL) return NULL;
     for(size_t i = 0; i < cell->data->len; i++) {
         if(tsc_streql(cell->data->keys[i], key)) {
             return cell->data->values[i];
@@ -82,8 +83,15 @@ const char *tsc_cell_get(const tsc_cell *cell, const char *key) {
     return NULL;
 }
 
+const char *tsc_cell_nthKey(const tsc_cell *cell, size_t idx) {
+    if(cell->data == NULL) return NULL;
+    if(idx >= cell->data->len) return NULL;
+    return cell->data->keys[idx];
+}
+
 void tsc_cell_set(tsc_cell *cell, const char *key, const char *value) {
     if(value == NULL) {
+        if(cell->data == NULL) return;
         // Remove
         size_t j = 0;
         for(size_t i = 0; i < cell->data->len; i++) {
@@ -167,17 +175,17 @@ tsc_celltable *tsc_cell_getTable(tsc_cell *cell) {
     return NULL;
 }
 
-int tsc_cell_canMove(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType) {
+int tsc_cell_canMove(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force) {
     if(cell->id == builtin.wall) return 0;
     if(cell->id == builtin.slide) return  dir % 2 == cell->rot % 2;
 
     tsc_celltable *celltable = tsc_cell_getTable(cell);
     if(celltable == NULL) return 1;
     if(celltable->canMove == NULL) return 1;
-    return celltable->canMove(grid, cell, x, y, dir, forceType, celltable->payload);
+    return celltable->canMove(grid, cell, x, y, dir, forceType, force, celltable->payload);
 }
 
-float tsc_cell_getBias(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType) {
+float tsc_cell_getBias(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force) {
     if(cell->id == builtin.mover && tsc_streql(forceType, "push")) {
         if(cell->rot == dir) return 1;
         if((cell->rot + 2) % 4 == dir) return -1;
@@ -194,13 +202,13 @@ int tsc_cell_canGenerate(tsc_grid *grid, tsc_cell *cell, int x, int y, tsc_cell 
     return 1;
 }
 
-int tsc_cell_isTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, tsc_cell *eating) {
+int tsc_cell_isTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, tsc_cell *eating) {
     if(cell->id == builtin.trash) return 1;
     if(cell->id == builtin.enemy) return 1;
     return 0;
 }
 
-void tsc_cell_onTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, tsc_cell *eating) {
+void tsc_cell_onTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, tsc_cell *eating) {
     if(cell->id == builtin.enemy) {
         tsc_cell empty = tsc_cell_create(builtin.empty, 0);
         tsc_grid_set(grid, x, y, &empty);
@@ -211,10 +219,10 @@ void tsc_cell_onTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, co
     }
 }
 
-int tsc_cell_isAcid(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, tsc_cell *dissolving) {
+int tsc_cell_isAcid(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy) {
     return 0;
 }
 
-void tsc_cell_onAcid(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, tsc_cell *dissolving) {
+void tsc_cell_onAcid(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy) {
 
 }

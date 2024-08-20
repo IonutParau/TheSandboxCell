@@ -15,7 +15,7 @@ void more_gens_init() {
     tsc_category *gens = tsc_getCategory(tsc_rootCategory(), "Generators");
     assert(gens != NULL);
 
-    tsc_subtick_t *subtick = tsc_subtick_find(tsc_strintern("generators"));
+    tsc_subtick_t *subtick = tsc_subtick_find("generators");
     tsc_subtick_addCell(subtick, more_gens_ids.replicator);
 
     tsc_addCell(gens, more_gens_ids.replicator);

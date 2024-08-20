@@ -4,6 +4,9 @@
 #include "../threads/workers.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <string.h>
+#include "../api/api.h"
 
 tsc_subtick_manager_t subticks = {NULL, 0};
 
@@ -58,12 +61,13 @@ static void tsc_subtick_sort(int low, int high) {
     }
 }
 
-void tsc_subtick_add(tsc_subtick_t subtick) {
+tsc_subtick_t *tsc_subtick_add(tsc_subtick_t subtick) {
     size_t idx = subticks.subc++;
     subticks.subs = realloc(subticks.subs, sizeof(tsc_subtick_t) * subticks.subc);
     subticks.subs[idx] = subtick;
 
     tsc_subtick_sort(0, subticks.subc - 1);
+    return tsc_subtick_find(subtick.name);
 }
 
 void tsc_subtick_addCell(tsc_subtick_t *subtick, const char *cell) {
@@ -74,10 +78,59 @@ void tsc_subtick_addCell(tsc_subtick_t *subtick, const char *cell) {
 
 // Names must be interned because I said so
 tsc_subtick_t *tsc_subtick_find(const char *name) {
+    name = tsc_strintern(name);
     for(size_t i = 0; i < subticks.subc; i++) {
         if(subticks.subs[i].name == name) return subticks.subs + i;
     }
     return NULL;
+}
+
+static tsc_subtick_t tsc_subtick_createNew(const char *name, double priority, char spacing, bool parallel) {
+    name = tsc_strintern(tsc_padWithModID(name));
+    tsc_subtick_t subtick;
+    subtick.spacing = 0;
+    subtick.parallel = parallel;
+    subtick.spacing = spacing;
+    subtick.priority = priority;
+    subtick.name = name;
+    subtick.ids = NULL;
+    subtick.idc = 0;
+    subtick.mode = TSC_SUBMODE_TICKED;
+    return subtick;
+}
+
+tsc_subtick_t *tsc_subtick_addTicked(const char *name, double priority, char spacing, bool parallel) {
+    tsc_subtick_t subtick = tsc_subtick_createNew(name, priority, spacing, parallel);
+    subtick.mode = TSC_SUBMODE_TICKED;
+    return tsc_subtick_add(subtick);
+}
+
+tsc_subtick_t *tsc_subtick_addTracked(const char *name, double priority, char spacing, bool parallel) {
+    tsc_subtick_t subtick = tsc_subtick_createNew(name, priority, spacing, parallel);
+    subtick.mode = TSC_SUBMODE_TRACKED;
+    return tsc_subtick_add(subtick);
+}
+
+tsc_subtick_t *tsc_subtick_addNeighbour(const char *name, double priority, char spacing, bool parallel) {
+    tsc_subtick_t subtick = tsc_subtick_createNew(name, priority, spacing, parallel);
+    subtick.mode = TSC_SUBMODE_NEIGHBOUR;
+    return tsc_subtick_add(subtick);
+}
+
+tsc_subtick_t *tsc_subtick_addCustom(const char *name, double priority, char spacing, bool parallel, tsc_subtick_custom_order *orders, size_t orderc) {
+    tsc_subtick_t subtick = tsc_subtick_createNew(name, priority, spacing, parallel);
+    subtick.mode = TSC_SUBMODE_CUSTOM;
+    subtick.customOrder = malloc(sizeof(tsc_subtick_custom_order *) * (orderc + 1));
+    subtick.customOrder[orderc] = NULL;
+    for(size_t i = 0; i < orderc; i++) {
+        tsc_subtick_custom_order *orderp = malloc(sizeof(tsc_subtick_custom_order));
+        orderp->order = orders[i].order;
+        orderp->rotc = orders[i].rotc;
+        orderp->rots = malloc(sizeof(int) * orderp->rotc);
+        memcpy(orderp->rots, orders[i].rots, sizeof(int) * orderp->rotc);
+        subtick.customOrder[i] = orderp;
+    }
+    return tsc_subtick_add(subtick);
 }
 
 static void tsc_subtick_worker(void *data) {
@@ -494,30 +547,14 @@ void tsc_subtick_addCore() {
     tsc_celltable *mover = tsc_cell_newTable(builtin.mover);
     mover->update = &tsc_subtick_doMover;
 
-    tsc_subtick_t moverSubtick;
-    moverSubtick.priority = 3.0;
-    moverSubtick.idc = 1;
-    moverSubtick.ids = malloc(sizeof(const char *));
-    moverSubtick.ids[0] = builtin.mover;
-    moverSubtick.name = tsc_strintern("movers");
-    moverSubtick.mode = TSC_SUBMODE_TRACKED;
-    moverSubtick.spacing = 0;
-    moverSubtick.parallel = true;
-    tsc_subtick_add(moverSubtick);
+    tsc_subtick_t *moverSubtick = tsc_subtick_addTracked("movers", 3.0, 0, true);
+    tsc_subtick_addCell(moverSubtick, builtin.mover);
 
     tsc_celltable *generator = tsc_cell_newTable(builtin.generator);
     generator->update = &tsc_subtick_doGen;
 
-    tsc_subtick_t generatorSubtick;
-    generatorSubtick.priority = 1.0;
-    generatorSubtick.idc = 1;
-    generatorSubtick.ids = malloc(sizeof(const char *));
-    generatorSubtick.ids[0] = builtin.generator;
-    generatorSubtick.name = tsc_strintern("generators");
-    generatorSubtick.mode = TSC_SUBMODE_TRACKED;
-    generatorSubtick.spacing = 0;
-    generatorSubtick.parallel = true;
-    tsc_subtick_add(generatorSubtick);
+    tsc_subtick_t *generatorSubtick = tsc_subtick_addTracked("generators", 1.0, 0, true);
+    tsc_subtick_addCell(generatorSubtick, builtin.generator);
 
     tsc_celltable *rotcw = tsc_cell_newTable(builtin.rotator_cw);
     rotcw->update = &tsc_subtick_doClockwiseRotator;
@@ -525,15 +562,7 @@ void tsc_subtick_addCore() {
     tsc_celltable *rotccw = tsc_cell_newTable(builtin.rotator_ccw);
     rotccw->update = &tsc_subtick_doCounterClockwiseRotator;
 
-    tsc_subtick_t rotatorSubtick;
-    rotatorSubtick.priority = 2.0;
-    rotatorSubtick.idc = 2;
-    rotatorSubtick.ids = malloc(sizeof(const char *) * rotatorSubtick.idc);
-    rotatorSubtick.ids[0] = builtin.rotator_cw;
-    rotatorSubtick.ids[1] = builtin.rotator_ccw;
-    rotatorSubtick.name = tsc_strintern("rotators");
-    rotatorSubtick.mode = TSC_SUBMODE_NEIGHBOUR;
-    rotatorSubtick.spacing = 0;
-    rotatorSubtick.parallel = true;
-    tsc_subtick_add(rotatorSubtick);
+    tsc_subtick_t *rotatorSubtick = tsc_subtick_addNeighbour("rotators", 2.0, 0, true);
+    tsc_subtick_addCell(rotatorSubtick, builtin.rotator_cw);
+    tsc_subtick_addCell(rotatorSubtick, builtin.rotator_ccw);
 }
