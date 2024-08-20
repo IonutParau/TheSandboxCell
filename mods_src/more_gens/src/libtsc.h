@@ -77,6 +77,7 @@ tsc_cell tsc_cell_clone(tsc_cell *cell);
 void tsc_cell_swap(tsc_cell *a, tsc_cell *b);
 void tsc_cell_destroy(tsc_cell cell);
 const char *tsc_cell_get(const tsc_cell *cell, const char *key);
+const char *tsc_cell_nthKey(const tsc_cell *cell, size_t idx);
 void tsc_cell_set(tsc_cell *cell, const char *key, const char *value);
 size_t tsc_cell_getFlags(tsc_cell *cell);
 void tsc_cell_setFlags(tsc_cell *cell, size_t flags);
@@ -201,21 +202,24 @@ void tsc_subtick_run();
 
 #include <stddef.h>
 
-typedef struct tsc_saving_buffer {
+typedef struct tsc_buffer {
     char *mem;
     size_t len;
     size_t cap;
-} tsc_saving_buffer;
+} tsc_buffer;
 
-tsc_saving_buffer tsc_saving_newBuffer(const char *initial);
-tsc_saving_buffer tsc_saving_newBufferCapacity(const char *initial, size_t capacity);
-void tsc_saving_deleteBuffer(tsc_saving_buffer buffer);
-void tsc_saving_write(tsc_saving_buffer *buffer, char ch);
-void tsc_saving_writeStr(tsc_saving_buffer *buffer, const char *str);
-void tsc_saving_writeFormat(tsc_saving_buffer *buffer, const char *fmt, ...);
-void tsc_saving_writeBytes(tsc_saving_buffer *buffer, const char *mem, size_t count);
+// Legacy alias
+typedef tsc_buffer tsc_saving_buffer;
 
-typedef int tsc_saving_encoder(tsc_saving_buffer *buffer, tsc_grid *grid);
+tsc_buffer tsc_saving_newBuffer(const char *initial);
+tsc_buffer tsc_saving_newBufferCapacity(const char *initial, size_t capacity);
+void tsc_saving_deleteBuffer(tsc_buffer buffer);
+void tsc_saving_write(tsc_buffer *buffer, char ch);
+void tsc_saving_writeStr(tsc_buffer *buffer, const char *str);
+void __attribute__((format (printf, 2, 3))) tsc_saving_writeFormat(tsc_buffer *buffer, const char *fmt, ...);
+void tsc_saving_writeBytes(tsc_buffer *buffer, const char *mem, size_t count);
+
+typedef int tsc_saving_encoder(tsc_buffer *buffer, tsc_grid *grid);
 typedef void tsc_saving_decoder(const char *code, tsc_grid *grid);
 
 typedef struct tsc_saving_format {
@@ -225,8 +229,8 @@ typedef struct tsc_saving_format {
     tsc_saving_decoder *decode;
 } tsc_saving_format;
 
-int tsc_saving_encodeWith(tsc_saving_buffer *buffer, tsc_grid *grid, const char *name);
-void tsc_saving_encodeWithSmallest(tsc_saving_buffer *buffer, tsc_grid *grid);
+int tsc_saving_encodeWith(tsc_buffer *buffer, tsc_grid *grid, const char *name);
+void tsc_saving_encodeWithSmallest(tsc_buffer *buffer, tsc_grid *grid);
 void tsc_saving_decodeWith(const char *code, tsc_grid *grid, const char *name);
 const char *tsc_saving_identify(const char *code);
 void tsc_saving_decodeWithAny(const char *code, tsc_grid *grid);
@@ -563,12 +567,14 @@ void tsc_destroy(tsc_value value);
 
 void tsc_ensureArgs(tsc_value args, int min);
 void tsc_varArgs(tsc_value args, int min);
+void tsc_append(tsc_value list, tsc_value value);
 
 tsc_value tsc_index(tsc_value list, size_t index);
 void tsc_setIndex(tsc_value list, size_t index, tsc_value value);
 tsc_value tsc_getKey(tsc_value object, const char *key);
 void tsc_setKey(tsc_value object, const char *key, tsc_value value);
 
+bool tsc_isNull(tsc_value value);
 bool tsc_isInt(tsc_value value);
 bool tsc_isNumber(tsc_value value);
 bool tsc_isNumerical(tsc_value value);
@@ -616,6 +622,14 @@ const char *tsc_setupSignal(const char *id, tsc_signal_t *signal, tsc_typeinfo_t
 tsc_typeinfo_t *tsc_getSignalInfo(const char *id);
 tsc_signal_t *tsc_getSignal(const char *id);
 tsc_value tsc_callSignal(tsc_signal_t *signal, tsc_value *argv, size_t argc);
+
+#endif
+#ifndef TSC_JSON_H
+#define TSC_JSON_H
+
+
+tsc_buffer tsc_json_encode(tsc_value value, tsc_buffer *err);
+tsc_value tsc_json_decode(const char *text, tsc_buffer *err);
 
 #endif
 #ifdef __cplusplus

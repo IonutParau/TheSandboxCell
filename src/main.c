@@ -10,6 +10,8 @@
 #include "graphics/rendering.h"
 #include "utils.h"
 #include "api/api.h"
+#include "api/value.h"
+#include "api/tscjson.h"
 
 void doShit(void *thing) {
     int *num = thing;

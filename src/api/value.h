@@ -76,12 +76,14 @@ void tsc_destroy(tsc_value value);
 
 void tsc_ensureArgs(tsc_value args, int min);
 void tsc_varArgs(tsc_value args, int min);
+void tsc_append(tsc_value list, tsc_value value);
 
 tsc_value tsc_index(tsc_value list, size_t index);
 void tsc_setIndex(tsc_value list, size_t index, tsc_value value);
 tsc_value tsc_getKey(tsc_value object, const char *key);
 void tsc_setKey(tsc_value object, const char *key, tsc_value value);
 
+bool tsc_isNull(tsc_value value);
 bool tsc_isInt(tsc_value value);
 bool tsc_isNumber(tsc_value value);
 bool tsc_isNumerical(tsc_value value);

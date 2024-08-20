@@ -6,6 +6,7 @@
 
 #include <stddef.h>
 #include <stdbool.h>
+#include "value.h"
 
 // hideapi
 
@@ -17,11 +18,18 @@ void tsc_addCoreSplashes();
 
 // hideapi
 
+typedef struct tsc_mod_t {
+    const char *id;
+    tsc_value value;
+} tsc_mod_t;
+
 void tsc_addSplash(const char *splash, double weight);
 const char *tsc_randomSplash();
 
 // Check if mod exists
 bool tsc_hasMod(const char *id);
+// Check if a mod exists AND is loaded
+bool tsc_hasLoadedMod(const char *id);
 
 // In case the mod forgets
 const char *tsc_currentModID();

@@ -77,8 +77,11 @@ const char *tsc_randomSplash() {
 const char *currentMod = NULL;
 
 void tsc_loadMod(const char *id) {
+    if(tsc_hasLoadedMod(id)) return;
+    const char *old = currentMod;
     currentMod = id;
     tsc_initMod(id); // Actually initialize it with the modloader
+    currentMod = old;
 }
 
 const char *tsc_padWithModID(const char *id) {
@@ -239,7 +242,7 @@ static void tsc_loadButton(void *_) {
 }
 
 static void tsc_saveButton(void *_) {
-    tsc_saving_buffer buffer = tsc_saving_newBuffer("");
+    tsc_buffer buffer = tsc_saving_newBuffer("");
     tsc_saving_encodeWithSmallest(&buffer, currentGrid);
     if(buffer.len == 0) {
         tsc_sound_play(builtin.audio.explosion);
@@ -249,7 +252,7 @@ static void tsc_saveButton(void *_) {
 }
 
 static void tsc_saveV3Button(void *_) {
-    tsc_saving_buffer buffer = tsc_saving_newBuffer("");
+    tsc_buffer buffer = tsc_saving_newBuffer("");
     int success = tsc_saving_encodeWith(&buffer, currentGrid, "V3");
     if(success) {
     SetClipboardText(buffer.mem);

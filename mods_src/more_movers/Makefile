@@ -21,6 +21,7 @@ all: libtsc dll
 	mkdir -p ../../mods/more_movers
 	cp $(OUTPUT) ../../mods/more_movers/$(OUTPUT)
 	cp -r textures ../../mods/more_movers
+	cp config.json ../../mods/more_movers
 libtsc:
 	cd ../..; lua ./libtsc.lua generate > mods_src/more_movers/src/libtsc.h
 dll: $(objects)

@@ -190,6 +190,14 @@ void tsc_varArgs(tsc_value args, int min) {
     tsc_destroy(varargs);
 }
 
+void tsc_append(tsc_value list, tsc_value value) {
+    if(list.tag != TSC_VALUE_ARRAY) return;
+    size_t idx = list.array->valuec++;
+    list.array->values = realloc(list.array->values, sizeof(tsc_value) * list.array->valuec);
+    tsc_retain(value);
+    list.array->values[idx] = value;
+}
+
 tsc_value tsc_index(tsc_value list, size_t index) {
     if(list.tag == TSC_VALUE_ARRAY) {
         if(index >= list.array->valuec) return tsc_null();
@@ -250,6 +258,10 @@ void tsc_setKey(tsc_value object, const char *key, tsc_value value) {
     object.object->values[idx] = value;
     object.object->keys = realloc(object.object->keys, sizeof(char *) * object.object->len);
     object.object->keys[idx] = tsc_strdup(key);
+}
+
+bool tsc_isNull(tsc_value value) {
+    return value.tag == TSC_VALUE_NULL;
 }
 
 bool tsc_isInt(tsc_value value) {
