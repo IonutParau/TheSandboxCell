@@ -3,8 +3,8 @@ CFLAGS=-std=c17
 
 LINKER=gcc
 LFLAGS=
-LUADLL=liblua.so
-LINKLUA=-l:./$(LUADLL)
+LUADLL=liblua.a
+LINKLUA=-L. -llua
 
 OUTPUT=platform.so
 

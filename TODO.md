@@ -134,8 +134,8 @@ struct tsc_value {
 ```json
 {
     "name": "MyMod",
-    "description": "The mod",
-    "platform": "lua",
+    "author": "The creator",
+    "platform": "lua54",
 }
 ```
 
