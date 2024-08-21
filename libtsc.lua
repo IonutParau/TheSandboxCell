@@ -81,6 +81,10 @@ if task == "generate" then
         end
     end
 
+    for line in io.lines("LICENSE", "l") do
+        out:write("// " .. line .. "\n")
+    end
+
     out:write("#ifdef __cplusplus\n")
     out:write("extern \"C\" {\n")
     out:write("#endif\n")

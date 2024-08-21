@@ -22,7 +22,7 @@ int main() {
     srand(time(NULL));
 
     // Suppress raylib debug messages
-    //SetTraceLogLevel(LOG_ERROR);
+    SetTraceLogLevel(LOG_ERROR);
 
     workers_setupBest();
 

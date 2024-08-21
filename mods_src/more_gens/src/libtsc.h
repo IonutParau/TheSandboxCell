@@ -1,3 +1,12 @@
+// MIT License
+// 
+// Copyright 2024 Pârău Ionuț Alexandru
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -426,70 +435,6 @@ char **tsc_dirfiles(const char *path, size_t *len);
 void tsc_freedirfiles(char **dirfiles);
 
 #endif
-// Cell Categories + mod ID stuff.
-// This file is very confusingly named, but fuck you
-
-#ifndef TSC_API_H
-#define TSC_API_H
-
-#include <stddef.h>
-#include <stdbool.h>
-
-
-void tsc_addSplash(const char *splash, double weight);
-const char *tsc_randomSplash();
-
-// Check if mod exists
-bool tsc_hasMod(const char *id);
-
-// In case the mod forgets
-const char *tsc_currentModID();
-
-const char *tsc_registerCell(const char *id, const char *name, const char *description);
-
-typedef struct tsc_cellbutton {
-    void *payload;
-    void (*click)(void *payload);
-    const char *icon;
-    const char *name;
-    const char *desc;
-} tsc_cellbutton;
-
-#define TSC_CATEGORY_CELL 0
-#define TSC_CATEGORY_SUBCATEGORY 1
-#define TSC_CATEGORY_BUTTON 2
-
-typedef struct tsc_categoryitem {
-    char kind;
-    union {
-        const char *cellID;
-        struct tsc_category *category;
-        struct tsc_cellbutton button;
-    };
-} tsc_categoryitem;
-
-typedef struct tsc_category {
-    const char *title;
-    const char *description;
-    const char *icon;
-    tsc_categoryitem *items;
-    size_t itemc;
-    size_t itemcap;
-    struct tsc_category *parent;
-    bool open;
-    bool usedAsCell;
-} tsc_category;
-
-tsc_category *tsc_rootCategory();
-tsc_category *tsc_newCategory(const char *title, const char *description, const char *icon);
-tsc_category *tsc_newCellGroup(const char *title, const char *description, const char *mainCell);
-void tsc_addCategory(tsc_category *category, tsc_category *toAdd);
-void tsc_addCell(tsc_category *category, const char *cell);
-void tsc_addButton(tsc_category *category, const char *icon, const char *name, const char *description, void (*click)(void *), void *payload);
-tsc_category *tsc_getCategory(tsc_category *category, const char *path);
-
-
-#endif
 #ifndef TSC_VALUE_H
 #define TSC_VALUE_H
 
@@ -622,6 +567,77 @@ const char *tsc_setupSignal(const char *id, tsc_signal_t *signal, tsc_typeinfo_t
 tsc_typeinfo_t *tsc_getSignalInfo(const char *id);
 tsc_signal_t *tsc_getSignal(const char *id);
 tsc_value tsc_callSignal(tsc_signal_t *signal, tsc_value *argv, size_t argc);
+
+#endif
+// Cell Categories + mod ID stuff.
+// This file is very confusingly named, but fuck you
+
+#ifndef TSC_API_H
+#define TSC_API_H
+
+#include <stddef.h>
+#include <stdbool.h>
+
+
+typedef struct tsc_mod_t {
+    const char *id;
+    tsc_value value;
+} tsc_mod_t;
+
+void tsc_addSplash(const char *splash, double weight);
+const char *tsc_randomSplash();
+
+// check if mod exists
+bool tsc_hasMod(const char *id);
+// check if a mod exists and is loaded
+bool tsc_hasLoadedmod(const char *id);
+
+// In case the mod forgets
+const char *tsc_currentModID();
+
+const char *tsc_registerCell(const char *id, const char *name, const char *description);
+
+typedef struct tsc_cellbutton {
+    void *payload;
+    void (*click)(void *payload);
+    const char *icon;
+    const char *name;
+    const char *desc;
+} tsc_cellbutton;
+
+#define TSC_CATEGORY_CELL 0
+#define TSC_CATEGORY_SUBCATEGORY 1
+#define TSC_CATEGORY_BUTTON 2
+
+typedef struct tsc_categoryitem {
+    char kind;
+    union {
+        const char *cellID;
+        struct tsc_category *category;
+        struct tsc_cellbutton button;
+    };
+} tsc_categoryitem;
+
+typedef struct tsc_category {
+    const char *title;
+    const char *description;
+    const char *icon;
+    tsc_categoryitem *items;
+    size_t itemc;
+    size_t itemcap;
+    struct tsc_category *parent;
+    bool open;
+    bool usedAsCell;
+} tsc_category;
+
+tsc_category *tsc_rootCategory();
+tsc_category *tsc_newCategory(const char *title, const char *description, const char *icon);
+tsc_category *tsc_newCellGroup(const char *title, const char *description, const char *mainCell);
+void tsc_addCategory(tsc_category *category, tsc_category *toAdd);
+void tsc_addCell(tsc_category *category, const char *cell);
+void tsc_addButton(tsc_category *category, const char *icon, const char *name, const char *description, void (*click)(void *), void *payload);
+tsc_category *tsc_getCategory(tsc_category *category, const char *path);
+
 
 #endif
 #ifndef TSC_JSON_H

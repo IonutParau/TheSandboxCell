@@ -115,7 +115,7 @@ static void tsc_initPlatformMod(const char *id, const char *platform, tsc_value 
     static char sym[256];
     snprintf(sym, 256, "%s_loadMod", platform);
     char *path;
-    asprintf(&path, "mods/%s", platform);
+    asprintf(&path, "mods/%s", id);
     tsc_pathfix(path);
 #ifdef _WIN32
     tsc_platform_loadMod *loadMod = GetProcAddress(lib, sym);
@@ -133,8 +133,9 @@ static void tsc_initPlatformMod(const char *id, const char *platform, tsc_value 
         exit(1);
         return;
     }
-    loadMod(id, platform, value);
+    loadMod(id, path, value);
 #endif
+    free(path);
 }
 
 bool tsc_hasLoadedMod(const char *id) {

@@ -28,7 +28,7 @@ const char *tsc_randomSplash();
 
 // Check if mod exists
 bool tsc_hasMod(const char *id);
-// Check if a mod exists AND is loaded
+// Check if a mod exists and is loaded
 bool tsc_hasLoadedMod(const char *id);
 
 // In case the mod forgets

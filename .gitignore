@@ -1,7 +1,9 @@
 *.o
 *.zip
-*.so
-*.dll
+libtsc.so
+raylib.so
+libtsc.dll
+raylib.dll
 *.exe
 thesandboxcell
 test_thesandboxcell

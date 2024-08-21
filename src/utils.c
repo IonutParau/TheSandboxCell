@@ -274,3 +274,15 @@ void tsc_freedirfiles(char **dirfiles) {
     }
     free(dirfiles);
 }
+
+void *tsc_malloc(size_t len) {
+    return malloc(len);
+}
+
+void tsc_free(void *memory) {
+    free(memory);
+}
+
+void *tsc_realloc(void *memory, size_t len) {
+    return realloc(memory, len);
+}

@@ -13,7 +13,7 @@
 static tsc_saving_format *saving_arr = NULL;
 static size_t savingc = 0;
 
-int tsc_saving_encodeWith(tsc_saving_buffer *buffer, tsc_grid *grid, const char *name) {
+int tsc_saving_encodeWith(tsc_buffer *buffer, tsc_grid *grid, const char *name) {
     for(size_t i = 0; i < savingc; i++) {
         if(strcmp(saving_arr[i].name, name) == 0) {
             if(saving_arr[i].encode == NULL) continue;
@@ -25,13 +25,13 @@ int tsc_saving_encodeWith(tsc_saving_buffer *buffer, tsc_grid *grid, const char 
 }
 
 // A lot of heap allocations here.
-void tsc_saving_encodeWithSmallest(tsc_saving_buffer *buffer, tsc_grid *grid) {
-    tsc_saving_buffer best = tsc_saving_newBuffer(NULL);
+void tsc_saving_encodeWithSmallest(tsc_buffer *buffer, tsc_grid *grid) {
+    tsc_buffer best = tsc_saving_newBuffer(NULL);
     size_t bestSize = SIZE_MAX;
 
     for(size_t i = 0; i < savingc; i++) {
         if(saving_arr[i].encode == NULL) continue;
-        tsc_saving_buffer tmp = tsc_saving_newBufferCapacity(NULL, 4096);
+        tsc_buffer tmp = tsc_saving_newBufferCapacity(NULL, 4096);
         if(saving_arr[i].encode(&tmp, grid) == 0) {
             // Encoding failed.
             tsc_saving_deleteBuffer(tmp);
@@ -254,7 +254,7 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
         } else if(c == '(') {
             bool simplerepcount = false;
             i++;
-            tsc_saving_buffer cellcountencoded = tsc_saving_newBuffer("");
+            tsc_buffer cellcountencoded = tsc_saving_newBuffer("");
             while(true) {
                 if(cells[i] == '(') {
                     break;
@@ -270,7 +270,7 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
             int cellcount = tsc_saving_decode74(cellcountencoded.mem)+1;
             tsc_saving_deleteBuffer(cellcountencoded);
 
-            tsc_saving_buffer repcountencoded = tsc_saving_newBuffer("");
+            tsc_buffer repcountencoded = tsc_saving_newBuffer("");
             i++;
             if(simplerepcount) {
                 tsc_saving_write(&repcountencoded, cells[i]);
@@ -322,7 +322,7 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
     free(desc);
 }
 
-static void tsc_v3_writeRepeater(tsc_saving_buffer *buffer, int length, int back) {
+static void tsc_v3_writeRepeater(tsc_buffer *buffer, int length, int back) {
     char *elen = tsc_saving_encode74(length);
     char *eback = tsc_saving_encode74(back-1);
     if(length >= 74) {
@@ -346,7 +346,7 @@ static int tsc_v3_weightOfRepeat(int length, int back) {
     return 1 + tsc_saving_count74(back) + tsc_saving_count74(length);
 }
 
-static int tsc_v3_encode(tsc_saving_buffer *buffer, tsc_grid *grid) {
+static int tsc_v3_encode(tsc_buffer *buffer, tsc_grid *grid) {
     tsc_saving_writeStr(buffer, "V3;");
     char *ewidth = tsc_saving_encode74(grid->width);
     char *eheight = tsc_saving_encode74(grid->height);
