@@ -4,6 +4,8 @@ libtsc.so
 raylib.so
 libtsc.dll
 raylib.dll
+platform.so
+mod.so
 *.exe
 thesandboxcell
 test_thesandboxcell
@@ -11,3 +13,4 @@ test_thesandboxcell
 # Music used for debugging
 ILLEGAL_*.*
 mods/*/
+platforms/*/
