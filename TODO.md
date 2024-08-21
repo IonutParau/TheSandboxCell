@@ -22,6 +22,7 @@ For v0.0.2:
 - Allow for the custom subtick mode (20% done)
 - Some safety asserts in the V-series decoders
 - Add payload to saving functions
+- Add callback subticks which just call a function
 
 For v0.1:
 - TSC Saving Format Encoder / Decoder
