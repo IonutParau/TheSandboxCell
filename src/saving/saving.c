@@ -9,6 +9,7 @@
 #include "../threads/tinycthread.h"
 #include "../threads/workers.h"
 #include "../utils.h"
+#include <assert.h>
 
 static tsc_saving_format *saving_arr = NULL;
 static size_t savingc = 0;
@@ -80,6 +81,7 @@ const char *tsc_saving_identify(const char *code) {
 }
 
 const char *saving_base74 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!$%&+-.=?^{}";
+int saving_base74R[256] = {-1};
 
 static int tsc_saving_count74(int num) {
     if(num == 0) return 1;
@@ -110,6 +112,11 @@ static char *tsc_saving_encode74(int num) {
     return result;
 }
 
+static char tsc_saving_encodeChar74(char n) {
+    assert(n < 74);
+    return saving_base74[n];
+}
+
 static int tsc_saving_decode74(const char *num) {
     int n = 0;
 
@@ -131,15 +138,26 @@ static int tsc_saving_decode74(const char *num) {
     return n;
 }
 
+static char tsc_saving_decodeChar74(char c) {
+    if(saving_base74R[0] == -1) {
+        for(int i = 0; i < 74; i++) {
+            saving_base74R[tsc_saving_encodeChar74(i)] = i;
+        }
+        saving_base74R[0] = 0;
+    }
+
+    return saving_base74R[c];
+}
+
 
 // Caller owns memory
 // NULL if conversion fails (V3 does not support the cell)
-static char *tsc_v3_celltochar(tsc_cell *cell, bool hasBg) {
-    if(cell->data != NULL) return NULL; // Can not be stored accurately
-    if(cell->texture != NULL) return NULL; // Can not be stored accurately
-    if(cell->flags != 0) return NULL; // Can not be stored accurately
+static char tsc_v3_celltochar(tsc_cell *cell, bool hasBg) {
+    if(cell->data != NULL) return '\0'; // Can not be stored accurately
+    if(cell->texture != NULL) return '\0'; // Can not be stored accurately
+    if(cell->flags != 0) return '\0'; // Can not be stored accurately
     if(cell->id == builtin.empty) {
-        return tsc_saving_encode74(72 + (hasBg ? 1 : 0));
+        return tsc_saving_encodeChar74(72 + (hasBg ? 1 : 0));
     }
     const char *ids[] = {
         builtin.generator, builtin.rotator_cw,
@@ -156,13 +174,13 @@ static char *tsc_v3_celltochar(tsc_cell *cell, bool hasBg) {
             goto success;
         }
     }
-    return NULL; // Can not be stored accurately
+    return '\0'; // Can not be stored accurately
 success:
-    return tsc_saving_encode74(id * 2 + (hasBg ? 1 : 0) + ((int)cell->rot) * 9 * 2);
+    return tsc_saving_encodeChar74(id * 2 + (hasBg ? 1 : 0) + ((int)cell->rot) * 9 * 2);
 }
 
-static tsc_cell tsc_v3_chartocell(const char *input, bool *hasBg) {
-    int n = tsc_saving_decode74(input);
+static tsc_cell tsc_v3_chartocell(char input, bool *hasBg) {
+    int n = tsc_saving_decodeChar74(input);
     *hasBg = (n % 2 == 1);
 
     if(n > 71) {
@@ -239,12 +257,9 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
     size_t celli = 0;
     for(int i = 0; cells[i] != '\0'; i++) {
         char c = cells[i];
-        char str[2] = {c, '\0'};
         if(c == ')') {
-            char scellcount[2] = {cells[i+1], '\0'};
-            char srepcount[2] = {cells[i+2], '\0'};
-            int cellcount = tsc_saving_decode74(scellcount)+1;
-            int repcount = tsc_saving_decode74(srepcount);
+            int cellcount = tsc_saving_decodeChar74(cells[i+1])+1;
+            int repcount = tsc_saving_decodeChar74(cells[i+2]);
             i += 2;
 
             for(size_t j = 0; j < repcount; j++) {
@@ -294,7 +309,7 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
             }
         } else {
             bool isBg = false;
-            tsc_cell cell = tsc_v3_chartocell(str, &isBg);
+            tsc_cell cell = tsc_v3_chartocell(c, &isBg);
             cellArr[celli] = cell;
             celli++;
         }
@@ -314,11 +329,11 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
     }
 
     char *title = tsc_v3_nextPart(code, &index);
-    grid->title = tsc_strintern(title);
+    grid->title = strlen(title) == 0 ? NULL : tsc_strintern(title);
     free(title);
     
     char *desc = tsc_v3_nextPart(code, &index);
-    grid->desc = tsc_strintern(desc);
+    grid->desc = strlen(desc) == 0 ? NULL : tsc_strintern(desc);
     free(desc);
 }
 
@@ -361,16 +376,14 @@ static int tsc_v3_encode(tsc_buffer *buffer, tsc_grid *grid) {
             tsc_cell *cell = tsc_grid_get(grid, x, y);
             bool hasbg = false;
 
-            char *encoded = tsc_v3_celltochar(cell, hasbg);
-            if(encoded == NULL) {
+            char encoded = tsc_v3_celltochar(cell, hasbg);
+            if(encoded == '\0') {
                 free(cells);
                 return 0; // V3 can't encode this
             }
 
-            // Should ONLY be one character
-            cells[ci] = *encoded;
+            cells[ci] = encoded;
             ci++;
-            free(encoded);
         }
     }
 
@@ -437,11 +450,9 @@ void tsc_v2_decode(const char *code, tsc_grid *grid) {
     int celli = 0;
     for(size_t i = 0; cells[i] != '\0'; i++) {
         char c = cells[i];
-        char str[] = {c, '\0'};
         if(c == ')') {
             i++;
-            char count[] = {cells[i], '\0'};
-            int amount = tsc_saving_decode74(count);
+            int amount = tsc_saving_decodeChar74(cells[i]);
             for(int j = 0; j < amount; j++) {
                 // Unsafe copy but none of these cells have any managed memory.
                 cellArr[celli] = cellArr[celli-1];
@@ -460,7 +471,7 @@ void tsc_v2_decode(const char *code, tsc_grid *grid) {
             }
         } else {
             bool isbg = false;
-            cellArr[celli] = tsc_v3_chartocell(str, &isbg);
+            cellArr[celli] = tsc_v3_chartocell(c, &isbg);
             celli++;
         }
     }
@@ -478,11 +489,11 @@ ohno:
     free(cellArr);
 
     char *title = tsc_v3_nextPart(code, &index);
-    grid->title = tsc_strintern(title);
+    grid->title = strlen(title) == 0 ? NULL : tsc_strintern(title);
     free(title);
     
     char *desc = tsc_v3_nextPart(code, &index);
-    grid->desc = tsc_strintern(desc);
+    grid->desc = strlen(desc) == 0 ? NULL : tsc_strintern(desc);
     free(desc);
 }
 
@@ -548,11 +559,11 @@ void tsc_v1_decode(const char *code, tsc_grid *grid) {
     free(cells);
 
     char *title = tsc_v3_nextPart(code, &index);
-    grid->title = tsc_strintern(title);
+    grid->title = strlen(title) == 0 ? NULL : tsc_strintern(title);
     free(title);
 
     char *desc = tsc_v3_nextPart(code, &index);
-    grid->desc = tsc_strintern(desc);
+    grid->desc = strlen(desc) == 0 ? NULL : tsc_strintern(desc);
     free(desc);
 }
 
