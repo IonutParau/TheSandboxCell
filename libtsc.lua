@@ -195,7 +195,8 @@ if task == "compile" then
         if compiler == "gcc" then
             -- We can't use gcc, we have to use x86_64-w64-mingw32-gcc
             compiler = "x86_64-w64-mingw32-gcc"
-            os.execute("make " .. step .. " MODE=" .. mode .. " CC=\"" .. compiler .. "\" LINKER=\"" .. compiler .. "\" OUTPUT=\"thesandboxcell.exe\" ECFLAGS=\"-I /usr/local/include\" LIBRARY=libtsc.dll LFLAGS=\"-L. -lraylib -lm -lwinmm -lgdi32 -lopengl32 -static-libgcc -Wl,-Bstatic -lpthread -Wl,--subsystem,windows\" LINKRAYLIB=\"-L. -lraylib -lm -lwinmm -lgdi32 -lopengl32\"")
+            local windowsSystem = mode == "release" and "-Wl,--subsystem,windows" or ""
+            os.execute("make " .. step .. " MODE=" .. mode .. " CC=\"" .. compiler .. "\" LINKER=\"" .. compiler .. "\" OUTPUT=\"thesandboxcell.exe\" ECFLAGS=\"-I /usr/local/include\" LIBRARY=libtsc.dll LFLAGS=\"-L. -lraylib -lm -lwinmm -lgdi32 -lopengl32 -static-libgcc -Wl,-Bstatic -lpthread " .. windowsSystem .. "\" LINKRAYLIB=\"-L. -lraylib -lm -lwinmm -lgdi32 -lopengl32\"")
         end
     end
 

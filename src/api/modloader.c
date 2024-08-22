@@ -19,7 +19,7 @@ typedef void tsc_platform_loadMod(const char *id, const char *path, tsc_value co
 
 typedef struct tsc_platform_t {
     const char *id;
-    tsc_lib_t *lib;
+    tsc_lib_t lib;
 } tsc_platform_t;
 
 tsc_platform_t *platforms = NULL;
@@ -68,7 +68,7 @@ static void tsc_initDLLMod(const char *id) {
 #endif
 }
 
-static tsc_lib_t *tsc_getPlatform(const char *platform) {
+static tsc_lib_t tsc_getPlatform(const char *platform) {
     for(size_t i = 0; i < platformc; i++) {
         if(tsc_streql(platforms[i].id, platform)) {
             return platforms[i].lib;
@@ -111,14 +111,16 @@ static tsc_lib_t *tsc_getPlatform(const char *platform) {
 
 static void tsc_initPlatformMod(const char *id, const char *platform, tsc_value value) {
     printf("Initializing %s as a %s mod\n", id, platform);
-    tsc_lib_t *lib = tsc_getPlatform(platform);
+    tsc_lib_t lib = tsc_getPlatform(platform);
     static char sym[256];
     snprintf(sym, 256, "%s_loadMod", platform);
+    static char buf[256];
     char *path;
-    asprintf(&path, "mods/%s", id);
+    snprintf(buf, 256, "mods/%s", id);
+    path = tsc_strdup(buf);
     tsc_pathfix(path);
 #ifdef _WIN32
-    tsc_platform_loadMod *loadMod = GetProcAddress(lib, sym);
+    tsc_platform_loadMod *loadMod = (tsc_platform_loadMod *)GetProcAddress(lib, sym);
     if(loadMod == NULL) {
         printf("Unable to load %s with %s due to missing symbol %s\n", id, platform, sym);
         exit(1);
