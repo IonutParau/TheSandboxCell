@@ -11,6 +11,7 @@
 #include "../api/api.h"
 #include "ui.h"
 #include <time.h>
+#include <math.h>
 
 typedef struct camera_t {
     double x, y, cellSize, speed;
@@ -26,6 +27,8 @@ static char renderingCellBrushRot = -1;
 static ui_frame *renderingGameUI;
 static tsc_categorybutton *renderingCellButtons = NULL;
 static double renderingApproximationSize = 8;
+static float tsc_zoomScrollTotal = 0;
+static float tsc_brushScrollBuf = 0;
 
 typedef struct selection_t {
     int sx;
@@ -109,6 +112,8 @@ void tsc_resetRendering() {
     isInitial = true;
     renderingCellBrushSize = 0;
     renderingCellBrushId = NULL;
+    tsc_zoomScrollTotal = 0;
+    tsc_brushScrollBuf = 0;
     tsc_ui_clearButtonState(renderingSelectionButtons.copy);
     tsc_ui_clearButtonState(renderingSelectionButtons.cut);
     tsc_ui_clearButtonState(renderingSelectionButtons.del);
@@ -565,6 +570,7 @@ void tsc_pasteGridClipboard() {
     renderingIsPasting = true;
 }
 
+
 void tsc_handleRenderInputs() {
     float delta = GetFrameTime();
 
@@ -747,22 +753,23 @@ void tsc_handleRenderInputs() {
     }
 
     float mouseWheel = GetMouseWheelMove();
-    int amount = 32.0 / renderingCamera.cellSize;
-    if(amount < 1) amount = 1;
-    if(mouseWheel > 0) {
-        if(IsKeyDown(KEY_LEFT_CONTROL)) {
+    if(mouseWheel != 0) printf("%f\n", mouseWheel);
+    if(IsKeyDown(KEY_LEFT_CONTROL)) {
+        tsc_brushScrollBuf += mouseWheel;
+        int amount = 32.0 / renderingCamera.cellSize;
+        if(amount < 1) amount = 1;
+        while(tsc_brushScrollBuf >= 1.5) {
+            tsc_brushScrollBuf -= 1.5;
             brushSize += amount;
-        } else {
-            tsc_setZoomLevel(renderingCamera.cellSize * 2);
         }
-    }
-    if(mouseWheel < 0) {
-        if(IsKeyDown(KEY_LEFT_CONTROL)) {
+        while(tsc_brushScrollBuf <= -1.5) {
+            tsc_brushScrollBuf += 1.5;
             if(brushSize >= amount) brushSize -= amount;
             else brushSize = 0;
-        } else {
-            tsc_setZoomLevel(renderingCamera.cellSize / 2);
         }
+    } else {
+        tsc_zoomScrollTotal += mouseWheel;
+        tsc_setZoomLevel(32.0 * (pow(2, tsc_zoomScrollTotal / 1.5)));
     }
 
     if(IsKeyPressed(KEY_SPACE)) {
