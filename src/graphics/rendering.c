@@ -198,6 +198,7 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
         float repeat[] = {gridRepeat, gridRepeat};
         SetShaderValue(renderingRepeatingShader, renderingRepeatingScaleLoc, repeat, SHADER_UNIFORM_VEC2);
         BeginTextureMode(renderingCellTexture);
+        ClearBackground(BLANK);
         BeginShaderMode(renderingRepeatingShader);
         dest.x = origin.x;
         dest.y = origin.y;
