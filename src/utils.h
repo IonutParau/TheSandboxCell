@@ -3,6 +3,43 @@
 
 #include <stddef.h>
 
+// Based off https://stackoverflow.com/questions/5919996/how-to-detect-reliably-mac-os-x-ios-linux-windows-in-c-preprocessor
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+   //define something for Windows (32-bit and 64-bit, this part is common)
+   #ifdef _WIN64
+        #define TSC_WINDOWS
+   #else
+        #error "Windows 32-bit is not supported"
+   #endif
+#elif __APPLE__
+    #include <TargetConditionals.h>
+    #if TARGET_IPHONE_SIMULATOR
+        #error "iPhone Emulators are not supported"
+    #elif TARGET_OS_MACCATALYST
+        // I guess?
+        #define TSC_MACOS
+    #elif TARGET_OS_IPHONE
+        #error "iPhone are not supported"
+    #elif TARGET_OS_MAC
+        #define TSC_MACOS
+    #else
+        #error "Unknown Apple platform"
+    #endif
+#elif __ANDROID__
+    #error "Android is not supported"
+#elif __linux__
+    #define TSC_LINUX
+#endif
+
+#if __unix__ // all unices not caught above
+    // Unix
+    #define TSC_UNIX
+    #define TSC_POSIX
+#elif defined(_POSIX_VERSION)
+    // POSIX
+    #define TSC_POSIX
+#endif
+
 const char *tsc_strintern(const char *str);
 // hideapi
 double tsc_strhashimbalance();
