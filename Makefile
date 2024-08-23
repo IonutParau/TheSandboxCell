@@ -101,7 +101,7 @@ test: library $(tests) testing.o
 fresh: clean all
 	
 library: $(objects)
-	$(LINKER) -o $(LIBRARY) -shared $(objects) $(LFLAGS)
+	$(LINKER) -o $(LIBRARY) -shared $(objects) $(LFLAGS) $(LINKRAYLIB)
 main.o: src/main.c
 	$(CC) $(CFLAGS) src/main.c -o main.o
 testing.o: src/testing.c
