@@ -32,6 +32,7 @@ typedef struct tsc_celltable {
     void *payload;
     void (*update)(tsc_cell *cell, int x, int y, int ux, int uy, void *payload);
     int (*canMove)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, void *payload);
+    char *(*signal)(tsc_cell *cell, int x, int y, const char *protocol, const char *data, tsc_cell *sender, int sx, int sy, void *payload);
 } tsc_celltable;
 
 tsc_celltable *tsc_cell_newTable(const char *id);
@@ -137,6 +138,7 @@ int tsc_cell_isTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, con
 void tsc_cell_onTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, tsc_cell *eating);
 int tsc_cell_isAcid(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy);
 void tsc_cell_onAcid(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy);
+char *tsc_cell_signal(tsc_cell *cell, int x, int y, const char *protocol, const char *data, tsc_cell *sender, int sx, int sy);
 
 // Returns how many cells were pushed.
 int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell *replacement);

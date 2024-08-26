@@ -67,4 +67,8 @@ const char *tsc_fextension(char *path);
 char **tsc_dirfiles(const char *path, size_t *len);
 void tsc_freedirfiles(char **dirfiles);
 
+void *tsc_malloc(size_t len);
+void *tsc_realloc(void *buffer, size_t len);
+void tsc_free(void *buffer);
+
 #endif

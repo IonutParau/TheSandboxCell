@@ -226,3 +226,10 @@ int tsc_cell_isAcid(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceT
 void tsc_cell_onAcid(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy) {
 
 }
+
+char *tsc_cell_signal(tsc_cell *cell, int x, int y, const char *protocol, const char *data, tsc_cell *sender, int sx, int sy) {
+    tsc_celltable *table = tsc_cell_getTable(cell);
+    if(table == NULL) return NULL;
+    if(table->signal == NULL) return NULL;
+    return table->signal(cell, x, y, protocol, data, sender, sx, sy, table->payload);
+}
