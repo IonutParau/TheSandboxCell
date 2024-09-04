@@ -12,6 +12,7 @@ if task == "help" then
     print("\t\t--target <windows / linux> - The target to compile for. If omitted, it is the native target.")
     print("\t\t--compiler <gcc> - The C compiler to use. Currently only gcc is supported. When cross-compiling, it uses MinGW.")
     print("\t\t--mode <release / debug> - The build mode")
+    print("\t\t--game - Compiling the whole game")
     print("\tflags - Output recommended linking flags")
 end
 
