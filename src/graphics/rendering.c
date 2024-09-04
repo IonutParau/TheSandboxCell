@@ -338,6 +338,17 @@ void tsc_drawGrid() {
     if(renderingCamera.cellSize >= renderingApproximationSize) {
         skipLevel = 1;
     }
+    
+    for(size_t x = sx; x <= ex; x = (x+skipLevel) - x % skipLevel) {
+        for(size_t y = sy; y <= ey; y = (y+skipLevel) - y % skipLevel) {
+            int repeat = skipLevel;
+            if(x + repeat >= currentGrid->width) repeat = currentGrid->width - x;
+            if(y + repeat >= currentGrid->height) repeat = currentGrid->height - y;
+            tsc_cell *bg = tsc_grid_background(currentGrid, x, y);
+            if(bg == NULL) break;
+            tsc_drawCell(bg, x, y, 1, repeat);
+        }
+    }
 
     for(size_t x = sx; x <= ex; x = (x+skipLevel) - x % skipLevel) {
         for(size_t y = sy; y <= ey; y = (y+skipLevel) - y % skipLevel) {
@@ -490,20 +501,31 @@ static void tsc_handleCellPlace() {
 
     if(x < 0 || y < 0 || x >= currentGrid->width || y >= currentGrid->height) return;
 
+    tsc_cell current = tsc_cell_create(currentId, currentRot);
+    tsc_cell nothing = tsc_cell_create(builtin.empty, 0);
+
+    size_t currentFlags = tsc_cell_getTableFlags(&current);
+
     if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-        tsc_cell cell = tsc_cell_create(currentId, currentRot);
         for(int ox = -brushSize; ox <= brushSize; ox++) {
             for(int oy = -brushSize; oy <= brushSize; oy++) {
-                tsc_grid_set(currentGrid, x + ox, y + oy, &cell);
+                if(currentFlags & TSC_FLAGS_PLACEABLE) {
+                    tsc_grid_setBackground(currentGrid, x + ox, y + oy, &current);
+                } else {
+                    tsc_grid_set(currentGrid, x + ox, y + oy, &current);
+                }
             }
         }
     }
     
     if(IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
-        tsc_cell cell = tsc_cell_create(builtin.empty, 0);
         for(int ox = -brushSize; ox <= brushSize; ox++) {
             for(int oy = -brushSize; oy <= brushSize; oy++) {
-                tsc_grid_set(currentGrid, x + ox, y + oy, &cell);
+                if(currentFlags & TSC_FLAGS_PLACEABLE) {
+                    tsc_grid_setBackground(currentGrid, x + ox, y + oy, &nothing);
+                } else {
+                    tsc_grid_set(currentGrid, x + ox, y + oy, &nothing);
+                }
             }
         }
     }

@@ -26,6 +26,8 @@ typedef struct tsc_cell {
 
 typedef struct tsc_grid tsc_grid;
 
+#define TSC_FLAGS_PLACEABLE 1
+
 // Stores function pointers and payload for everything we might need from a modded cell.
 // Can be used in place of ID comparison (technically) but it's not much of a benefit.
 typedef struct tsc_celltable {
@@ -33,10 +35,12 @@ typedef struct tsc_celltable {
     void (*update)(tsc_cell *cell, int x, int y, int ux, int uy, void *payload);
     int (*canMove)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, void *payload);
     char *(*signal)(tsc_cell *cell, int x, int y, const char *protocol, const char *data, tsc_cell *sender, int sx, int sy, void *payload);
+    size_t flags;
 } tsc_celltable;
 
 tsc_celltable *tsc_cell_newTable(const char *id);
 tsc_celltable *tsc_cell_getTable(tsc_cell *cell);
+size_t tsc_cell_getTableFlags(tsc_cell *cell);
 
 typedef struct tsc_texture_id_pool_t {
     const char *icon;
@@ -52,6 +56,10 @@ typedef struct tsc_audio_id_pool_t {
     const char *explosion;
 } tsc_audio_id_pool_t;
 
+typedef struct tsc_optimization_id_pool_t {
+    size_t gens[4];
+} tsc_optimization_id_pool_t;
+
 typedef struct tsc_id_pool_t {
     const char *empty; 
     const char *placeable; 
@@ -66,6 +74,7 @@ typedef struct tsc_id_pool_t {
     const char *wall;
     tsc_texture_id_pool_t textures;
     tsc_audio_id_pool_t audio;
+    tsc_optimization_id_pool_t optimizations;
 } tsc_cell_id_pool_t;
 
 extern tsc_cell_id_pool_t builtin;
@@ -86,6 +95,7 @@ void tsc_cell_setFlags(tsc_cell *cell, size_t flags);
 
 typedef struct tsc_grid {
     tsc_cell *cells;
+    tsc_cell *bgs;
     int width;
     int height;
     const char *title;
@@ -94,6 +104,7 @@ typedef struct tsc_grid {
     bool *chunkdata;
     int chunkwidth;
     int chunkheight;
+    char *optData;
 } tsc_grid;
 
 typedef struct tsc_gridStorage {
@@ -117,8 +128,18 @@ void tsc_copyGrid(tsc_grid *dest, tsc_grid *src);
 void tsc_clearGrid(tsc_grid *grid, int width, int height);
 void tsc_nukeGrids();
 
+size_t tsc_allocOptimization(const char *id);
+size_t tsc_findOptimization(const char *trueID);
+size_t tsc_defineEffect(const char *id);
+size_t tsc_findEffect(const char *trueID);
+
+size_t tsc_optSize();
+size_t tsc_effectSize();
+
 tsc_cell *tsc_grid_get(tsc_grid *grid, int x, int y);
 void tsc_grid_set(tsc_grid *grid, int x, int y, tsc_cell *cell);
+tsc_cell *tsc_grid_background(tsc_grid *grid, int x, int y);
+void tsc_grid_setBackground(tsc_grid *grid, int x, int y, tsc_cell *cell);
 int tsc_grid_frontX(int x, char dir);
 int tsc_grid_frontY(int y, char dir);
 int tsc_grid_shiftX(int x, char dir, int amount);
@@ -128,6 +149,8 @@ void tsc_grid_disableChunk(tsc_grid *grid, int x, int y);
 bool tsc_grid_checkChunk(tsc_grid *grid, int x, int y);
 bool tsc_grid_checkRow(tsc_grid *grid, int y);
 bool tsc_grid_checkColumn(tsc_grid *grid, int x);
+bool tsc_grid_checkOptimization(tsc_grid *grid, int x, int y, size_t optimization);
+void tsc_grid_setOptimization(tsc_grid *grid, int x, int y, size_t optimization, bool enabled);
 
 // Cell interactions 
 

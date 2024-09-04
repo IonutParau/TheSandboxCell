@@ -20,6 +20,9 @@ void tsc_init_builtin_ids() {
     builtin.empty = tsc_strintern("empty");
     builtin.wall = tsc_strintern("wall");
 
+    tsc_celltable *placeTable = tsc_cell_newTable(builtin.placeable);
+    placeTable->flags = TSC_FLAGS_PLACEABLE;
+
     builtin.textures.icon = tsc_strintern("icon");
     builtin.textures.copy = tsc_strintern("copy");
     builtin.textures.cut = tsc_strintern("cut");
@@ -29,6 +32,11 @@ void tsc_init_builtin_ids() {
 
     builtin.audio.destroy = tsc_strintern("destroy");
     builtin.audio.explosion = tsc_strintern("explosion");
+
+    builtin.optimizations.gens[0] = tsc_allocOptimization("gen0");
+    builtin.optimizations.gens[1] = tsc_allocOptimization("gen1");
+    builtin.optimizations.gens[2] = tsc_allocOptimization("gen2");
+    builtin.optimizations.gens[3] = tsc_allocOptimization("gen3");
 }
 
 tsc_cell __attribute__((hot)) tsc_cell_create(const char *id, char rot) {
@@ -173,6 +181,12 @@ tsc_celltable *tsc_cell_getTable(tsc_cell *cell) {
 
     // Table not found.
     return NULL;
+}
+
+size_t tsc_cell_getTableFlags(tsc_cell *cell) {
+    tsc_celltable *table = tsc_cell_getTable(cell);
+    if(table == NULL) return 0;
+    return table->flags;
 }
 
 int tsc_cell_canMove(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force) {

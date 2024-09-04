@@ -265,14 +265,25 @@ static void tsc_subtick_doMover(struct tsc_cell *cell, int x, int y, int _ux, in
 }
 
 static void tsc_subtick_doGen(struct tsc_cell *cell, int x, int y, int _ux, int _uy, void *_) {
+    int fx = tsc_grid_frontX(x, cell->rot);
+    int fy = tsc_grid_frontY(y, cell->rot);
+    tsc_cell *front = tsc_grid_get(currentGrid, fx, fy);
+    if(front == NULL) return;
+    bool useOptimization = true;
+    if(useOptimization && tsc_grid_checkOptimization(currentGrid, fx, fy, builtin.optimizations.gens[cell->rot])) {
+        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[cell->rot], true);
+        return;
+    } else {
+        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[cell->rot], false);
+    }
     int bx = tsc_grid_shiftX(x, cell->rot, -1);
     int by = tsc_grid_shiftY(y, cell->rot, -1);
     tsc_cell *back = tsc_grid_get(currentGrid, bx, by);
     if(back == NULL) return;
     if(!tsc_cell_canGenerate(currentGrid, back, bx, by, cell, x, y, cell->rot)) return;
-    int fx = tsc_grid_frontX(x, cell->rot);
-    int fy = tsc_grid_frontY(y, cell->rot);
-    tsc_grid_push(currentGrid, fx, fy, cell->rot, 1, back);
+    if(tsc_grid_push(currentGrid, fx, fy, cell->rot, 1, back) == 0) {
+        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[cell->rot], true);
+    }
 }
 
 static void tsc_subtick_doClockwiseRotator(struct tsc_cell *cell, int x, int y, int ux, int uy, void *_) {
@@ -508,6 +519,7 @@ static void tsc_subtick_reset(void *data) {
     // Super smart optimization
     // If you don't understand, me neither
     size_t x = (size_t)data;
+    size_t optSize = tsc_optSize();
 
     for(size_t y = 0; y < currentGrid->height; y++) {
         tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
@@ -515,6 +527,8 @@ static void tsc_subtick_reset(void *data) {
         cell->lx = x;
         cell->ly = y;
         cell->addedRot = 0;
+        size_t i = x + y * currentGrid->width;
+        memset(currentGrid->optData + i * optSize, 0, optSize);
         // TODO: cell reset method
     }
 }

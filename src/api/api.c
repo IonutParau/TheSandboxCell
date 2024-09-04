@@ -309,4 +309,7 @@ void tsc_loadDefaultCellBar() {
     tsc_addCell(destroyers, builtin.enemy);
     tsc_addCell(destroyers, builtin.trash);
     tsc_addCategory(root, destroyers);
+    tsc_category *backgrounds = tsc_newCellGroup("Backgrounds", "Cells sitting in the background", builtin.placeable);
+    tsc_addCell(backgrounds, builtin.placeable);
+    tsc_addCategory(root, backgrounds);
 }

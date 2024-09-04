@@ -1,9 +1,11 @@
 #include "grid.h"
 #include "../utils.h"
+#include "../api/api.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <string.h>
 
 tsc_grid *currentGrid = NULL;
 tsc_gridStorage *gridStorage = NULL;
@@ -56,9 +58,13 @@ tsc_grid *tsc_createGrid(const char *id, int width, int height, const char *titl
     grid->refc = 1;
     size_t len = width * height;
     grid->cells = malloc(sizeof(tsc_cell) * len);
+    grid->bgs = malloc(sizeof(tsc_cell) * len);
+    grid->optData = malloc(sizeof(char) * len * tsc_optSize());
 
     for(size_t i = 0; i < len; i++) {
         grid->cells[i] = tsc_cell_create(builtin.empty, 0);
+        grid->bgs[i] = tsc_cell_create(builtin.empty, 0);
+        memset(grid->optData + i * tsc_optSize(), 0, tsc_optSize());
     }
 
     return grid;
@@ -74,8 +80,10 @@ void tsc_deleteGrid(tsc_grid *grid) {
     // Title and description is interned
     for(size_t i = 0; i < grid->width*grid->height; i++) {
         tsc_cell_destroy(grid->cells[i]);
+        tsc_cell_destroy(grid->bgs[i]);
     }
     free(grid->cells);
+    free(grid->bgs);
     free(grid->chunkdata);
     free(grid);
 }
@@ -92,6 +100,7 @@ void tsc_copyGrid(tsc_grid *dest, tsc_grid *src) {
     tsc_clearGrid(dest, src->width, src->height);
     for(size_t i = 0; i < dest->width * dest->height; i++) {
         dest->cells[i] = tsc_cell_clone(src->cells + i);
+        dest->bgs[i] = tsc_cell_clone(src->bgs + i);
     }
     for(int i = 0; i < dest->chunkwidth * dest->chunkheight; i++) {
         dest->chunkdata[i] = src->chunkdata[i];
@@ -102,10 +111,12 @@ void tsc_clearGrid(tsc_grid *grid, int width, int height) {
     for(int x = 0; x < grid->width; x++) {
         for(int y = 0; y < grid->height; y++) {
             tsc_cell_destroy(*tsc_grid_get(grid, x, y));
+            tsc_cell_destroy(*tsc_grid_background(grid, x, y));
         }
     }
     size_t len = width * height;
     grid->cells = realloc(grid->cells, sizeof(tsc_cell) * len);
+    grid->bgs = realloc(grid->bgs, sizeof(tsc_cell) * len);
     int chunkWidth = width / gridChunkSize + (width % gridChunkSize == 0 ? 0 : 1);
     int chunkHeight = height / gridChunkSize + (height % gridChunkSize == 0 ? 0 : 1);
     grid->chunkdata = realloc(grid->chunkdata, sizeof(bool) * chunkWidth * chunkHeight);
@@ -118,6 +129,7 @@ void tsc_clearGrid(tsc_grid *grid, int width, int height) {
     grid->height = height;
     for(size_t i = 0; i < len; i++) {
         grid->cells[i] = tsc_cell_create(builtin.empty, 0);
+        grid->bgs[i] = tsc_cell_create(builtin.empty, 0);
     }
 }
 
@@ -136,6 +148,52 @@ void tsc_nukeGrids() {
     currentGrid = NULL;
 }
 
+size_t tsc_optLen = 0;
+const char **tsc_optBuf = NULL;
+
+size_t tsc_effectLen = 0;
+const char **tsc_effectBuf = NULL;
+
+size_t tsc_allocOptimization(const char *id) {
+    const char *trueID = tsc_strintern(tsc_padWithModID(id));
+    size_t idx = tsc_optLen++;
+    tsc_optBuf = realloc(tsc_optBuf, sizeof(const char *) * tsc_optLen);
+    tsc_optBuf[idx] = trueID;
+    return idx;
+}
+
+size_t tsc_findOptimization(const char *trueID) {
+    trueID = tsc_strintern(trueID);
+    for(size_t i = 0; i < tsc_optLen; i++) {
+        if(tsc_optBuf[i] == trueID) return i;
+    }
+    return 0;
+}
+
+size_t tsc_defineEffect(const char *id) {
+    const char *trueID = tsc_strintern(tsc_padWithModID(id));
+    size_t idx = tsc_effectLen++;
+    tsc_effectBuf = realloc(tsc_effectBuf, sizeof(const char *) * tsc_effectLen);
+    tsc_effectBuf[idx] = trueID;
+    return idx;
+}
+
+size_t tsc_findEffect(const char *trueID) {
+    trueID = tsc_strintern(trueID);
+    for(size_t i = 0; i < tsc_effectLen; i++) {
+        if(tsc_effectBuf[i] == trueID) return i;
+    }
+    return 0;
+}
+
+size_t tsc_optSize() {
+    return tsc_optLen / 8 + (tsc_optLen % 8 == 0 ? 0 : 1);
+}
+
+size_t tsc_effectSize() {
+    return tsc_effectLen / 8 + (tsc_effectLen % 8 == 0 ? 0 : 1);
+}
+
 tsc_cell *tsc_grid_get(tsc_grid *grid, int x, int y) {
     if(x < 0 || y < 0 || x >= grid->width || y >= grid->height) return NULL;
     return grid->cells + (x + y * grid->width);
@@ -150,6 +208,19 @@ void tsc_grid_set(tsc_grid *grid, int x, int y, tsc_cell *cell) {
     if(copy.id != builtin.empty) {
         tsc_grid_enableChunk(grid, x, y);
     }
+}
+
+tsc_cell *tsc_grid_background(tsc_grid *grid, int x, int y) {
+    if(x < 0 || y < 0 || x >= grid->width || y >= grid->height) return NULL;
+    return grid->bgs + (x + y * grid->width);
+}
+
+void tsc_grid_setBackground(tsc_grid *grid, int x, int y, tsc_cell *cell) {
+    if(x < 0 || y < 0 || x >= grid->width || y >= grid->height) return;
+    tsc_cell copy = tsc_cell_clone(cell);
+    tsc_cell *old = tsc_grid_background(grid, x, y);
+    tsc_cell_destroy(*old);
+    *old = copy;
 }
 
 int tsc_grid_frontX(int x, char dir) {
@@ -209,6 +280,22 @@ bool tsc_grid_checkColumn(tsc_grid *grid, int x) {
         if(tsc_grid_checkChunk(grid, x, y)) return true;
     }
     return false;
+}
+
+bool tsc_grid_checkOptimization(tsc_grid *grid, int x, int y, size_t optimization) {
+    if(tsc_grid_get(grid, x, y) == NULL) return false;
+    if(optimization >= tsc_optLen) return false;
+    size_t size = tsc_optSize();
+    size_t i = x + y * grid->width;
+    return tsc_getBit(grid->optData + i * size, optimization);
+}
+
+void tsc_grid_setOptimization(tsc_grid *grid, int x, int y, size_t optimization, bool enabled) {
+    if(tsc_grid_get(grid, x, y) == NULL) return;
+    if(optimization >= tsc_optLen) return;
+    size_t size = tsc_optSize();
+    size_t i = x + y * grid->width;
+    tsc_setBit(grid->optData + i * size, optimization, enabled);
 }
 
 int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell *replacement) {

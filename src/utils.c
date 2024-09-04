@@ -286,3 +286,20 @@ void tsc_free(void *memory) {
 void *tsc_realloc(void *memory, size_t len) {
     return realloc(memory, len);
 }
+
+bool tsc_getBit(char *num, size_t bit) {
+    size_t b = bit % 8;
+    size_t i = bit / 8;
+    size_t mask = 1 << b;
+
+    return (num[i] & mask) != 0;
+}
+
+void tsc_setBit(char *num, size_t bit, bool value) {
+    size_t b = bit % 8;
+    size_t i = bit / 8;
+    size_t mask = 1 << b;
+
+    if(value) num[i] |= mask;
+    else num[i] &= ~value;
+}

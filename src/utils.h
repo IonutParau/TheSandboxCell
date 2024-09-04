@@ -2,6 +2,7 @@
 #define TSC_UTILS
 
 #include <stddef.h>
+#include <stdbool.h>
 
 // Based off https://stackoverflow.com/questions/5919996/how-to-detect-reliably-mac-os-x-ios-linux-windows-in-c-preprocessor
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
@@ -70,5 +71,8 @@ void tsc_freedirfiles(char **dirfiles);
 void *tsc_malloc(size_t len);
 void *tsc_realloc(void *buffer, size_t len);
 void tsc_free(void *buffer);
+
+bool tsc_getBit(char *num, size_t bit);
+void tsc_setBit(char *num, size_t bit, bool value);
 
 #endif
