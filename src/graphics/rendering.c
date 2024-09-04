@@ -399,7 +399,7 @@ void tsc_drawGrid() {
         for(int x = 0; x < renderingGridClipboard.width; x++) {
             for(int y = 0; y < renderingGridClipboard.height; y++) {
                 int i = y * renderingGridClipboard.width + x;
-                tsc_drawCell(&renderingGridClipboard.cells[i], mx + x, my + y, 0.5, 0);
+                tsc_drawCell(&renderingGridClipboard.cells[i], mx + x, my + y, 0.5, 1);
             }
         }
     } else {

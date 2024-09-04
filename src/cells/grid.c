@@ -127,9 +127,11 @@ void tsc_clearGrid(tsc_grid *grid, int width, int height) {
     }
     grid->width = width;
     grid->height = height;
+    grid->optData = realloc(grid->optData, sizeof(char) * width * height * tsc_optSize());
     for(size_t i = 0; i < len; i++) {
         grid->cells[i] = tsc_cell_create(builtin.empty, 0);
         grid->bgs[i] = tsc_cell_create(builtin.empty, 0);
+        memset(grid->optData + i * tsc_optSize(), 0, tsc_optSize());
     }
 }
 
