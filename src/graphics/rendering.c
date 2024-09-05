@@ -26,7 +26,7 @@ static const char *renderingCellBrushId = NULL;
 static char renderingCellBrushRot = -1;
 static ui_frame *renderingGameUI;
 static tsc_categorybutton *renderingCellButtons = NULL;
-static double renderingApproximationSize = 8;
+static double renderingApproximationSize = 4;
 static float tsc_zoomScrollTotal = 0;
 static float tsc_brushScrollBuf = 0;
 
@@ -338,7 +338,7 @@ void tsc_drawGrid() {
     if(renderingCamera.cellSize >= renderingApproximationSize) {
         skipLevel = 1;
     }
-    
+
     for(size_t x = sx; x <= ex; x = (x+skipLevel) - x % skipLevel) {
         for(size_t y = sy; y <= ey; y = (y+skipLevel) - y % skipLevel) {
             int repeat = skipLevel;
@@ -384,7 +384,7 @@ void tsc_drawGrid() {
         sely = fixedSel.sy * renderingCamera.cellSize - renderingCamera.y;
         selw = width * renderingCamera.cellSize;
         selh = height * renderingCamera.cellSize;
-        
+
         int units = 2 * 3 + 2;
         selbtnsize = (float)selh / units;
         selbtnpad = selbtnsize / 4;
@@ -517,7 +517,7 @@ static void tsc_handleCellPlace() {
             }
         }
     }
-    
+
     if(IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
         for(int ox = -brushSize; ox <= brushSize; ox++) {
             for(int oy = -brushSize; oy <= brushSize; oy++) {
@@ -738,7 +738,7 @@ void tsc_handleRenderInputs() {
             }
         }
     }
-    
+
     if(tsc_ui_checkbutton(renderingSelectionButtons.copy) == UI_BUTTON_PRESS) {
         printf("Copied selection\n");
         tsc_ui_clearButtonState(renderingSelectionButtons.copy);
@@ -769,7 +769,7 @@ void tsc_handleRenderInputs() {
     if(renderingGridClipboard.width != 0 && IsKeyPressed(KEY_V) && IsKeyDown(KEY_LEFT_CONTROL)) {
         renderingIsPasting = true;
     }
-    
+
     if(renderingIsPasting && IsKeyPressed(KEY_ESCAPE)) {
         renderingIsPasting = false;
     }

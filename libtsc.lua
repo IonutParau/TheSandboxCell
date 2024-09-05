@@ -170,7 +170,7 @@ if task == "compile" then
             bundle = true
         end
     end
-    
+
     local library = target == "linux" and "libtsc.so" or "libtsc.dll"
     local exe = target == "linux" and "thesandboxcell" or "thesandboxcell.exe"
 
@@ -196,7 +196,7 @@ if task == "compile" then
             -- We can't use gcc, we have to use x86_64-w64-mingw32-gcc
             compiler = "x86_64-w64-mingw32-gcc"
             local windowsSystem = mode == "release" and "-Wl,--subsystem,windows" or ""
-            os.execute("make " .. step .. " MODE=" .. mode .. " CC=\"" .. compiler .. "\" LINKER=\"" .. compiler .. "\" OUTPUT=\"thesandboxcell.exe\" ECFLAGS=\"-I /usr/local/include\" LIBRARY=libtsc.dll LFLAGS=\"-L. -lraylib -lm -lwinmm -lgdi32 -lopengl32 -static-libgcc -Wl,-Bstatic -lpthread " .. windowsSystem .. "\" LINKRAYLIB=\"-L. -lraylib -lm -lwinmm -lgdi32 -lopengl32\"")
+            os.execute("make " .. step .. " MODE=" .. mode .. " CC=\"" .. compiler .. "\" LINKER=\"" .. compiler .. "\" OUTPUT=\"thesandboxcell.exe\" ECFLAGS=\"-I /usr/local/include\" LIBRARY=libtsc.dll LFLAGS=\"-L. -l:./raylib.dll -lm -lwinmm -lgdi32 -lopengl32 -static-libgcc -Wl,-Bstatic -lpthread " .. windowsSystem .. "\" LINKRAYLIB=\"-L. -l:./raylib.dll -lm -lwinmm -lgdi32 -lopengl32\"")
         end
     end
 
