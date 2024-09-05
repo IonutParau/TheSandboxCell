@@ -25,7 +25,7 @@ typedef struct tsc_texture_resource {
 } tsc_texture_resource;
 
 // Not good for BIG textures.
-static Color __attribute__((optimize("O0"))) tsc_texture_computeApproximation(Texture texture) {
+static Color tsc_texture_computeApproximation(Texture texture) {
     // Copy to CPU the image buffer
     Image image = LoadImageFromTexture(texture);
     Color *colors = LoadImageColors(image);
@@ -44,10 +44,10 @@ static Color __attribute__((optimize("O0"))) tsc_texture_computeApproximation(Te
             int i = y * image.width + x;
             Color pixel = colors[i];
             double red, green, blue, alpha = 0;
-            red = (double)pixel.r / 255;
-            green = (double)pixel.g / 255;
-            blue = (double)pixel.b / 255;
-            alpha = (double)pixel.a / 255;
+            red = ((double)pixel.r) / 255;
+            green = ((double)pixel.g) / 255;
+            blue = ((double)pixel.b) / 255;
+            alpha = ((double)pixel.a) / 255;
 
             r += red * alpha / alphaSum;
             g += green * alpha / alphaSum;
@@ -171,7 +171,7 @@ static void rp_init_textures(tsc_resourcepack *pack, const char *path, const cha
 
     size_t filec;
     char **files = tsc_dirfiles(path, &filec);
-    
+
     for(size_t i = 0; i < filec; i++) {
         char *file = files[i];
         const char *ext = tsc_fextension(file);
@@ -250,7 +250,7 @@ static void rp_init_sounds(tsc_resourcepack *pack, const char *path, const char 
 
     size_t filec;
     char **files = tsc_dirfiles(path, &filec);
-    
+
     for(size_t i = 0; i < filec; i++) {
         char *file = files[i];
         const char *ext = tsc_fextension(file);
@@ -313,7 +313,7 @@ static void rp_init_music(tsc_resourcepack *pack, const char *path) {
 
     size_t filec;
     char **files = tsc_dirfiles(path, &filec);
-    
+
     for(size_t i = 0; i < filec; i++) {
         char *file = files[i];
         const char *ext = tsc_fextension(file);
@@ -388,7 +388,7 @@ tsc_resourcepack *tsc_createResourcePack(const char *id) {
     pack->description = NULL;
     pack->readme = NULL;
     pack->license = NULL;
-    
+
     pack->textures = rp_createResourceTable(sizeof(tsc_texture_resource));
     pack->audio = rp_createResourceTable(sizeof(Sound));
     pack->font = NULL;
@@ -596,7 +596,7 @@ tsc_music_t tsc_music_getRandom() {
         tsc_resourcepack *pack = rp_enabled[i];
         len += pack->trackcount;
     }
-    
+
     if(len == 0) {
         tsc_music_t notfound;
         // notfound.music is undefined
@@ -607,7 +607,7 @@ tsc_music_t tsc_music_getRandom() {
 
     enabledMusic = malloc(sizeof(tsc_music_t) * len);
     size_t j = 0;
-    
+
     for(size_t i = 0; i < rp_enabledc; i++) {
         tsc_resourcepack *pack = rp_enabled[i];
         for(size_t k = 0; k < pack->trackcount; k++) {
