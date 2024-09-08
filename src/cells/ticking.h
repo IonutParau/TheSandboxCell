@@ -5,6 +5,7 @@ extern volatile bool isGamePaused;
 extern volatile bool isGameTicking;
 extern volatile double tickTime;
 extern volatile double tickDelay;
+extern volatile size_t tickCount;
 extern volatile bool multiTickPerFrame;
 extern volatile bool onlyOneTick;
 extern volatile size_t gameTPS;

@@ -238,6 +238,9 @@ static void tsc_loadButton(void *_) {
         tsc_sound_play(builtin.audio.explosion);
     } else {
         tsc_saving_decodeWithAny(clipboard, currentGrid);
+        isInitial = true;
+        tickCount = 0;
+        tsc_copyGrid(tsc_getGrid("initial"), tsc_getGrid("main"));
     }
 }
 
@@ -266,12 +269,14 @@ static void tsc_restoreInitial(void *_) {
     if(isGameTicking) return;
     tsc_copyGrid(currentGrid, tsc_getGrid("initial"));
     isInitial = true;
+    tickCount = 0;
 }
 
 static void tsc_setInitial(void *_) {
     if(isGameTicking) return;
     tsc_copyGrid(tsc_getGrid("initial"), currentGrid);
     isInitial = true;
+    tickCount = 0;
 }
 
 static void tsc_pasteButton(void *_) {

@@ -8,6 +8,7 @@ volatile bool isGamePaused = true;
 volatile bool isGameTicking = false;
 volatile double tickTime = 0.0;
 volatile double tickDelay = 0.0;
+volatile size_t tickCount = 0;
 volatile bool multiTickPerFrame = true;
 volatile bool onlyOneTick = false;
 volatile size_t gameTPS = 0;
@@ -44,6 +45,7 @@ static int tsc_gridUpdateThread(void *_) {
         }
         tsc_subtick_run();
         ticksInSecond++;
+        tickCount++;
         time(&now);
         double delta = difftime(now, last);
         if(delta >= 1) {

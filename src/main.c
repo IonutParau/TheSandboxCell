@@ -165,6 +165,7 @@ int main(int argc, char **argv) {
             tsc_ui_update(delta);
             if(tsc_ui_checkbutton(tsc_mainMenuBtn.play) == UI_BUTTON_PRESS) {
                 tsc_currentMenu = "game";
+                tsc_resetRendering();
             }
             if(tsc_ui_checkbutton(tsc_mainMenuBtn.quit) == UI_BUTTON_PRESS) {
                 if(rand() % 50) {

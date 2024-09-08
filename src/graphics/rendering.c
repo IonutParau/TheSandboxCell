@@ -26,7 +26,7 @@ static const char *renderingCellBrushId = NULL;
 static char renderingCellBrushRot = -1;
 static ui_frame *renderingGameUI;
 static tsc_categorybutton *renderingCellButtons = NULL;
-static double renderingApproximationSize = 4;
+static double renderingApproximationSize = 2;
 static float tsc_zoomScrollTotal = 0;
 static float tsc_brushScrollBuf = 0;
 
@@ -179,7 +179,7 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
         size};
     Color color = WHITE;
     color.a = opacity * 255;
-    if(renderingCamera.cellSize < renderingApproximationSize) {
+    if(renderingCamera.cellSize <= renderingApproximationSize) {
         Color approx = textures_getApproximation(cell->texture == NULL ? cell->id : cell->texture);
         approx = ColorAlphaBlend(approx, approx, color);
         Vector2 origin = {size / 2, size / 2};
@@ -423,7 +423,7 @@ void tsc_drawGrid() {
         DrawText(buffer, 10, 40, 20, RED);
     }
     if(tickDelay == 0) {
-        snprintf(buffer, 256, "TPS: %lu\n", gameTPS);
+        snprintf(buffer, 256, "TPS: %lu", gameTPS);
         Color color = GREEN;
         if(gameTPS < 10) {
             color = YELLOW; // still good but nothing to flex about
@@ -432,6 +432,13 @@ void tsc_drawGrid() {
             color = RED; // substandard
         }
         DrawText(buffer, 10, 40, 20, color);
+    }
+
+    if(tickCount > 0) {
+        snprintf(buffer, 256, "Tick Count: %lu", tickCount);
+        int tickCountSize = 20;
+        int tickCountWidth = MeasureText(buffer, tickCountSize);
+        DrawText(buffer, GetScreenWidth() - tickCountWidth - 10, 10, tickCountSize, WHITE);
     }
 
     DrawFPS(10, 10);
@@ -495,7 +502,7 @@ static void tsc_setZoomLevel(double cellSize) {
 }
 
 static void tsc_handleCellPlace() {
-    if(isGameTicking || !isGamePaused) return;
+    if(isGameTicking && !multiTickPerFrame) return;
     long x = tsc_cellMouseX();
     long y = tsc_cellMouseY();
 
