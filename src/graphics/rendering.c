@@ -619,6 +619,10 @@ void tsc_handleRenderInputs() {
         renderingCamera.x += speed * delta;
     }
 
+    if(IsKeyPressed(KEY_ESCAPE)) {
+        tsc_currentMenu = "main";
+    }
+
     if(IsKeyPressed(KEY_Q)) {
         if(renderingIsPasting) {
             int width = renderingGridClipboard.width;

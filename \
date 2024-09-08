@@ -127,21 +127,6 @@ int main(int argc, char **argv) {
                 if(tsc_ui_button(tsc_mainMenuBtn.play) == UI_BUTTON_HOVER) {
                     tsc_ui_box(buttonHoverColor);
                 }
-                tsc_ui_text("Settings", 20, WHITE);
-                tsc_ui_pad(10, 10);
-                if(tsc_ui_button(tsc_mainMenuBtn.settings) == UI_BUTTON_HOVER) {
-                    tsc_ui_box(buttonHoverColor);
-                }
-                tsc_ui_text("Manual", 20, WHITE);
-                tsc_ui_pad(10, 10);
-                if(tsc_ui_button(tsc_mainMenuBtn.manual) == UI_BUTTON_HOVER) {
-                    tsc_ui_box(buttonHoverColor);
-                }
-                tsc_ui_text("Credits", 20, WHITE);
-                tsc_ui_pad(10, 10);
-                if(tsc_ui_button(tsc_mainMenuBtn.credits) == UI_BUTTON_HOVER) {
-                    tsc_ui_box(buttonHoverColor);
-                }
                 tsc_ui_text("Quit", 20, WHITE);
                 tsc_ui_pad(10, 10);
                 if(tsc_ui_button(tsc_mainMenuBtn.quit) == UI_BUTTON_HOVER) {
@@ -149,7 +134,6 @@ int main(int argc, char **argv) {
                 }
             });
             tsc_ui_pad(20, textHeight+20);
-            tsc_ui_align(0.5, 0, width, 0);
             tsc_ui_render();
             tsc_ui_popFrame();
         }
@@ -166,11 +150,8 @@ int main(int argc, char **argv) {
             if(tsc_ui_checkbutton(tsc_mainMenuBtn.play) == UI_BUTTON_PRESS) {
                 tsc_currentMenu = "game";
             }
-            if(tsc_ui_checkbutton(tsc_mainMenuBtn.quit) == UI_BUTTON_PRESS) {
-                if(rand() % 50) {
-                    break;
-                }
-                tsc_ui_checkbutton(NULL); // segfault hehe
+            if(tsc_ui_checkbutton(tsc_mainMenuBtn.play) == UI_BUTTON_PRESS) {
+                break;
             }
             tsc_ui_popFrame();
         }

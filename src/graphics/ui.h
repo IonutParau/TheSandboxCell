@@ -8,6 +8,8 @@
 #define WIDTH(x) (((double)(x) / 100.0) * GetScreenWidth())
 #define HEIGHT(y) (((double)(y) / 100.0) * GetScreenHeight())
 
+extern const char *tsc_currentMenu;
+
 typedef struct ui_frame ui_frame;
 
 #define UI_BUTTON_CLICK 1
@@ -16,6 +18,7 @@ typedef struct ui_frame ui_frame;
 #define UI_BUTTON_RIGHTCLICK 4
 #define UI_BUTTON_RIGHTPRESS 5
 #define UI_BUTTON_RIGHTLONGPRESS 6
+#define UI_BUTTON_HOVER 7
 
 typedef struct ui_button {
     float pressTime;
@@ -25,6 +28,7 @@ typedef struct ui_button {
     bool wasClicked;
     bool clicked;
     bool rightClick;
+    bool hovered;
 } ui_button;
 
 #define UI_INPUT_DEFAULT 0

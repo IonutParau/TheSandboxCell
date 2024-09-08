@@ -9,6 +9,8 @@
 
 // I pray, almost every day, that one day I can forget I wrote this
 
+const char *tsc_currentMenu = "main";
+
 typedef struct ui_node ui_node;
 
 typedef struct ui_frame {
@@ -312,6 +314,14 @@ static void ui_drawNode(ui_node *node, int x, int y) {
         ui_drawFrame(node->stack, x, y, 0, 0);
         return;
     }
+
+    if(node->tag == UI_ALIGN) {
+        ui_align *align = node->align;
+        int offX = align->width * align->x - ui_widthOf(align->child) * align->x;
+        int offY = align->height * align->y - ui_heightOf(align->child) * align->y;
+        ui_drawNode(align->child, x + offX, y + offY);
+        return;
+    }
 }
 
 static void ui_updateFrame(ui_frame *frame, int x, int y, int mx, int my, double delta);
@@ -352,7 +362,8 @@ start:
         button->clicked = false;
         int mx = GetMouseX();
         int my = GetMouseY();
-        if((IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) && mx >= x && my >= y && mx <= x + width && my <= y + height) {
+        button->hovered = mx >= x && my >= y && mx <= x + width && my <= y + height;
+        if((IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) && button->hovered) {
             button->clicked = true;
             button->pressTime += delta;
             button->rightClick = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
@@ -367,6 +378,16 @@ start:
         x += node->translate->x;
         y += node->translate->y;
         node = node->translate->child;
+        goto start;
+    }
+    
+    if(node->tag == UI_ALIGN) {
+        ui_align *align = node->align;
+        int offX = align->width * align->x - ui_widthOf(align->child) * align->x;
+        int offY = align->height * align->y - ui_heightOf(align->child) * align->y;
+        x += offX;
+        y += offY;
+        node = align->child;
         goto start;
     }
 }
@@ -394,6 +415,12 @@ static int ui_nodeAbsorbs(ui_node *node, int x, int y, int px, int py) {
     }
     if(node->tag == UI_TRANSLATE) {
         return ui_nodeAbsorbs(node->translate->child, x + node->translate->x, y + node->translate->y, px, py);
+    }
+    if(node->tag == UI_ALIGN) {
+        ui_align *align = node->align;
+        int offX = align->width * align->x - ui_widthOf(align->child) * align->x;
+        int offY = align->height * align->y - ui_heightOf(align->child) * align->y;
+        return ui_nodeAbsorbs(align->child, x + offX, y + offY, px, py);
     }
     return false;
 }
@@ -736,7 +763,7 @@ int tsc_ui_checkbutton(ui_button *state) {
             return UI_BUTTON_LONGPRESS;
         }
     }
-    return 0;
+    return state->hovered ? UI_BUTTON_HOVER : 0;
 }
 
 const char *tsc_ui_input(ui_input *state, int width, int height) {
@@ -839,6 +866,25 @@ void tsc_ui_pad(int x, int y) {
     node->pad->px = x;
     node->pad->py = y;
     node->pad->child = child;
+    tsc_ui_giveFrame(frame, node);
+}
+
+void tsc_ui_align(float x, float y, int width, int height) {
+    ui_frame *frame = tsc_ui_topFrame();
+    if(frame == NULL) return;
+    ui_node *child = tsc_ui_takeFromFrame(frame);
+    ui_node *node = tsc_ui_askFrame(frame, UI_ALIGN);
+    if(node == NULL) {
+        node = malloc(sizeof(ui_node));
+        node->tag = UI_ALIGN;
+        node->align = malloc(sizeof(ui_align));
+        tsc_ui_backupInFrame(frame, node);
+    }
+    node->align->x = x;
+    node->align->y = y;
+    node->align->width = width;
+    node->align->height = height;
+    node->align->child = child;
     tsc_ui_giveFrame(frame, node);
 }
 
