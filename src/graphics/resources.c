@@ -25,7 +25,7 @@ typedef struct tsc_texture_resource {
 } tsc_texture_resource;
 
 // Not good for BIG textures.
-static Color tsc_texture_computeApproximation(Texture texture) {
+__attribute__((optnone,optimize("O3"))) static Color tsc_texture_computeApproximation(Texture texture) {
     // Copy to CPU the image buffer
     Image image = LoadImageFromTexture(texture);
     Color *colors = LoadImageColors(image);
@@ -49,10 +49,10 @@ static Color tsc_texture_computeApproximation(Texture texture) {
             blue = ((double)pixel.b) / 255;
             alpha = ((double)pixel.a) / 255;
 
-            r += red * alpha / alphaSum;
-            g += green * alpha / alphaSum;
-            b += blue * alpha / alphaSum;
-            a += alpha * alpha / alphaSum;
+            r += ((red * alpha) / alphaSum);
+            g += ((green * alpha) / alphaSum);
+            b += ((blue * alpha) / alphaSum);
+            a += ((alpha * alpha) / alphaSum);
         }
     }
 
@@ -60,7 +60,7 @@ static Color tsc_texture_computeApproximation(Texture texture) {
     UnloadImageColors(colors);
     UnloadImage(image);
 
-    Color out = {r * 255, g * 255, b * 255, a * 255};
+    Color out = {(char) (r * 255), (char) (g * 255), (char) (b * 255), (char) (a * 255)};
     return out;
 }
 
