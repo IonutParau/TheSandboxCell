@@ -687,6 +687,8 @@ void tsc_handleRenderInputs() {
         const char *clipboard = GetClipboardText();
         if(clipboard != NULL) {
             tsc_saving_decodeWithAny(clipboard, currentGrid);
+            isInitial = true;
+            tickCount = 0;
         }
     }
 
@@ -813,6 +815,7 @@ void tsc_handleRenderInputs() {
         if(isGamePaused && !isGameTicking) {
             tsc_copyGrid(currentGrid, tsc_getGrid("initial"));
             isInitial = true;
+            tickCount = 0;
         }
     }
 
