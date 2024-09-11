@@ -12,6 +12,7 @@
 #include "utils.h"
 #include "api/api.h"
 #include "graphics/ui.h"
+#include "cells/ticking.h"
 
 void doShit(void *thing) {
     int *num = thing;
@@ -54,6 +55,12 @@ int main(int argc, char **argv) {
             height = atoi(svalue);
         } else if(strncmp(arg, "--level=", 8) == 0) {
             level = arg + 8;
+        } else if(strcmp(arg, "--mtpf") == 0) {
+            multiTickPerFrame = true;
+        } else if(strcmp(arg, "--no-mtpf") == 0) {
+            multiTickPerFrame = false;
+        } else if(strncmp(arg, "--tickDelay=", 12) == 0) {
+            tickDelay = atof(arg + 12);
         }
     }
     

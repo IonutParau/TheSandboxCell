@@ -26,7 +26,8 @@ static const char *renderingCellBrushId = NULL;
 static char renderingCellBrushRot = -1;
 static ui_frame *renderingGameUI;
 static tsc_categorybutton *renderingCellButtons = NULL;
-static double renderingApproximationSize = 2;
+static double renderingApproximationSize = 4;
+static double trueApproximationSize;
 static float tsc_zoomScrollTotal = 0;
 static float tsc_brushScrollBuf = 0;
 
@@ -114,6 +115,7 @@ void tsc_resetRendering() {
     renderingCellBrushId = NULL;
     tsc_zoomScrollTotal = 0;
     tsc_brushScrollBuf = 0;
+    trueApproximationSize = renderingApproximationSize;
     tsc_ui_clearButtonState(renderingSelectionButtons.copy);
     tsc_ui_clearButtonState(renderingSelectionButtons.cut);
     tsc_ui_clearButtonState(renderingSelectionButtons.del);
@@ -179,7 +181,7 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
         size};
     Color color = WHITE;
     color.a = opacity * 255;
-    if(renderingCamera.cellSize <= renderingApproximationSize) {
+    if(renderingCamera.cellSize <= trueApproximationSize) {
         Color approx = textures_getApproximation(cell->texture == NULL ? cell->id : cell->texture);
         approx = ColorAlphaBlend(approx, approx, color);
         Vector2 origin = {size / 2, size / 2};
@@ -202,20 +204,19 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
         }
         float repeat[] = {gridRepeat, gridRepeat};
         SetShaderValue(renderingRepeatingShader, renderingRepeatingScaleLoc, repeat, SHADER_UNIFORM_VEC2);
-        BeginTextureMode(renderingCellTexture);
-        ClearBackground(BLANK);
+        //BeginTextureMode(renderingCellTexture);
+        //ClearBackground(BLANK);
         BeginShaderMode(renderingRepeatingShader);
-        dest.x = origin.x;
-        dest.y = origin.y;
+        //dest.x = origin.x;
+        //dest.y = origin.y;
     }
     // weird hack
-    DrawTexturePro(texture, src, dest, origin, irot * 90 * (1-(gridRepeat > 1)*2), color);
+    DrawTexturePro(texture, src, dest, origin, irot * 90, color);
     if(gridRepeat > 1) {
         EndShaderMode();
-        EndTextureMode();
         // Weird hack science can not explain
-        DrawTexture(renderingCellTexture.texture, -renderingCamera.x + ix * renderingCamera.cellSize,
-                -renderingCamera.y + iy * renderingCamera.cellSize, color);
+        // DrawTexture(renderingCellTexture.texture, -renderingCamera.x + ix * renderingCamera.cellSize,
+        //         -renderingCamera.y + iy * renderingCamera.cellSize, color);
     }
 }
 
@@ -301,10 +302,16 @@ static void tsc_updateCellbar(tsc_category *category, tsc_categorybutton *button
 void tsc_drawGrid() {
     Vector2 emptyOrigin = {0, 0};
     Rectangle emptyDest = {-renderingCamera.x, -renderingCamera.y, renderingCamera.cellSize * currentGrid->width, renderingCamera.cellSize * currentGrid->height};
-    if(renderingCamera.cellSize < renderingApproximationSize) {
+    if(renderingCamera.cellSize < trueApproximationSize) {
+        if(GetFPS() > 60) {
+            trueApproximationSize /= 2;
+        }
         Color approx = textures_getApproximation(builtin.empty);
         DrawRectanglePro(emptyDest, emptyOrigin, 0, approx);
     } else {
+        if(GetFPS() < 60) {
+            trueApproximationSize *= 2;
+        }
         Texture empty = textures_get(builtin.empty);
         float emptyScale[2] = {currentGrid->width, currentGrid->height};
         SetShaderValue(renderingRepeatingShader, renderingRepeatingScaleLoc, emptyScale, SHADER_UNIFORM_VEC2);
@@ -327,9 +334,9 @@ void tsc_drawGrid() {
     if(ex < sx) ex = sx;
     if(ey < sy) ey = sy;
 
-    int maxRenderCount = 1000;
+    int maxRenderCount = 50000;
     int skipLevel = 1;
-    int maxSkipLevel = 4;
+    int maxSkipLevel = 3;
     int renderCount = (ex - sx + 1) * (ey - sy + 1);
     while(renderCount > maxRenderCount && skipLevel < maxSkipLevel) {
         skipLevel++;

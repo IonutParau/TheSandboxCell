@@ -83,7 +83,7 @@ static tsc_resourcetable *rp_createResourceTable(size_t itemsize) {
 }
 
 static void *rp_resourceTableGet(tsc_resourcetable *table, const char *id) {
-    size_t hash = tsc_strhash(id);
+    size_t hash = (size_t)id;
     size_t idx = hash % table->arrayc;
 
     if(table->hashes[idx] != hash) return NULL;
@@ -103,7 +103,7 @@ static void *rp_resourceTableGet(tsc_resourcetable *table, const char *id) {
 
 static void rp_resourceTablePut(tsc_resourcetable *table, const char *id, const void *item) {
     id = tsc_strintern(id);
-    size_t hash = tsc_strhash(id);
+    size_t hash = (size_t)id;
 start:;
     size_t idx = hash % table->arrayc;
     tsc_resourcearray *array = table->arrays + idx;
