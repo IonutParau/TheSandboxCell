@@ -52,10 +52,12 @@ static void tsc_initDLLMod(const char *id) {
     void (__cdecl *init)(void) = (void (__cdecl *)(void))GetProcAddress(library, sym);
 #endif
 #ifdef linux
-#if defined(RTLD_DEEPBIND)
+#ifdef RTLD_DEEPBIND
     void *library = dlopen(buffer, RTLD_NOW | RTLD_DEEPBIND);
 #else
-	void *library = dlopen(buffer, RTLD_NOW);
+    // We use magic number here because musl headers suck dick
+    // and Blendi loves Alpine
+	void *library = dlopen(buffer, RTLD_NOW | 8);
 #endif
     if(library == NULL) {
         fprintf(stderr, "Unable to open %s\n", dlerror());
