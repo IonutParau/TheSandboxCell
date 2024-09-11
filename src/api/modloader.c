@@ -52,7 +52,11 @@ static void tsc_initDLLMod(const char *id) {
     void (__cdecl *init)(void) = (void (__cdecl *)(void))GetProcAddress(library, sym);
 #endif
 #ifdef linux
+#if defined(RTLD_DEEPBIND)
     void *library = dlopen(buffer, RTLD_NOW | RTLD_DEEPBIND);
+#else
+	void *library = dlopen(buffer, RTLD_NOW);
+#endif
     if(library == NULL) {
         fprintf(stderr, "Unable to open %s\n", dlerror());
         exit(1);
@@ -93,7 +97,11 @@ static tsc_lib_t tsc_getPlatform(const char *platform) {
     }
 #endif
 #ifdef linux
+#if defined(RTLD_DEEPBIND)
     void *library = dlopen(buffer, RTLD_NOW | RTLD_DEEPBIND);
+#else
+	void *library = dlopen(buffer, RTLD_NOW);
+#endif
     if(library == NULL) {
         fprintf(stderr, "Unable to open %s\n", dlerror());
         exit(1);
