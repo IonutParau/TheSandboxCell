@@ -321,7 +321,9 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
 
     // Stupid V3 encoding lets you omit cells
     while(celli < width * height) {
-        cellArr[celli++] = tsc_cell_create(builtin.empty, 0);
+        cellArr[celli] = tsc_cell_create(builtin.empty, 0);
+        bgArr[celli] = false;
+        celli++;
     }
 
     celli = 0;
