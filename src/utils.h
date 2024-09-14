@@ -41,6 +41,15 @@
     #define TSC_POSIX
 #endif
 
+// x64 gives us 64 bit pointers, but in virtual memory, they become 48-bit pointers.
+// 12 bits for a 4kb index within a page, 4 indexes 9 bits each which tell the CPU how to traverse the page table.
+// The remaining 16 bits must be empty in case the 5th index is ever implemented, but it can be used to store extra info.
+#if defined(__x86_64) || defined(_M_X64)
+    #define TSC_PTR_HAS_SHORT 1
+#else
+    #define TSC_PTR_HAS_SHORT 0
+#endif
+
 const char *tsc_strintern(const char *str);
 // hideapi
 double tsc_strhashimbalance();
@@ -74,5 +83,14 @@ void tsc_free(void *buffer);
 
 bool tsc_getBit(char *num, size_t bit);
 void tsc_setBit(char *num, size_t bit, bool value);
+
+unsigned char tsc_getUnusedPointerByte(void *pointer);
+void *tsc_getPointerWithoutByte(void *pointer);
+void *tsc_setUnusedPointerByte(void *pointer, unsigned char byte);
+// x64 only
+unsigned short tsc_getUnusedPointerShort(void *pointer);
+void *tsc_getPointerWithoutShort(void *pointer);
+// x64 only
+void *tsc_setUnusedPointerShort(void *pointer, unsigned short byte);
 
 #endif
