@@ -166,7 +166,7 @@ static float tsc_rotInterp(char rot, signed char added) {
     return last + (now - last) * (t >= 1 ? 1 : t);
 }
 
-static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat) {
+static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat, bool forceRectangle) {
     if(cell->id == builtin.empty && cell->texture == NULL) return;
     Texture texture = textures_get(cell->texture == NULL ? cell->id : cell->texture);
     double size = renderingCamera.cellSize * gridRepeat;
@@ -181,7 +181,7 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
         size};
     Color color = WHITE;
     color.a = opacity * 255;
-    if(renderingCamera.cellSize <= trueApproximationSize) {
+    if(renderingCamera.cellSize <= trueApproximationSize || forceRectangle) {
         Color approx = textures_getApproximation(cell->texture == NULL ? cell->id : cell->texture);
         approx = ColorAlphaBlend(approx, approx, color);
         Vector2 origin = {size / 2, size / 2};
@@ -353,7 +353,7 @@ void tsc_drawGrid() {
             if(y + repeat >= currentGrid->height) repeat = currentGrid->height - y;
             tsc_cell *bg = tsc_grid_background(currentGrid, x, y);
             if(bg == NULL) break;
-            tsc_drawCell(bg, x, y, 1, repeat);
+            tsc_drawCell(bg, x, y, 1, repeat, repeat > 1);
         }
     }
 
@@ -364,7 +364,7 @@ void tsc_drawGrid() {
             if(y + repeat >= currentGrid->height) repeat = currentGrid->height - y;
             tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
             if(cell == NULL) break;
-            tsc_drawCell(cell, x, y, 1, repeat);
+            tsc_drawCell(cell, x, y, 1, repeat, repeat > 1);
         }
     }
 
@@ -406,7 +406,7 @@ void tsc_drawGrid() {
         for(int x = 0; x < renderingGridClipboard.width; x++) {
             for(int y = 0; y < renderingGridClipboard.height; y++) {
                 int i = y * renderingGridClipboard.width + x;
-                tsc_drawCell(&renderingGridClipboard.cells[i], mx + x, my + y, 0.5, 1);
+                tsc_drawCell(&renderingGridClipboard.cells[i], mx + x, my + y, 0.5, 1, false);
             }
         }
     } else {
@@ -418,7 +418,7 @@ void tsc_drawGrid() {
         cell.lx = cmx;
         cell.ly = cmy;
         cell.addedRot = 0;
-        tsc_drawCell(&cell, cmx, cmy, 0.5, brushSize*2+1);
+        tsc_drawCell(&cell, cmx, cmy, 0.5, brushSize*2+1, false);
     }
 
     static char buffer[256];

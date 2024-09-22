@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
     srand(time(NULL));
 
     // Suppress raylib debug messages
-    SetTraceLogLevel(LOG_ERROR);
+    //SetTraceLogLevel(LOG_ERROR);
 
     workers_setupBest();
 
