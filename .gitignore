@@ -1,11 +1,15 @@
 *.o
 *.zip
 libtsc.so
+libtsc.dylib
 raylib.so
+raylib.dylib
 libtsc.dll
 raylib.dll
 platform.so
+platform.dylib
 mod.so
+mod.dylib
 *.exe
 thesandboxcell
 test_thesandboxcell

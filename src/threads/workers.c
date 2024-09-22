@@ -42,12 +42,13 @@ int workers_amount() {
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdatomic.h>
+#include "../utils.h"
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
-#ifdef linux
+#ifdef TSC_MACOS
 #include <unistd.h>
 #endif
 
@@ -156,8 +157,8 @@ void workers_setupBest() {
     GetSystemInfo(&info);
     workers_setup(info.dwNumberOfProcessors);
 #endif
-#ifdef linux
-    workers_setup(sysconf(_SC_NPROCESSORS_ONLN));
+#ifdef TSC_MACOS
+    workers_setup(6);
 #endif
 }
 

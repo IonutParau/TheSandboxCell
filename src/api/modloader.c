@@ -11,7 +11,7 @@
 typedef HINSTANCE tsc_lib_t;
 typedef void __cdecl tsc_platform_loadMod(const char *id, const char *path, tsc_value config);
 #endif
-#ifdef linux
+#ifdef TSC_MACOS
 #include <dlfcn.h>
 typedef void *tsc_lib_t;
 typedef void tsc_platform_loadMod(const char *id, const char *path, tsc_value config);
@@ -38,6 +38,9 @@ static void tsc_initDLLMod(const char *id) {
     #ifdef linux
     lib = "mod.so";
     #endif
+    #ifdef TSC_MACOS
+    lib = "mod.dylib";
+    #endif
     snprintf(buffer, 256, "mods/%s/%s", id, lib);
     tsc_pathfix(buffer);
     static char sym[256];
@@ -51,7 +54,7 @@ static void tsc_initDLLMod(const char *id) {
     }
     void (__cdecl *init)(void) = (void (__cdecl *)(void))GetProcAddress(library, sym);
 #endif
-#ifdef linux
+#if defined(linux) || defined(TSC_MACOS)
 #ifdef RTLD_DEEPBIND
     void *library = dlopen(buffer, RTLD_NOW | RTLD_DEEPBIND);
 #else
@@ -88,6 +91,9 @@ static tsc_lib_t tsc_getPlatform(const char *platform) {
 #ifdef linux
     lib = "platform.so";
 #endif
+#ifdef TSC_MACOS
+    lib = "platform.dylib";
+#endif
     snprintf(buffer, 256, "platforms/%s/%s", platform, lib);
     tsc_pathfix(buffer);
 #ifdef _WIN32
@@ -98,7 +104,7 @@ static tsc_lib_t tsc_getPlatform(const char *platform) {
         return NULL;
     }
 #endif
-#ifdef linux
+#if defined(linux) || defined(TSC_MACOS)
 #if defined(RTLD_DEEPBIND)
     void *library = dlopen(buffer, RTLD_NOW | RTLD_DEEPBIND);
 #else
@@ -138,7 +144,7 @@ static void tsc_initPlatformMod(const char *id, const char *platform, tsc_value 
     }
     loadMod(id, platform, value);
 #endif
-#ifdef linux
+#ifdef TSC_MACOS
     tsc_platform_loadMod *loadMod = dlsym(lib, sym);
     if(loadMod == NULL) {
         printf("Unable to load %s with %s due to missing symbol %s\n", id, platform, sym);

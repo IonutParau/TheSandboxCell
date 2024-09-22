@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#ifdef linux
+#ifdef TSC_MACOS
 #include <dirent.h>
 #endif
 #ifdef _WIN32
@@ -219,7 +219,7 @@ char **tsc_dirfiles(const char *path, size_t *len) {
     files[0] = NULL;
     size_t i = 0;
 
-#ifdef linux
+#ifdef TSC_MACOS
     // Linux implementation
     DIR *dir = opendir(path);
     if(dir == NULL) {

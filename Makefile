@@ -1,21 +1,21 @@
 CC=gcc
 CFLAGS=-c -fPIC
 # Extra C Flags (for cross-compiling)
-ECFLAGS=
+ECFLAGS=-I /opt/homebrew/Cellar/raylib/5.0/include
 
 LINKER=gcc
 LFLAGS=-lm -lpthread -ldl
 # Extra linking flags (for cross-compiling)
-ELFLAGS=
+ELFLAGS=-L /opt/homebrew/Cellar/raylib/5.0/lib
 
 OUTPUT=thesandboxcell
-LIBRARY=libtsc.so
+LIBRARY=libtsc.dylib
 
 objects=workers.o utils.o cell.o grid.o resources.o rendering.o\
 		subticks.o saving.o saving_buffer.o ui.o api.o tinycthread.o\
 		ticking.o modloader.o value.o tscjson.o
 
-LINKRAYLIB=-lraylib -lGL -lpthread -ldl -lrt -lX11 -lm
+LINKRAYLIB=-lraylib -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL -lpthread -ldl -lm
 
 ifdef OPENMP
 	CFLAGS += -DTSC_USE_OPENMP -fopenmp
@@ -92,12 +92,12 @@ all: library main.o
 ifeq ($(MODE), TURBO)
 	$(LINKER) -o $(OUTPUT) main.o $(objects) $(LINKRAYLIB) $(LFLAGS)
 else
-	$(LINKER) -o $(OUTPUT) main.o -L. -l:./$(LIBRARY) $(LINKRAYLIB) $(LFLAGS)
+	$(LINKER) -o $(OUTPUT) main.o -L. -ltsc $(LINKRAYLIB) $(LFLAGS)
 endif
 clean:
 	rm -f $(objects) $(LIBRARY) $(OUTPUT) $(tests) main.o testing.o test_$(OUTPUT)
 test: library $(tests) testing.o
-	$(LINKER) -o test_$(OUTPUT) $(tests) testing.o -L. -l:./$(LIBRARY) $(LINKRAYLIB) $(LFLAGS)
+	$(LINKER) -o test_$(OUTPUT) $(tests) testing.o -L. -ltsc $(LINKRAYLIB) $(LFLAGS)
 fresh: clean all
 	
 library: $(objects)
