@@ -93,6 +93,11 @@ void tsc_cell_set(tsc_cell *cell, const char *key, const char *value);
 size_t tsc_cell_getFlags(tsc_cell *cell);
 void tsc_cell_setFlags(tsc_cell *cell, size_t flags);
 
+typedef struct tsc_grid_slice {
+    int min;
+    int max;
+} tsc_grid_slice;
+
 typedef struct tsc_grid {
     tsc_cell *cells;
     tsc_cell *bgs;
@@ -105,6 +110,10 @@ typedef struct tsc_grid {
     int chunkwidth;
     int chunkheight;
     char *optData;
+    int widthSliceLen;
+    int heightSliceLen;
+    tsc_grid_slice **widthSlices;
+    tsc_grid_slice **heightSlices;
 } tsc_grid;
 
 typedef struct tsc_gridStorage {
@@ -114,6 +123,7 @@ typedef struct tsc_gridStorage {
 } tsc_gridStorage;
 
 extern tsc_grid *currentGrid;
+extern int tsc_maxSliceSize;
 // hideapi
 extern tsc_gridStorage *gridStorage;
 extern size_t gridChunkSize;
@@ -151,6 +161,8 @@ bool tsc_grid_checkRow(tsc_grid *grid, int y);
 bool tsc_grid_checkColumn(tsc_grid *grid, int x);
 bool tsc_grid_checkOptimization(tsc_grid *grid, int x, int y, size_t optimization);
 void tsc_grid_setOptimization(tsc_grid *grid, int x, int y, size_t optimization, bool enabled);
+tsc_grid_slice *tsc_grid_getWidthSlices(tsc_grid *grid, int y);
+tsc_grid_slice *tsc_grid_getHeightSlices(tsc_grid *grid, int x);
 
 // Cell interactions 
 
