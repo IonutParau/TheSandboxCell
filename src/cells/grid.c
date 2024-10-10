@@ -10,7 +10,6 @@
 tsc_grid *currentGrid = NULL;
 tsc_gridStorage *gridStorage = NULL;
 size_t gridChunkSize = 25;
-int tsc_maxSliceSize = 50;
 
 tsc_grid *tsc_getGrid(const char *name) {
     if(gridStorage == NULL) return NULL;
@@ -69,13 +68,6 @@ tsc_grid *tsc_createGrid(const char *id, int width, int height, const char *titl
         memset(grid->optData + i * tsc_optSize(), 0, tsc_optSize());
     }
 
-
-    grid->widthSliceLen = width / tsc_maxSliceSize + (width % tsc_maxSliceSize != 0);
-    grid->heightSliceLen = height / tsc_maxSliceSize + (height % tsc_maxSliceSize != 0);
-
-    grid->widthSlices = calloc(grid->widthSliceLen, sizeof(tsc_grid_slice));
-    grid->heightSlices = calloc(grid->heightSliceLen, sizeof(tsc_grid_slice));
-
     return grid;
 }
 
@@ -91,17 +83,9 @@ void tsc_deleteGrid(tsc_grid *grid) {
         tsc_cell_destroy(grid->cells[i]);
         tsc_cell_destroy(grid->bgs[i]);
     }
-    for(int i = 0; i < grid->height; i++) {
-        free(grid->widthSlices[i]);
-    }
-    for(int i = 0; i < grid->width; i++) {
-        free(grid->heightSlices[i]);
-    }
     free(grid->cells);
     free(grid->bgs);
     free(grid->chunkdata);
-    free(grid->widthSlices);
-    free(grid->heightSlices);
     free(grid);
 }
 
@@ -131,12 +115,6 @@ void tsc_clearGrid(tsc_grid *grid, int width, int height) {
             tsc_cell_destroy(*tsc_grid_background(grid, x, y));
         }
     }
-    for(int i = 0; i < grid->heightSliceLen; i++) {
-        free(grid->widthSlices[i]);
-    }
-    for(int i = 0; i < grid->widthSliceLen; i++) {
-        free(grid->heightSlices[i]);
-    }
     size_t len = width * height;
     grid->cells = realloc(grid->cells, sizeof(tsc_cell) * len);
     grid->bgs = realloc(grid->bgs, sizeof(tsc_cell) * len);
@@ -156,12 +134,6 @@ void tsc_clearGrid(tsc_grid *grid, int width, int height) {
         grid->bgs[i] = tsc_cell_create(builtin.empty, 0);
         memset(grid->optData + i * tsc_optSize(), 0, tsc_optSize());
     }
-    grid->widthSliceLen = width / tsc_maxSliceSize + (width % tsc_maxSliceSize != 0);
-    grid->heightSliceLen = height / tsc_maxSliceSize + (height % tsc_maxSliceSize != 0);
-    grid->widthSlices = realloc(grid->widthSlices, sizeof(tsc_grid_slice) * grid->widthSliceLen);
-    grid->heightSlices = realloc(grid->heightSlices, sizeof(tsc_grid_slice) * grid->heightSliceLen);
-    memset(grid->widthSlices, 0, sizeof(tsc_grid_slice) * grid->widthSliceLen);
-    memset(grid->heightSlices, 0, sizeof(tsc_grid_slice) * grid->heightSliceLen);
 }
 
 void tsc_nukeGrids() {
