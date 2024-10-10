@@ -131,7 +131,7 @@ Just one byte.
 
 The cell integer, no matter how big it is, represents an ID, background and rotation.
 
-It is calculated as the math expression `rotation + bg + id * #bg`, where:
+It is calculated as the math expression `rotation + bg * 4 + id * #bg * 4`, where:
 - `rotation` is the rotation of the cell (0-3). Rotations are clockwise and a mover with 0 rotation would move to the right.
 - `id` is the id index (where 0 is the first one).
 - `bg` is the background ID index (where 0 is the first one).
