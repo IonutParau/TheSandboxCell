@@ -28,14 +28,14 @@ However, each part is not so simple.
 Cell IDs and cell data keys are often shared, thus, they are first put here and instead indexes to them are stored.
 The binary structure of the intern table is like this:
 ```
-[<cstring>...]0
+[<cstring>...]00
 ```
 Where a cstring is defined as:
 ```
 <string bytes>0
 ```
 The `0` byte marking the end of the string.
-Another `0` byte marks the end of the string intern table.
+Another 2 `0` bytes marks the end of the string intern table. (equivalent to as if you put 2 empty strings, but since each entry should be unique, it is treated as a terminator for the whole table)
 
 Indexes into this table start at `1`. This is so `0` can be used in other places for marking terminators.
 The size of the integers storing these indexes varies. It is between the range of `1` to `8` bytes, however, the exact size is equal to the minimum
@@ -147,8 +147,19 @@ A rotation of 2 means it is identical to the cell top-left of it.
 A rotation of 3 means it is identical to the cell top-right of it.
 This allows encoding to only store a "delta" compared to the previous row, allowing it to potentially achieve better compression.
 
+NOTE: by above it, we mean from the equivalent spot in the segment before it. If it is a column, it would be to the left of it.
+
 ### Simplification
 
 Cells are allowed to be "simplified" during encoding.
 The vanilla cells are simplified by having their rotations changed in ways that do not affect their behavior.
 This is done so compression can be achieved, although technically qualifying it as lossy compression.
+
+### Coordinate space
+
+Given index i, which is from 0 to W\*H - 1, where W is the width and H is the height, and where i = 0 means the first decoded cell and i = W\*H-1 means the very last cell,
+
+In this coordinate system, `0, 0` is the top left of the grid, with positive x being right and positive y being down.
+
+If each segment is a row, then x = i mod W, and y = i / W (integer division, rounded down).
+If each segment is a column, then y = i mod H, and x = i / H (still integer division)
