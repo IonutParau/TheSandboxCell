@@ -1,7 +1,9 @@
-# TSC Saving Format - Draft 2
+# TSC Saving Format - Draft 3
 
-A highly compressable binary saving format for Cell Machine. It supports key-value pair cell data, cell flags, cell IDs (TSC cell ids),
-backgrounds and more. It uses little endian byte order (least significant byte comes first).
+A highly compressable binary saving format with parallelizable encoding for Cell Machine.
+It supports key-value pair cell data, cell flags, cell IDs (TSC cell ids), backgrounds and more.
+It uses little endian byte order (least significant byte comes first).
+This is for occasional performance boosts on x86_64 CPUs.
 
 # Overall text structure
 
@@ -52,51 +54,101 @@ Indexes into these arrays start at `0`.
 There are useful for shrinking the possible numerical values that encode a cell type id (more on that later) which can reduce the overall size of
 the level code.
 
-## Cell opcodes
+## Cell structure
 
-`Opcodes` are instructions telling the decoder how to assemble the grid.
-The grid must start out as empty.
+The cell array is either a list of rows or a list of columns. It is a list of columns if there are more columns than rows, otherwise it is a list of rows.
+Each entry will be referred to as a "segment" since whether it is a column or a row, they are encoded the same.
+This document clarifies the difference between how column and row indexes should be turned into x, y coordinates later.
 
-### Coordinate space and rotations
+## Each cell segment
 
-0 means right, 1 means down, 2 means left, 3 means up. +x is right, -x is left, +y is down, -y is up.
-When going "back", it goes to the left, unless the border is reached, in which case it goes up one row and out the other side.
+The cell segment is a mixture of bytes and cell data.
 
-### Opcode format
+There is no implicit start and finish, it ends when the next cells are no longer at that segment.
 
-Each opcode starts as a `byte`, but may take additional bytes as operands.
-- The opcode `0` means skip 1 cell
-- The opcodes `1` - `8` means skin `N+2` cells, where `N` is an `opcode` byte long integer immediately aftwards
-- The opcodes `9` - `16` are followed by a `cell data integer` that is `opcode - 8` bytes long immediately afterwards. They add that extra cell
-- The opcodes `17` - `24` mean "slice copy compressed" and are followed by 2 `opcode - 16` byte long integers (N & L). It means "go back (N+1) cells where last
-cell and copy a horizontal slice of size (L+1)"
-- The opcodes `25` - `32` mean "vertical slice copy compressed" and are followed by 2 `opcode - 24` byte long integers (N & L). It is like slice copy
-compression, except it goes vertically instead of horizontally, starting at the bottom.
-- The opcodes `33` - `40` mean "block copy compressed" and are followed by 3 `opcode - 32` byte long integers (N, W & H). It goes back `N` cells, and copies a
-`W+1` x `L+1` block, starting at the bottomleft corner.
-- The opcodes `41` - `48` mean "set flag" which sets the flags of the last cell to the integer `opcode - 40` bytes long after it.
-- The opcode `49` means "set data" which sets the cell data of the last cell to what is encoded after this byte. See `Cell data`.
+### The opcodes
 
-## Cell binary format
+NOTE: In the sizes of numbers, 0 means 1 byte, 7 means 8 bytes, etc.
+And in the amount of cells, or amount to look back, there is also an implicit +1.
+This is to ensure maximum efficiency, since otherwise 0 would be unused.
 
-At a high level, the binary format of a cell can be viewed as a single interger, `Cell type data`.
-`Cell type data` is an integer that encodes the ID, background ID, rotation, background rotation.
+```c
+0b01SSSCCC<cell ints...>
+```
+this is placing cells with a "small count".
+SSS is how many bytes per cell & CCC is the amount itself.
+After it is a list of cell integers (more on them later.
 
-It can calculated like so:
-```lua
--- id and background are indexes in the string intern table (they start at 1 and thus 1 is subtracted)
--- #ids is the length of the cell ID array
--- #backgrounds is the length of the background ID array
+```c
+0b10SSSCC0<cell count><cell ints...>
+```
+this is placing cells with a "large count".
+SSS is how many bytes per cell & CC is the amount of bytes storing the amount of cells.
+After it is a list of cell integers (more on them later.
 
-local n = rot + backgroundRot * 4 + id * 16 + background * #ids * 16
+```c
+0b10ERF__1<effects?><registry?><flags?>
 ```
 
-It is recommended you use the right opcode for the smallest integer needed to store that value.
+This makes the previous cell optionally have data.
 
-### Cell data
+It may have Effects, Registry or 1 byte Flags.
+The 2 bits afterwards are unused and should be 0, as they may be used in the future.
 
-Cell data is very easy to follow
+After it should be Effects if enabled, Registry if enabled or the 1 byte flags if enabled.
+They may not be in any order other than that.
+
+```c
+0b11BBBCCC
 ```
-[<non-0 string intern id of key><cstring value>]<string intern id of 0 terminator>
+for short copy instruction, where BBB is the look-back integer and CCC is how many bytes the count takes up.
+
+```c
+0b00BBBCCC<look-back int><count int>
 ```
-It is a continuous array of key-value pairs.
+for long copy optimization, where BBB is the amount of bytes storing the look-back integer, and CCC is the size of the count integer.
+
+### Copy Optimization
+
+Copy Optimization is the same as it is in V3. The look-back is the amount of cells to look back, and the count is how many cells to copy.
+The "slice" can run into itself. That is to say, the count can be bigger than the look-back integer.
+
+### Effects
+
+Effects are stored identically to the string ID array.
+
+### Registry
+
+```
+[<key: non-0 string index><value: string index>]<string index of 0>
+```
+
+### Flags
+
+Just one byte.
+
+### Cell Integer
+
+The cell integer, no matter how big it is, represents an ID, background and rotation.
+
+It is calculated as the math expression `rotation + bg + id * #bg`, where:
+- `rotation` is the rotation of the cell (0-3). Rotations are clockwise and a mover with 0 rotation would move to the right.
+- `id` is the id index (where 0 is the first one).
+- `bg` is the background ID index (where 0 is the first one).
+- `#bg` is the amount of backgrounds.
+
+### A note on cell IDs.
+
+The `empty` ID, representing no cell, has special properties when it comes to rotation (technically they only apply to all segments except the first one)
+
+A rotation of 0 means an actual empty cell.
+A rotation of 1 means it is identical to the cell above it.
+A rotation of 2 means it is identical to the cell top-left of it.
+A rotation of 3 means it is identical to the cell top-right of it.
+This allows encoding to only store a "delta" compared to the previous row, allowing it to potentially achieve better compression.
+
+### Simplification
+
+Cells are allowed to be "simplified" during encoding.
+The vanilla cells are simplified by having their rotations changed in ways that do not affect their behavior.
+This is done so compression can be achieved, although technically qualifying it as lossy compression.
