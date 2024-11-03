@@ -69,6 +69,48 @@ typedef struct tsc_category {
     bool usedAsCell;
 } tsc_category;
 
+#define TSC_SETTING_TOGGLE 0
+#define TSC_SETTING_LIST 1
+#define TSC_SETTING_SLIDER 2
+#define TSC_SETTING_INTEGER 3
+#define TSC_SETTING_NUMBER 3
+
+// hideapi
+typedef struct tsc_setting {
+    unsigned char kind;
+    const char *id;
+    const char *name;
+    union {
+        struct {
+            const char **items;
+            size_t len;
+        } list;
+        struct {
+            float min;
+            float max;
+        } slider;
+        struct {
+            int min;
+            int max;
+        } integer;
+        struct {
+            float min;
+            float max;
+        } number;
+    };
+} tsc_setting;
+
+typedef struct tsc_settingCategory {
+    const char *id;
+    const char *title;
+    tsc_setting *settings;
+    size_t settinglen;
+    size_t settingcap;
+} tsc_settingCategory;
+// hideapi
+
+typedef void tsc_settingCallback(const char *settingID);
+
 tsc_category *tsc_rootCategory();
 tsc_category *tsc_newCategory(const char *title, const char *description, const char *icon);
 tsc_category *tsc_newCellGroup(const char *title, const char *description, const char *mainCell);
@@ -81,6 +123,18 @@ tsc_category *tsc_getCategory(tsc_category *category, const char *path);
 void tsc_openCategory(tsc_category *category);
 void tsc_closeCategory(tsc_category *category);
 void tsc_loadDefaultCellBar();
+// hideapi
+
+tsc_value tsc_getSetting(const char *settingID);
+const char *tsc_addSettingCategory(const char *settingCategoryID, const char *settingTitle);
+const char *tsc_addSetting(const char *settingID, const char *name, const char *categoryID, unsigned char kind, void *data, tsc_settingCallback *callback);
+
+// hideapi
+extern tsc_settingCategory *tsc_settingCategories;
+extern size_t tsc_settingLen;
+extern tsc_value tsc_settingStore;
+
+void tsc_loadSettings();
 // hideapi
 
 #endif

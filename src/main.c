@@ -97,6 +97,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    tsc_loadSettings();
+
     tsc_loadAllMods();
     
     tsc_enableResourcePack(defaultResourcePack);

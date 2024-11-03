@@ -318,3 +318,106 @@ void tsc_loadDefaultCellBar() {
     tsc_addCell(backgrounds, builtin.placeable);
     tsc_addCategory(root, backgrounds);
 }
+
+tsc_settingCategory *tsc_settingCategories = NULL;
+size_t tsc_settingLen = 0;
+tsc_value tsc_settingStore;
+
+void tsc_settingHandler(const char *title) {
+    if(title == builtin.settings.vsync) {
+        ClearWindowState(FLAG_VSYNC_HINT);
+        if(tsc_toBoolean(tsc_getSetting(builtin.settings.vsync))) {
+            SetWindowState(FLAG_VSYNC_HINT);
+        }
+    } else if(title == builtin.settings.fullscreen) {
+        if(tsc_toBoolean(tsc_getSetting(builtin.settings.fullscreen)) != IsWindowFullscreen()) {
+            ToggleFullscreen();
+        }
+    }
+}
+
+void tsc_loadSettings() {
+    tsc_settingStore = tsc_object();
+
+    // Load default settings
+    const char *performance = tsc_addSettingCategory("performance", "Performance");
+    const char *graphics = tsc_addSettingCategory("graphics", "Graphics");
+    const char *audio = tsc_addSettingCategory("audio", "Audio");
+    const char *saving = tsc_addSettingCategory("saving", "Saving");
+
+    builtin.settings.vsync = tsc_addSetting("vsync", "V-Sync", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
+    builtin.settings.fullscreen = tsc_addSetting("fullscreen", "Fullscreen", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
+}
+
+tsc_value tsc_getSetting(const char *settingID);
+const char *tsc_addSettingCategory(const char *settingCategoryID, const char *settingTitle) {
+    size_t idx = tsc_settingLen++;
+    tsc_settingCategories = tsc_realloc(tsc_settingCategories, sizeof(tsc_settingCategory) * tsc_settingLen);
+    const char *id = tsc_padWithModID(settingCategoryID);
+    size_t settingcap = 10;
+    tsc_settingCategory category = {
+        .id = id,
+        .title = tsc_strdup(settingTitle),
+        .settings = malloc(sizeof(tsc_setting) * settingcap),
+        .settingcap = settingcap,
+        .settinglen = 0,
+    };
+    tsc_settingCategories[idx] = category;
+    return id;
+}
+const char *tsc_addSetting(const char *settingID, const char *name, const char *categoryID, unsigned char kind, void *data, tsc_settingCallback *callback) {
+    tsc_settingCategory *category = NULL;
+    for(size_t i = 0; i < tsc_settingLen; i++) {
+        if(tsc_settingCategories[i].id == categoryID) {
+            category = tsc_settingCategories + i;
+            break;
+        }
+    }
+    settingID = tsc_padWithModID(settingID);
+    tsc_setting setting = {
+        .kind = kind,
+        .id = settingID,
+        .name = tsc_strdup(name),
+    };
+    if(kind == TSC_SETTING_INTEGER) {
+        int *range = data;
+        setting.integer.min = range[0];
+        setting.integer.max = range[1];
+    } else if(kind == TSC_SETTING_NUMBER) {
+        float *range = data;
+        setting.number.min = range[0];
+        setting.number.max = range[1];
+    } else if(kind == TSC_SETTING_SLIDER) {
+        float *range = data;
+        setting.slider.min = range[0];
+        setting.slider.max = range[1];
+    } else if(kind == TSC_SETTING_LIST) {
+        size_t len = 0;
+        const char **buf = data;
+        while(buf[len] != NULL) len++;
+        const char **buf2 = malloc(sizeof(const char *) * len);
+        memcpy(buf2, buf, sizeof(const char *) * len);
+        setting.list.items = buf2;
+        setting.list.len = len;
+    }
+    if(tsc_isNull(tsc_getKey(tsc_settingStore, settingID))) {
+        if(kind == TSC_SETTING_TOGGLE) {
+            tsc_setKey(tsc_settingStore, settingID, tsc_boolean(data != NULL));
+        } else if(kind == TSC_SETTING_INTEGER) {
+            int *range = data;
+            tsc_setKey(tsc_settingStore, settingID, tsc_int(range[2]));
+        } else if(kind == TSC_SETTING_NUMBER) {
+            float *range = data;
+            tsc_setKey(tsc_settingStore, settingID, tsc_number(range[2]));
+        } else if(kind == TSC_SETTING_SLIDER) {
+            float *range = data;
+            tsc_setKey(tsc_settingStore, settingID, tsc_number(range[2]));
+        } else if(kind == TSC_SETTING_LIST) {
+            const char **buf = data;
+            tsc_value firstVal = tsc_string(*buf);
+            tsc_setKey(tsc_settingStore, settingID, firstVal); // retains
+            tsc_destroy(firstVal);
+        }
+    }
+    return settingID;
+}

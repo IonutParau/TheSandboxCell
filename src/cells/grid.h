@@ -60,6 +60,16 @@ typedef struct tsc_optimization_id_pool_t {
     size_t gens[4];
 } tsc_optimization_id_pool_t;
 
+typedef struct tsc_setting_id_pool_t {
+    const char *vsync;
+    const char *fullscreen;
+    const char *threadCount;
+    const char *savingFormat;
+    const char *musicVolume;
+    const char *sfxVolume;
+    const char *unfocusedVolume;
+} tsc_setting_id_pool_t;
+
 typedef struct tsc_id_pool_t {
     const char *empty; 
     const char *placeable; 
@@ -75,6 +85,7 @@ typedef struct tsc_id_pool_t {
     tsc_texture_id_pool_t textures;
     tsc_audio_id_pool_t audio;
     tsc_optimization_id_pool_t optimizations;
+    tsc_setting_id_pool_t settings;
 } tsc_cell_id_pool_t;
 
 extern tsc_cell_id_pool_t builtin;
