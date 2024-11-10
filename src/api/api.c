@@ -349,7 +349,10 @@ void tsc_loadSettings() {
     builtin.settings.fullscreen = tsc_addSetting("fullscreen", "Fullscreen", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
 }
 
-tsc_value tsc_getSetting(const char *settingID);
+tsc_value tsc_getSetting(const char *settingID) {
+    return tsc_getKey(tsc_settingStore, settingID);
+}
+
 const char *tsc_addSettingCategory(const char *settingCategoryID, const char *settingTitle) {
     size_t idx = tsc_settingLen++;
     tsc_settingCategories = tsc_realloc(tsc_settingCategories, sizeof(tsc_settingCategory) * tsc_settingLen);
