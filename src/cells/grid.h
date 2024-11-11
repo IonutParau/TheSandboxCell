@@ -11,6 +11,16 @@ typedef struct tsc_cellreg {
     size_t len;
 } tsc_cellreg;
 
+typedef struct tsc_cell tsc_cell;
+
+// hideapi
+typedef struct tsc_private_cell_stuff_do_not_touch {
+    int lx;
+    int ly;
+    signed char addedRot;
+    bool updated;
+} tsc_private_cell_stuff_do_not_touch;
+
 typedef struct tsc_cell {
     const char *id;
     const char *texture;
@@ -23,6 +33,7 @@ typedef struct tsc_cell {
     signed char addedRot;
     bool updated;
 } tsc_cell;
+// hideapi
 
 typedef struct tsc_grid tsc_grid;
 
@@ -103,6 +114,17 @@ const char *tsc_cell_nthKey(const tsc_cell *cell, size_t idx);
 void tsc_cell_set(tsc_cell *cell, const char *key, const char *value);
 size_t tsc_cell_getFlags(tsc_cell *cell);
 void tsc_cell_setFlags(tsc_cell *cell, size_t flags);
+
+// Cell API stuff (TODO: everything)
+
+const char *tsc_cell_getID(tsc_cell *cell);
+char tsc_cell_getRotation(tsc_cell *cell);
+void tsc_cell_setRotation(tsc_cell *cell, char rot);
+void tsc_cell_rotate(tsc_cell *cell, signed char amount);
+
+// hideapi
+tsc_private_cell_stuff_do_not_touch *tsc_cell_privateStuff(tsc_cell *cell);
+// hideapi
 
 typedef struct tsc_grid {
     tsc_cell *cells;
