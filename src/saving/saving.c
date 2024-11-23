@@ -5,9 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-// Damn you Nathan and your massive vault solves
-#include "../threads/tinycthread.h"
-#include "../threads/workers.h"
 #include "../utils.h"
 #include <assert.h>
 
@@ -186,7 +183,7 @@ static tsc_cell tsc_v3_chartocell(char input, bool *hasBg) {
     if(n > 71) {
         return tsc_cell_create(builtin.empty, 0);
     }
-    
+
     const char *ids[] = {
         builtin.generator, builtin.rotator_cw,
         builtin.rotator_ccw, builtin.mover,
@@ -197,7 +194,7 @@ static tsc_cell tsc_v3_chartocell(char input, bool *hasBg) {
 
     int val = n % (9 * 2);
     char rot = n / (9 * 2);
-    
+
     const char *id = ids[val / 2];
 
     return tsc_cell_create(id, rot);
@@ -344,7 +341,7 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
     char *title = tsc_v3_nextPart(code, &index);
     grid->title = strlen(title) == 0 ? NULL : tsc_strintern(title);
     free(title);
-    
+
     char *desc = tsc_v3_nextPart(code, &index);
     grid->desc = strlen(desc) == 0 ? NULL : tsc_strintern(desc);
     free(desc);
@@ -508,7 +505,7 @@ ohno:
     char *title = tsc_v3_nextPart(code, &index);
     grid->title = strlen(title) == 0 ? NULL : tsc_strintern(title);
     free(title);
-    
+
     char *desc = tsc_v3_nextPart(code, &index);
     grid->desc = strlen(desc) == 0 ? NULL : tsc_strintern(desc);
     free(desc);
@@ -554,16 +551,16 @@ void tsc_v1_decode(const char *code, tsc_grid *grid) {
         free(strid);
 
         const char *id = ididx < idc ? ids[ididx] : builtin.empty;
-        
+
         char *strrot = tsc_v3_nextPartUntil(celldata, &celldatai, '.');
         int rot = atoi(strrot);
         rot %= 4;
         free(strrot);
-        
+
         char *strx = tsc_v3_nextPartUntil(celldata, &celldatai, '.');
         int x = atoi(strx);
         free(strx);
-        
+
         char *stry = tsc_v3_nextPartUntil(celldata, &celldatai, '.');
         int y = height - atoi(stry) - 1;
         free(stry);
@@ -604,7 +601,7 @@ void tsc_saving_registerCore() {
     v2.decode = tsc_v2_decode;
     v2.encode = NULL;
     tsc_saving_register(v2);
-    
+
     tsc_saving_format v1 = {};
     v1.name = "V1";
     v1.header = "V1;";
