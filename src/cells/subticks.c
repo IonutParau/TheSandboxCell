@@ -144,15 +144,17 @@ static void tsc_subtick_worker(void *data) {
             for(int x = currentGrid->width-1; x >= 0; x--) {
                 int y = info->x;
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
+                size_t idx = x + y * currentGrid->width;
                 if(cell == NULL) continue;
-                if(cell->rot != 0) continue;
-                if(cell->updated) continue;
+                tsc_private_cell_stuff_do_not_touch *privates = &currentGrid->cells.privates[idx];
+                if(currentGrid->cells.rots[idx] != 0) continue;
+                if(privates->updated) continue;
                 for(size_t i = 0; i < info->subtick->idc; i++) {
-                    if(info->subtick->ids[i] == cell->id) {
+                    if(info->subtick->ids[i] == (currentGrid->cells.ids[idx])) {
                         tsc_celltable *table = tsc_cell_getTable(cell);
                         if(table == NULL) break; // breaks out of id loop.
                         if(table->update == NULL) break;
-                        cell->updated = true;
+                        privates->updated = true;
                         table->update(cell, x, y, x, y, table->payload);
                         break;
                     }
@@ -161,15 +163,17 @@ static void tsc_subtick_worker(void *data) {
             for(int x = 0; x < currentGrid->width; x++) {
                 int y = info->x;
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
+                size_t idx = x + y * currentGrid->width;
                 if(cell == NULL) continue;
-                if(cell->rot != 2) continue;
-                if(cell->updated) continue;
+                tsc_private_cell_stuff_do_not_touch *privates = &currentGrid->cells.privates[idx];
+                if(currentGrid->cells.rots[idx] != 2) continue;
+                if(privates->updated) continue;
                 for(size_t i = 0; i < info->subtick->idc; i++) {
-                    if(info->subtick->ids[i] == cell->id) {
+                    if(info->subtick->ids[i] == (currentGrid->cells.ids[idx])) {
                         tsc_celltable *table = tsc_cell_getTable(cell);
                         if(table == NULL) break; // breaks out of id loop.
                         if(table->update == NULL) break;
-                        cell->updated = true;
+                        privates->updated = true;
                         table->update(cell, x, y, x, y, table->payload);
                         break;
                     }
@@ -180,14 +184,17 @@ static void tsc_subtick_worker(void *data) {
             for(int y = 0; y < currentGrid->height; y++) {
                 int x = info->x;
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
-                if(cell->rot != 3) continue;
-                if(cell->updated) continue;
+                size_t idx = x + y * currentGrid->width;
+                if(cell == NULL) continue;
+                tsc_private_cell_stuff_do_not_touch *privates = &currentGrid->cells.privates[idx];
+                if(currentGrid->cells.rots[idx] != 3) continue;
+                if(privates->updated) continue;
                 for(size_t i = 0; i < info->subtick->idc; i++) {
-                    if(info->subtick->ids[i] == cell->id) {
+                    if(info->subtick->ids[i] == (currentGrid->cells.ids[idx])) {
                         tsc_celltable *table = tsc_cell_getTable(cell);
                         if(table == NULL) break; // breaks out of id loop.
                         if(table->update == NULL) break;
-                        cell->updated = true;
+                        privates->updated = true;
                         table->update(cell, x, y, x, y, table->payload);
                         break;
                     }
@@ -196,14 +203,17 @@ static void tsc_subtick_worker(void *data) {
             for(int y = currentGrid->height-1; y >= 0; y--) {
                 int x = info->x;
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
-                if(cell->rot != 1) continue;
-                if(cell->updated) continue;
+                size_t idx = x + y * currentGrid->width;
+                if(cell == NULL) continue;
+                tsc_private_cell_stuff_do_not_touch *privates = &currentGrid->cells.privates[idx];
+                if(currentGrid->cells.rots[idx] != 1) continue;
+                if(privates->updated) continue;
                 for(size_t i = 0; i < info->subtick->idc; i++) {
-                    if(info->subtick->ids[i] == cell->id) {
+                    if(info->subtick->ids[i] == (currentGrid->cells.ids[idx])) {
                         tsc_celltable *table = tsc_cell_getTable(cell);
                         if(table == NULL) break; // breaks out of id loop.
                         if(table->update == NULL) break;
-                        cell->updated = true;
+                        privates->updated = true;
                         table->update(cell, x, y, x, y, table->payload);
                         break;
                     }
@@ -216,12 +226,14 @@ static void tsc_subtick_worker(void *data) {
     if(mode == TSC_SUBMODE_TICKED) {
         for(int y = 0; y < currentGrid->height; y++) {
             tsc_cell *cell = tsc_grid_get(currentGrid, info->x, y);
+            size_t idx = info->x + y * currentGrid->width;
             for(size_t i = 0; i < info->subtick->idc; i++) {
-                if(info->subtick->ids[i] == cell->id) {
+                if(info->subtick->ids[i] == (currentGrid->cells.ids[idx])) {
                     tsc_celltable *table = tsc_cell_getTable(cell);
+                    tsc_private_cell_stuff_do_not_touch *privates = &currentGrid->cells.privates[idx];
                     if(table == NULL) break; // breaks out of id loop.
                     if(table->update == NULL) break;
-                    cell->updated = true;
+                    privates->updated = true;
                     table->update(cell, info->x, y, info->x, y, table->payload);
                     break;
                 }
@@ -229,7 +241,7 @@ static void tsc_subtick_worker(void *data) {
         }
         return;
     }
-    
+
     if(mode == TSC_SUBMODE_NEIGHBOUR) {
         int off[] = {
             -1, 0,
@@ -244,9 +256,10 @@ static void tsc_subtick_worker(void *data) {
                 int cx = x + off[i*2];
                 int cy = y + off[i*2+1];
                 tsc_cell *cell = tsc_grid_get(currentGrid, cx, cy);
+                size_t idx = cx + cy * currentGrid->width;
                 if(cell == NULL) continue;
                 for(size_t i = 0; i < info->subtick->idc; i++) {
-                    if(info->subtick->ids[i] == cell->id) {
+                    if(info->subtick->ids[i] == (currentGrid->cells.ids[idx])) {
                         tsc_celltable *table = tsc_cell_getTable(cell);
                         if(table == NULL) break; // breaks out of id loop.
                         if(table->update == NULL) break;
@@ -261,47 +274,45 @@ static void tsc_subtick_worker(void *data) {
 }
 
 static void tsc_subtick_doMover(struct tsc_cell *cell, int x, int y, int _ux, int _uy, void *_) {
-    tsc_grid_push(currentGrid, x, y, cell->rot, 0, NULL);
+    tsc_grid_push(currentGrid, x, y, tsc_cell_getRotation(cell), 0, NULL);
 }
 
 static void tsc_subtick_doGen(struct tsc_cell *cell, int x, int y, int _ux, int _uy, void *_) {
-    int fx = tsc_grid_frontX(x, cell->rot);
-    int fy = tsc_grid_frontY(y, cell->rot);
+	size_t idx = x + y * currentGrid->width;
+	char rot = currentGrid->cells.rots[idx];
+    int fx = tsc_grid_frontX(x, rot);
+    int fy = tsc_grid_frontY(y, rot);
     tsc_cell *front = tsc_grid_get(currentGrid, fx, fy);
     if(front == NULL) return;
     bool useOptimization = true;
-    if(useOptimization && tsc_grid_checkOptimization(currentGrid, fx, fy, builtin.optimizations.gens[cell->rot])) {
-        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[cell->rot], true);
+    if(useOptimization && tsc_grid_checkOptimization(currentGrid, fx, fy, builtin.optimizations.gens[rot])) {
+        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[rot], true);
         return;
     } else {
-        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[cell->rot], false);
+        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[rot], false);
     }
-    int bx = tsc_grid_shiftX(x, cell->rot, -1);
-    int by = tsc_grid_shiftY(y, cell->rot, -1);
+    int bx = tsc_grid_shiftX(x, rot, -1);
+    int by = tsc_grid_shiftY(y, rot, -1);
     tsc_cell *back = tsc_grid_get(currentGrid, bx, by);
     if(back == NULL) return;
-    if(!tsc_cell_canGenerate(currentGrid, back, bx, by, cell, x, y, cell->rot)) return;
-    if(tsc_grid_push(currentGrid, fx, fy, cell->rot, 1, back) == 0) {
-        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[cell->rot], true);
+    if(!tsc_cell_canGenerate(currentGrid, back, bx, by, cell, x, y, rot)) return;
+    if(tsc_grid_push(currentGrid, fx, fy, rot, 1, back) == 0) {
+        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[rot], true);
     }
 }
 
 static void tsc_subtick_doClockwiseRotator(struct tsc_cell *cell, int x, int y, int ux, int uy, void *_) {
     tsc_cell *toRot = tsc_grid_get(currentGrid, ux, uy);
     if(toRot == NULL) return;
-    if(toRot->id == builtin.empty) return;
-    toRot->rot++;
-    toRot->rot %= 4;
-    toRot->addedRot += 1;
+    if(tsc_cell_getID(toRot) == builtin.empty) return;
+    tsc_cell_rotate(toRot, 1);
 }
 
 static void tsc_subtick_doCounterClockwiseRotator(struct tsc_cell *cell, int x, int y, int ux, int uy, void *_) {
     tsc_cell *toRot = tsc_grid_get(currentGrid, ux, uy);
     if(toRot == NULL) return;
-    if(toRot->id == builtin.empty) return;
-    toRot->rot += 3;
-    toRot->rot %= 4;
-    toRot->addedRot -= 1;
+    if(tsc_cell_getID(toRot) == builtin.empty) return;
+    tsc_cell_rotate(toRot, -1);
 }
 
 static void tsc_subtick_do(tsc_subtick_t *subtick) {
@@ -363,10 +374,11 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                     for(int x = currentGrid->width - 1; x >= 0; x--) {
                         tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                         for(size_t i = 0; i < subtick->idc; i++) {
-                            if(subtick->ids[i] == cell->id) {
-                                if(cell->updated) break;
-                                if(cell->rot != rot) break;
-                                cell->updated = true;
+                            if(subtick->ids[i] == tsc_cell_getID(cell)) {
+                           		tsc_private_cell_stuff_do_not_touch *privates = tsc_cell_privateStuff(cell);
+                                if(privates->updated) break;
+                                if(tsc_cell_getRotation(cell) != rot) break;
+                                privates->updated = true;
                                 tsc_celltable *table = tsc_cell_getTable(cell);
                                 if(table == NULL) break;
                                 if(table->update == NULL) break;
@@ -381,10 +393,11 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                     for(int y = currentGrid->height-1; y >= 0; y--) {
                         tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                         for(size_t i = 0; i < subtick->idc; i++) {
-                            if(subtick->ids[i] == cell->id) {
-                                if(cell->updated) break;
-                                if(cell->rot != rot) break;
-                                cell->updated = true;
+                            if(subtick->ids[i] == tsc_cell_getID(cell)) {
+                            	tsc_private_cell_stuff_do_not_touch *privates = tsc_cell_privateStuff(cell);
+                                if(privates->updated) break;
+                                if(tsc_cell_getRotation(cell) != rot) break;
+                                privates->updated = true;
                                 tsc_celltable *table = tsc_cell_getTable(cell);
                                 if(table == NULL) break;
                                 if(table->update == NULL) break;
@@ -399,10 +412,11 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                     for(int x = 0; x < currentGrid->width; x++) {
                         tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                         for(size_t i = 0; i < subtick->idc; i++) {
-                            if(subtick->ids[i] == cell->id) {
-                                if(cell->updated) break;
-                                if(cell->rot != rot) break;
-                                cell->updated = true;
+                            if(subtick->ids[i] == tsc_cell_getID(cell)) {
+                            	tsc_private_cell_stuff_do_not_touch *privates = tsc_cell_privateStuff(cell);
+                                if(privates->updated) break;
+                                if(tsc_cell_getRotation(cell) != rot) break;
+                                privates->updated = true;
                                 tsc_celltable *table = tsc_cell_getTable(cell);
                                 if(table == NULL) break;
                                 if(table->update == NULL) break;
@@ -417,10 +431,11 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                     for(int y = 0; y < currentGrid->height; y++) {
                         tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                         for(size_t i = 0; i < subtick->idc; i++) {
-                            if(subtick->ids[i] == cell->id) {
-                                if(cell->updated) break;
-                                if(cell->rot != rot) break;
-                                cell->updated = true;
+                            if(subtick->ids[i] == tsc_cell_getID(cell)) {
+                            	tsc_private_cell_stuff_do_not_touch *privates = tsc_cell_privateStuff(cell);
+                                if(privates->updated) break;
+                                if(tsc_cell_getRotation(cell) != rot) break;
+                                privates->updated = true;
                                 tsc_celltable *table = tsc_cell_getTable(cell);
                                 if(table == NULL) break;
                                 if(table->update == NULL) break;
@@ -432,7 +447,7 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
             }
         }
     }
-    
+
     if(mode == TSC_SUBMODE_NEIGHBOUR) {
         if(parallel) {
             tsc_updateinfo_t *buffer = subticks_getBuffer(currentGrid->width);
@@ -464,9 +479,10 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                     int cy = y + off[i*2+1];
                     tsc_cell *cell = tsc_grid_get(currentGrid, cx, cy);
                     if(cell == NULL) continue;
-                    if(cell->updated) continue;
+                    tsc_private_cell_stuff_do_not_touch *privates = tsc_cell_privateStuff(cell);
+                    if(privates->updated) continue;
                     for(size_t i = 0; i < subtick->idc; i++) {
-                        if(subtick->ids[i] == cell->id) {
+                        if(subtick->ids[i] == tsc_cell_getID(cell)) {
                             tsc_celltable *table = tsc_cell_getTable(cell);
                             if(table == NULL) break;
                             if(table->update == NULL) break;
@@ -499,13 +515,14 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
         for(int x = 0; x < currentGrid->width; x++) {
             for(int y = 0; y < currentGrid->height; y++) {
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
-                if(cell->updated) continue;
+                tsc_private_cell_stuff_do_not_touch *privates = tsc_cell_privateStuff(cell);
+                if(privates->updated) continue;
                 for(size_t i = 0; i < subtick->idc; i++) {
-                    if(subtick->ids[i] == cell->id) {
+                    if(subtick->ids[i] == tsc_cell_getID(cell)) {
                         tsc_celltable *table = tsc_cell_getTable(cell);
                         if(table == NULL) break;
                         if(table->update == NULL) break;
-                        cell->updated = true;
+                        privates->updated = true;
                         table->update(cell, x, y, x, y, table->payload);
                         break;
                     }
@@ -523,10 +540,11 @@ static void tsc_subtick_reset(void *data) {
 
     for(size_t y = 0; y < currentGrid->height; y++) {
         tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
-        cell->updated = false;
-        cell->lx = x;
-        cell->ly = y;
-        cell->addedRot = 0;
+        tsc_private_cell_stuff_do_not_touch *privates = tsc_cell_privateStuff(cell);
+        privates->updated = false;
+        privates->lx = x;
+        privates->ly = y;
+        privates->addedRot = 0;
         size_t i = x + y * currentGrid->width;
         memset(currentGrid->optData + i * optSize, 0, optSize);
         // TODO: cell reset method
@@ -572,7 +590,7 @@ void tsc_subtick_addCore() {
 
     tsc_celltable *rotcw = tsc_cell_newTable(builtin.rotator_cw);
     rotcw->update = &tsc_subtick_doClockwiseRotator;
-    
+
     tsc_celltable *rotccw = tsc_cell_newTable(builtin.rotator_ccw);
     rotccw->update = &tsc_subtick_doCounterClockwiseRotator;
 

@@ -20,7 +20,7 @@ tsc_grid *tsc_getGrid(const char *name) {
     }
     return NULL;
 }
-    
+
 
 tsc_grid *tsc_createGrid(const char *id, int width, int height, const char *title, const char *description) {
     assert(width > 0);
@@ -58,13 +58,11 @@ tsc_grid *tsc_createGrid(const char *id, int width, int height, const char *titl
 
     grid->refc = 1;
     size_t len = width * height;
-    grid->cells = malloc(sizeof(tsc_cell) * len);
-    grid->bgs = malloc(sizeof(tsc_cell) * len);
+    grid->cells = tsc_cellArray_create(len);
+    grid->bgs = tsc_cellArray_create(len);
     grid->optData = malloc(sizeof(char) * len * tsc_optSize());
 
     for(size_t i = 0; i < len; i++) {
-        grid->cells[i] = tsc_cell_create(builtin.empty, 0);
-        grid->bgs[i] = tsc_cell_create(builtin.empty, 0);
         memset(grid->optData + i * tsc_optSize(), 0, tsc_optSize());
     }
 
@@ -79,45 +77,39 @@ void tsc_deleteGrid(tsc_grid *grid) {
     grid->refc--;
     if(grid->refc > 0) return;
     // Title and description is interned
-    for(size_t i = 0; i < grid->width*grid->height; i++) {
-        tsc_cell_destroy(grid->cells[i]);
-        tsc_cell_destroy(grid->bgs[i]);
-    }
-    free(grid->cells);
-    free(grid->bgs);
+    size_t len = grid->width * grid->height;
+    tsc_cellArray_destroy(grid->cells, len);
+    tsc_cellArray_destroy(grid->bgs, len);
     free(grid->chunkdata);
     free(grid);
 }
 
 void tsc_switchGrid(tsc_grid *grid) {
-    if(currentGrid != NULL) {
-        tsc_deleteGrid(currentGrid);
-    }
+    tsc_grid *old = currentGrid;
     currentGrid = grid;
     tsc_retainGrid(currentGrid);
+    if(old != NULL) {
+        tsc_deleteGrid(old);
+    }
 }
 
 void tsc_copyGrid(tsc_grid *dest, tsc_grid *src) {
     tsc_clearGrid(dest, src->width, src->height);
-    for(size_t i = 0; i < dest->width * dest->height; i++) {
-        dest->cells[i] = tsc_cell_clone(src->cells + i);
-        dest->bgs[i] = tsc_cell_clone(src->bgs + i);
-    }
+    size_t len = dest->width * dest->height;
+    tsc_cellArray_clone(&dest->cells, &src->cells, len);
+    tsc_cellArray_clone(&dest->bgs, &src->bgs, len);
     for(int i = 0; i < dest->chunkwidth * dest->chunkheight; i++) {
         dest->chunkdata[i] = src->chunkdata[i];
     }
 }
 
 void tsc_clearGrid(tsc_grid *grid, int width, int height) {
-    for(int x = 0; x < grid->width; x++) {
-        for(int y = 0; y < grid->height; y++) {
-            tsc_cell_destroy(*tsc_grid_get(grid, x, y));
-            tsc_cell_destroy(*tsc_grid_background(grid, x, y));
-        }
-    }
     size_t len = width * height;
-    grid->cells = realloc(grid->cells, sizeof(tsc_cell) * len);
-    grid->bgs = realloc(grid->bgs, sizeof(tsc_cell) * len);
+    size_t oldLen = grid->width * grid->height;
+    tsc_cellArray_clear(&grid->cells, oldLen);
+    tsc_cellArray_clear(&grid->bgs, oldLen);
+    tsc_cellArray_realloc(&grid->cells, oldLen, len);
+    tsc_cellArray_realloc(&grid->bgs, oldLen, len);
     int chunkWidth = width / gridChunkSize + (width % gridChunkSize == 0 ? 0 : 1);
     int chunkHeight = height / gridChunkSize + (height % gridChunkSize == 0 ? 0 : 1);
     grid->chunkdata = realloc(grid->chunkdata, sizeof(bool) * chunkWidth * chunkHeight);
@@ -130,8 +122,6 @@ void tsc_clearGrid(tsc_grid *grid, int width, int height) {
     grid->height = height;
     grid->optData = realloc(grid->optData, sizeof(char) * width * height * tsc_optSize());
     for(size_t i = 0; i < len; i++) {
-        grid->cells[i] = tsc_cell_create(builtin.empty, 0);
-        grid->bgs[i] = tsc_cell_create(builtin.empty, 0);
         memset(grid->optData + i * tsc_optSize(), 0, tsc_optSize());
     }
 }
@@ -199,31 +189,27 @@ size_t tsc_effectSize() {
 
 tsc_cell *tsc_grid_get(tsc_grid *grid, int x, int y) {
     if(x < 0 || y < 0 || x >= grid->width || y >= grid->height) return NULL;
-    return grid->cells + (x + y * grid->width);
+    size_t i = x + y * grid->width;
+    return (tsc_cell *)(tsc_cell_typeMask(TSC_CELL_POSPTR) | i);
 }
 
 void tsc_grid_set(tsc_grid *grid, int x, int y, tsc_cell *cell) {
     if(x < 0 || y < 0 || x >= grid->width || y >= grid->height) return;
-    tsc_cell copy = tsc_cell_clone(cell);
-    tsc_cell *old = tsc_grid_get(grid, x, y);
-    tsc_cell_destroy(*old);
-    *old = copy;
-    if(copy.id != builtin.empty) {
+    tsc_cellArray_set(&grid->cells, x + y * grid->width, cell);
+    if(tsc_cell_getID(cell) != builtin.empty) {
         tsc_grid_enableChunk(grid, x, y);
     }
 }
 
 tsc_cell *tsc_grid_background(tsc_grid *grid, int x, int y) {
     if(x < 0 || y < 0 || x >= grid->width || y >= grid->height) return NULL;
-    return grid->bgs + (x + y * grid->width);
+    size_t i = x + y * grid->width;
+    return (tsc_cell *)(tsc_cell_typeMask(TSC_CELL_BGPOSPTR) | i);
 }
 
 void tsc_grid_setBackground(tsc_grid *grid, int x, int y, tsc_cell *cell) {
     if(x < 0 || y < 0 || x >= grid->width || y >= grid->height) return;
-    tsc_cell copy = tsc_cell_clone(cell);
-    tsc_cell *old = tsc_grid_background(grid, x, y);
-    tsc_cell_destroy(*old);
-    *old = copy;
+    tsc_cellArray_set(&grid->bgs, x + y * grid->width, cell);
 }
 
 int tsc_grid_frontX(int x, char dir) {
@@ -303,10 +289,10 @@ void tsc_grid_setOptimization(tsc_grid *grid, int x, int y, size_t optimization,
 
 int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell *replacement) {
     // Beautiful hack
-    tsc_cell empty = tsc_cell_create(NULL, 0);
     if(replacement == NULL) {
-        empty.id = builtin.empty;
-        replacement = &empty;
+        replacement = tsc_cell_create(builtin.empty, 0);
+    } else {
+    	replacement = tsc_cell_clone(replacement);
     }
 
     int amount = 0;
@@ -317,11 +303,11 @@ int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell
     int cy = y;
     int lx = x;
     int ly = y;
-    tsc_cell replacecell = tsc_cell_clone(replacement);
+    tsc_cell *replacecell = replacement;
     while(true) {
         tsc_cell *cell = tsc_grid_get(grid, cx, cy);
         if(cell == NULL) return 0;
-        if(cell->id == builtin.empty) {
+        if(tsc_cell_getID(cell) == builtin.empty) {
             amount++;
             break;
         }
@@ -349,7 +335,7 @@ int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell
 
     // Move using tsc_cell_swap
     for(int i = 0; i < amount; i++) {
-        tsc_cell_swap(tsc_grid_get(grid, x, y), &replacecell);
+        tsc_cell_swap(tsc_grid_get(grid, x, y), replacecell);
         tsc_grid_enableChunk(grid, x, y);
         lx = x;
         ly = y;
@@ -358,12 +344,12 @@ int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell
     }
 
     if(mode == 1) {
-        tsc_cell_onAcid(grid, &replacecell, dir, "push", force, tsc_grid_get(grid, x, y), x, y);
+        tsc_cell_onAcid(grid, replacecell, dir, "push", force, tsc_grid_get(grid, x, y), x, y);
     }
     if(mode == 2) {
-        tsc_cell_onTrash(grid, tsc_grid_get(grid, x, y), x, y, dir, "push", force, &replacecell);     
+        tsc_cell_onTrash(grid, tsc_grid_get(grid, x, y), x, y, dir, "push", force, replacecell);
     }
-    
+
     tsc_cell_destroy(replacecell);
 
     // +1 cuz replacement. This also means 0 only happens if pushing failed
@@ -402,9 +388,9 @@ int tsc_grid_pull(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell
         } else {
             return m;
         }
-        
-        tsc_cell empty = tsc_cell_create(builtin.empty, 0);
-        tsc_grid_set(grid, x, y, &empty);
+
+        tsc_cell *empty = tsc_cell_createReadonly(builtin.empty, 0);
+        tsc_grid_set(grid, x, y, empty);
 
         x = tsc_grid_shiftX(x, dir, -1);
         y = tsc_grid_shiftY(y, dir, -1);

@@ -27,12 +27,34 @@ typedef struct tsc_cell {
     tsc_cellreg *data;
     struct tsc_celltable *celltable;
     size_t flags;
-    int lx;
-    int ly;
-    char rot;
-    signed char addedRot;
-    bool updated;
+    union {
+    	struct {
+     		int lx;
+      		int ly;
+         	signed char addedRot;
+          	bool updated;
+    	};
+     	tsc_private_cell_stuff_do_not_touch privates;
+    };
+   	char rot;
 } tsc_cell;
+
+typedef struct tsc_cellArray_t {
+    const char **ids;
+    char *rots;
+    const char **textures;
+    tsc_cellreg **datas;
+    struct tsc_celltable **celltables;
+    size_t *flags;
+    struct tsc_private_cell_stuff_do_not_touch *privates;
+} tsc_cellArray_t;
+
+tsc_cellArray_t tsc_cellArray_create(size_t len);
+void tsc_cellArray_realloc(tsc_cellArray_t *arr, size_t oldLen, size_t len);
+void tsc_cellArray_clear(tsc_cellArray_t *arr, size_t len);
+void tsc_cellArray_clone(tsc_cellArray_t *arr, tsc_cellArray_t *src, size_t len);
+void tsc_cellArray_set(tsc_cellArray_t *arr, size_t i, const tsc_cell *cell);
+void tsc_cellArray_destroy(tsc_cellArray_t arr, size_t len);
 // hideapi
 
 typedef struct tsc_grid tsc_grid;
@@ -82,16 +104,16 @@ typedef struct tsc_setting_id_pool_t {
 } tsc_setting_id_pool_t;
 
 typedef struct tsc_id_pool_t {
-    const char *empty; 
-    const char *placeable; 
-    const char *mover; 
-    const char *generator; 
+    const char *empty;
+    const char *placeable;
+    const char *mover;
+    const char *generator;
     const char *push;
     const char *slide;
-    const char *rotator_cw; 
-    const char *rotator_ccw; 
-    const char *enemy; 
-    const char *trash; 
+    const char *rotator_cw;
+    const char *rotator_ccw;
+    const char *enemy;
+    const char *trash;
     const char *wall;
     tsc_texture_id_pool_t textures;
     tsc_audio_id_pool_t audio;
@@ -105,30 +127,46 @@ extern tsc_cell_id_pool_t builtin;
 void tsc_init_builtin_ids();
 // hideapi
 
-tsc_cell tsc_cell_create(const char *id, char rot);
-tsc_cell tsc_cell_clone(tsc_cell *cell);
+tsc_cell *tsc_cell_create(const char *id, char rot);
+tsc_cell *tsc_cell_createReadonly(const char *id, char rot);
+tsc_cell *tsc_cell_clone(tsc_cell *cell);
 void tsc_cell_swap(tsc_cell *a, tsc_cell *b);
-void tsc_cell_destroy(tsc_cell cell);
-const char *tsc_cell_get(const tsc_cell *cell, const char *key);
-const char *tsc_cell_nthKey(const tsc_cell *cell, size_t idx);
-void tsc_cell_set(tsc_cell *cell, const char *key, const char *value);
-size_t tsc_cell_getFlags(tsc_cell *cell);
-void tsc_cell_setFlags(tsc_cell *cell, size_t flags);
+void tsc_cell_destroy(tsc_cell *cell);
 
 // Cell API stuff (TODO: everything)
 
-const char *tsc_cell_getID(tsc_cell *cell);
-char tsc_cell_getRotation(tsc_cell *cell);
+const char *tsc_cell_getID(const tsc_cell *cell);
+void tsc_cell_setID(tsc_cell *cell, const char *id);
+char tsc_cell_getRotation(const tsc_cell *cell);
 void tsc_cell_setRotation(tsc_cell *cell, char rot);
 void tsc_cell_rotate(tsc_cell *cell, signed char amount);
+const char *tsc_cell_getTexture(const tsc_cell *cell);
+void tsc_cell_setTexture(tsc_cell *cell, const char *id);
+const char *tsc_cell_get(const tsc_cell *cell, const char *key);
+const char *tsc_cell_nthKey(const tsc_cell *cell, size_t idx);
+void tsc_cell_set(tsc_cell *cell, const char *key, const char *value);
+size_t tsc_cell_getFlags(const tsc_cell *cell);
+void tsc_cell_setFlags(tsc_cell *cell, size_t flags);
 
 // hideapi
-tsc_private_cell_stuff_do_not_touch *tsc_cell_privateStuff(tsc_cell *cell);
+#define TSC_CELL_RAWPTR 0
+#define TSC_CELL_POSPTR 1
+#define TSC_CELL_BGPOSPTR 2
+#define TSC_CELL_LITE 3
+
+tsc_private_cell_stuff_do_not_touch *tsc_cell_privateStuff(const tsc_cell *cell);
+size_t tsc_cell_typeMask(char type);
+bool tsc_cell_checkType(const tsc_cell *cell, char type);
+size_t tsc_cell_stripType(const tsc_cell *cell);
+tsc_celltable **tsc_cell_getCellTable(const tsc_cell *cell);
+tsc_cellreg **tsc_cell_getCellRegistry(const tsc_cell *cell);
+tsc_cell tsc_cell_dump(const tsc_cell *cell);
+void tsc_cell_enter(tsc_cell *cell, tsc_cell dumped);
 // hideapi
 
 typedef struct tsc_grid {
-    tsc_cell *cells;
-    tsc_cell *bgs;
+    tsc_cellArray_t cells;
+    tsc_cellArray_t bgs;
     int width;
     int height;
     const char *title;
@@ -186,7 +224,7 @@ bool tsc_grid_checkColumn(tsc_grid *grid, int x);
 bool tsc_grid_checkOptimization(tsc_grid *grid, int x, int y, size_t optimization);
 void tsc_grid_setOptimization(tsc_grid *grid, int x, int y, size_t optimization, bool enabled);
 
-// Cell interactions 
+// Cell interactions
 
 int tsc_cell_canMove(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force);
 float tsc_cell_getBias(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force);

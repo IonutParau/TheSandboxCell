@@ -42,7 +42,7 @@ typedef struct tsc_object_t {
 
 typedef struct tsc_ownedcell_t {
     size_t refc;
-    tsc_cell cell;
+    tsc_cell *cell;
 } tsc_ownedcell_t;
 
 typedef struct tsc_value {

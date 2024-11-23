@@ -45,7 +45,7 @@ typedef struct selection_btn_t {
 } selection_btn_t;
 
 typedef struct gridclip_t {
-    tsc_cell *cells;
+    tsc_cell **cells;
     int width;
     int height;
 } gridclip_t;
@@ -166,15 +166,19 @@ static float tsc_rotInterp(char rot, signed char added) {
     return last + (now - last) * (t >= 1 ? 1 : t);
 }
 
-static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat, bool forceRectangle) {
-    if(cell->id == builtin.empty && cell->texture == NULL) return;
-    Texture texture = textures_get(cell->texture == NULL ? cell->id : cell->texture);
+static void __attribute__((hot)) tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat, bool forceRectangle) {
+	const char *id = tsc_cell_getID(cell);
+	char rot = tsc_cell_getRotation(cell);
+	const char *texID = tsc_cell_getTexture(cell);
+    if(id == builtin.empty && texID == NULL) return;
+    Texture texture = textures_get(texID == NULL ? id : texID);
     double size = renderingCamera.cellSize * gridRepeat;
     Vector2 origin = {size / 2, size / 2};
     Rectangle src = {0, 0, texture.width, texture.height};
-    float ix = tsc_updateInterp(cell->lx, x);
-    float iy = tsc_updateInterp(cell->ly, y);
-    float irot = tsc_rotInterp(cell->rot, cell->addedRot);
+    tsc_private_cell_stuff_do_not_touch *privates = tsc_cell_privateStuff(cell);
+    float ix = tsc_updateInterp(privates->lx, x);
+    float iy = tsc_updateInterp(privates->ly, y);
+    float irot = tsc_rotInterp(rot, privates->addedRot);
     Rectangle dest = {ix * renderingCamera.cellSize - renderingCamera.x + origin.x,
         iy * renderingCamera.cellSize - renderingCamera.y + origin.y,
         size,
@@ -182,7 +186,7 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
     Color color = WHITE;
     color.a = opacity * 255;
     if(renderingCamera.cellSize <= trueApproximationSize || forceRectangle) {
-        Color approx = textures_getApproximation(cell->texture == NULL ? cell->id : cell->texture);
+        Color approx = textures_getApproximation(texID == NULL ? id : texID);
         approx = ColorAlphaBlend(approx, approx, color);
         Vector2 origin = {size / 2, size / 2};
         // My precious little hack
@@ -195,13 +199,6 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
     // Basic cells get super optimized rendering
     if(gridRepeat > 1) {
         // We need a render texture that is big enough
-        if(renderingCellBrushSize != gridRepeat || renderingCellBrushId != cell->id || renderingCellBrushRot != cell->rot) {
-            UnloadRenderTexture(renderingCellTexture);
-            renderingCellTexture = LoadRenderTexture(size, size);
-            renderingCellBrushSize = gridRepeat;
-            renderingCellBrushId = cell->id;
-            renderingCellBrushRot = cell->rot;
-        }
         float repeat[] = {gridRepeat, gridRepeat};
         SetShaderValue(renderingRepeatingShader, renderingRepeatingScaleLoc, repeat, SHADER_UNIFORM_VEC2);
         //BeginTextureMode(renderingCellTexture);
@@ -406,7 +403,7 @@ void tsc_drawGrid() {
         for(int x = 0; x < renderingGridClipboard.width; x++) {
             for(int y = 0; y < renderingGridClipboard.height; y++) {
                 int i = y * renderingGridClipboard.width + x;
-                tsc_drawCell(&renderingGridClipboard.cells[i], mx + x, my + y, 0.5, 1, false);
+                tsc_drawCell(renderingGridClipboard.cells[i], mx + x, my + y, 0.5, 1, false);
             }
         }
     } else {
@@ -414,11 +411,13 @@ void tsc_drawGrid() {
         int cmy = tsc_cellMouseY();
         cmx = cmx - brushSize;
         cmy = cmy - brushSize;
-        tsc_cell cell = tsc_cell_create(currentId, currentRot);
-        cell.lx = cmx;
-        cell.ly = cmy;
-        cell.addedRot = 0;
-        tsc_drawCell(&cell, cmx, cmy, 0.5, brushSize*2+1, false);
+        tsc_cell *cell = tsc_cell_create(currentId, currentRot);
+        // Unsafe but fuck you
+        cell->lx = cmx;
+        cell->ly = cmy;
+        cell->addedRot = 0;
+        tsc_drawCell(cell, cmx, cmy, 0.5, brushSize*2+1, false);
+        tsc_cell_destroy(cell);
     }
 
     static char buffer[256];
@@ -505,7 +504,6 @@ static void tsc_setZoomLevel(double cellSize) {
     renderingCamera.y *= scale;
     renderingCamera.x -= mx;
     renderingCamera.y -= my;
-    renderingCellBrushSize = 0;
 }
 
 static void tsc_handleCellPlace() {
@@ -515,18 +513,18 @@ static void tsc_handleCellPlace() {
 
     if(x < 0 || y < 0 || x >= currentGrid->width || y >= currentGrid->height) return;
 
-    tsc_cell current = tsc_cell_create(currentId, currentRot);
-    tsc_cell nothing = tsc_cell_create(builtin.empty, 0);
+    tsc_cell *current = tsc_cell_createReadonly(currentId, currentRot);
+    tsc_cell *nothing = tsc_cell_createReadonly(builtin.empty, 0);
 
-    size_t currentFlags = tsc_cell_getTableFlags(&current);
+    size_t currentFlags = tsc_cell_getTableFlags(current);
 
     if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         for(int ox = -brushSize; ox <= brushSize; ox++) {
             for(int oy = -brushSize; oy <= brushSize; oy++) {
                 if(currentFlags & TSC_FLAGS_PLACEABLE) {
-                    tsc_grid_setBackground(currentGrid, x + ox, y + oy, &current);
+                    tsc_grid_setBackground(currentGrid, x + ox, y + oy, current);
                 } else {
-                    tsc_grid_set(currentGrid, x + ox, y + oy, &current);
+                    tsc_grid_set(currentGrid, x + ox, y + oy, current);
                 }
             }
         }
@@ -536,9 +534,9 @@ static void tsc_handleCellPlace() {
         for(int ox = -brushSize; ox <= brushSize; ox++) {
             for(int oy = -brushSize; oy <= brushSize; oy++) {
                 if(currentFlags & TSC_FLAGS_PLACEABLE) {
-                    tsc_grid_setBackground(currentGrid, x + ox, y + oy, &nothing);
+                    tsc_grid_setBackground(currentGrid, x + ox, y + oy, nothing);
                 } else {
-                    tsc_grid_set(currentGrid, x + ox, y + oy, &nothing);
+                    tsc_grid_set(currentGrid, x + ox, y + oy, nothing);
                 }
             }
         }
@@ -577,8 +575,8 @@ static void tsc_cutSelection() {
         for(int y = 0; y < height; y++) {
             int i = y * width + x;
             renderingGridClipboard.cells[i] = tsc_cell_clone(tsc_grid_get(currentGrid, fixed.sx + x, fixed.sy + y));
-            tsc_cell empty = tsc_cell_create(builtin.empty, 0);
-            tsc_grid_set(currentGrid, fixed.sx + x, fixed.sy + y, &empty);
+            tsc_cell *empty = tsc_cell_createReadonly(builtin.empty, 0);
+            tsc_grid_set(currentGrid, fixed.sx + x, fixed.sy + y, empty);
         }
     }
     renderingIsPasting = true;
@@ -593,8 +591,8 @@ static void tsc_deleteSelection() {
     for(int x = 0; x < width; x++) {
         for(int y = 0; y < height; y++) {
             int i = y * width + x;
-            tsc_cell empty = tsc_cell_create(builtin.empty, 0);
-            tsc_grid_set(currentGrid, fixed.sx + x, fixed.sy + y, &empty);
+            tsc_cell *empty = tsc_cell_createReadonly(builtin.empty, 0);
+            tsc_grid_set(currentGrid, fixed.sx + x, fixed.sy + y, empty);
         }
     }
 }
@@ -641,15 +639,16 @@ void tsc_handleRenderInputs() {
         if(renderingIsPasting) {
             int width = renderingGridClipboard.width;
             int height = renderingGridClipboard.height;
-            tsc_cell *copy = malloc(sizeof(tsc_cell) * width * height);
+            tsc_cell **copy = malloc(sizeof(tsc_cell *) * width * height);
 
             for(int x = 0; x < width; x++) {
                 for(int y = 0; y < height; y++) {
                     int o = x * height + y;
                     int i = y * width + (width - x - 1);
                     copy[o] = renderingGridClipboard.cells[i];
-                    copy[o].rot += 3;
-                    copy[o].rot %= 4;
+                    // they are technically all RAWPTR
+                    copy[o]->rot += 3;
+                    copy[o]->rot %= 4;
                 }
             }
 
@@ -667,15 +666,15 @@ void tsc_handleRenderInputs() {
         if(renderingIsPasting) {
             int width = renderingGridClipboard.width;
             int height = renderingGridClipboard.height;
-            tsc_cell *copy = malloc(sizeof(tsc_cell) * width * height);
+            tsc_cell **copy = malloc(sizeof(tsc_cell *) * width * height);
 
             for(int x = 0; x < width; x++) {
                 for(int y = 0; y < height; y++) {
                     int o = x * height + y;
                     int i = (height - y - 1) * width + x;
                     copy[o] = renderingGridClipboard.cells[i];
-                    copy[o].rot += 1;
-                    copy[o].rot %= 4;
+                    copy[o]->rot += 1;
+                    copy[o]->rot %= 4;
                 }
             }
 
@@ -753,8 +752,8 @@ void tsc_handleRenderInputs() {
         for(int x = 0; x < renderingGridClipboard.width; x++) {
             for(int y = 0; y < renderingGridClipboard.height; y++) {
                 int i = y * renderingGridClipboard.width + x;
-                if(renderingGridClipboard.cells[i].id == builtin.empty) continue;
-                tsc_grid_set(currentGrid, mx + x, my + y, &renderingGridClipboard.cells[i]);
+                if(renderingGridClipboard.cells[i]->id == builtin.empty) continue;
+                tsc_grid_set(currentGrid, mx + x, my + y, renderingGridClipboard.cells[i]);
             }
         }
     }

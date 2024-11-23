@@ -363,7 +363,7 @@ const char *tsc_keyAt(tsc_value object, size_t index) {
 
 tsc_cell *tsc_toCell(tsc_value value) {
     if(value.tag == TSC_VALUE_CELLPTR) return value.cellptr;
-    if(value.tag == TSC_VALUE_OWNEDCELL) return &value.ownedcell->cell;
+    if(value.tag == TSC_VALUE_OWNEDCELL) return value.ownedcell->cell;
     return NULL;
 }
 

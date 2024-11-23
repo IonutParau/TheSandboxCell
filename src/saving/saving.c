@@ -5,9 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-// Damn you Nathan and your massive vault solves
-#include "../threads/tinycthread.h"
-#include "../threads/workers.h"
 #include "../utils.h"
 #include <assert.h>
 
@@ -179,14 +176,14 @@ success:
     return tsc_saving_encodeChar74(id * 2 + (hasBg ? 1 : 0) + ((int)cell->rot) * 9 * 2);
 }
 
-static tsc_cell tsc_v3_chartocell(char input, bool *hasBg) {
+static tsc_cell *tsc_v3_chartocell(char input, bool *hasBg) {
     int n = tsc_saving_decodeChar74(input);
     *hasBg = (n % 2 == 1);
 
     if(n > 71) {
-        return tsc_cell_create(builtin.empty, 0);
+        return tsc_cell_createReadonly(builtin.empty, 0);
     }
-    
+
     const char *ids[] = {
         builtin.generator, builtin.rotator_cw,
         builtin.rotator_ccw, builtin.mover,
@@ -197,10 +194,10 @@ static tsc_cell tsc_v3_chartocell(char input, bool *hasBg) {
 
     int val = n % (9 * 2);
     char rot = n / (9 * 2);
-    
+
     const char *id = ids[val / 2];
 
-    return tsc_cell_create(id, rot);
+    return tsc_cell_createReadonly(id, rot);
 }
 
 static char *tsc_v3_nextPart(const char *code, size_t *idx) {
@@ -253,7 +250,7 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
     tsc_clearGrid(grid, width, height);
 
     char *cells = tsc_v3_nextPart(code, &index);
-    tsc_cell *cellArr = malloc(sizeof(tsc_cell) * width * height);
+    tsc_cell **cellArr = malloc(sizeof(tsc_cell *) * width * height);
     bool *bgArr = malloc(sizeof(bool) * width * height);
     size_t celli = 0;
     for(int i = 0; cells[i] != '\0'; i++) {
@@ -312,7 +309,7 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
             }
         } else {
             bool isBg = false;
-            tsc_cell cell = tsc_v3_chartocell(c, &isBg);
+            tsc_cell *cell = tsc_v3_chartocell(c, &isBg);
             cellArr[celli] = cell;
             bgArr[celli] = isBg;
             celli++;
@@ -327,12 +324,12 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
     }
 
     celli = 0;
-    tsc_cell place = tsc_cell_create(builtin.placeable, 0);
+    tsc_cell *place = tsc_cell_createReadonly(builtin.placeable, 0);
     for(int y = height-1; y >= 0; y--) {
         for(int x = 0; x < width; x++) {
-            tsc_grid_set(grid, x, y, &cellArr[celli]);
+            tsc_grid_set(grid, x, y, cellArr[celli]);
             if(bgArr[celli]) {
-                tsc_grid_setBackground(grid, x, y, &place);
+                tsc_grid_setBackground(grid, x, y, place);
             }
             celli++;
         }
@@ -344,7 +341,7 @@ static void tsc_v3_decode(const char *code, tsc_grid *grid) {
     char *title = tsc_v3_nextPart(code, &index);
     grid->title = strlen(title) == 0 ? NULL : tsc_strintern(title);
     free(title);
-    
+
     char *desc = tsc_v3_nextPart(code, &index);
     grid->desc = strlen(desc) == 0 ? NULL : tsc_strintern(desc);
     free(desc);
@@ -459,7 +456,7 @@ void tsc_v2_decode(const char *code, tsc_grid *grid) {
 
     char *cells = tsc_v3_nextPart(code, &index);
 
-    tsc_cell *cellArr = malloc(sizeof(tsc_cell) * width * height);
+    tsc_cell **cellArr = malloc(sizeof(tsc_cell *) * width * height);
     bool *bgArr = malloc(sizeof(bool) * width * height);
     int celli = 0;
     for(size_t i = 0; cells[i] != '\0'; i++) {
@@ -496,7 +493,7 @@ void tsc_v2_decode(const char *code, tsc_grid *grid) {
     int j = 0;
     for(int y = height - 1; y >= 0; y--) {
         for(int x = 0; x < width; x++) {
-            tsc_grid_set(grid, x, y, &cellArr[j]);
+            tsc_grid_set(grid, x, y, cellArr[j]);
             j++;
             if(j == celli) goto ohno;
         }
@@ -508,7 +505,7 @@ ohno:
     char *title = tsc_v3_nextPart(code, &index);
     grid->title = strlen(title) == 0 ? NULL : tsc_strintern(title);
     free(title);
-    
+
     char *desc = tsc_v3_nextPart(code, &index);
     grid->desc = strlen(desc) == 0 ? NULL : tsc_strintern(desc);
     free(desc);
@@ -554,22 +551,22 @@ void tsc_v1_decode(const char *code, tsc_grid *grid) {
         free(strid);
 
         const char *id = ididx < idc ? ids[ididx] : builtin.empty;
-        
+
         char *strrot = tsc_v3_nextPartUntil(celldata, &celldatai, '.');
         int rot = atoi(strrot);
         rot %= 4;
         free(strrot);
-        
+
         char *strx = tsc_v3_nextPartUntil(celldata, &celldatai, '.');
         int x = atoi(strx);
         free(strx);
-        
+
         char *stry = tsc_v3_nextPartUntil(celldata, &celldatai, '.');
         int y = height - atoi(stry) - 1;
         free(stry);
 
-        tsc_cell cell = tsc_cell_create(id, rot);
-        tsc_grid_set(grid, x, y, &cell);
+        tsc_cell *cell = tsc_cell_createReadonly(id, rot);
+        tsc_grid_set(grid, x, y, cell);
 
         free(celldata);
     }
@@ -604,7 +601,7 @@ void tsc_saving_registerCore() {
     v2.decode = tsc_v2_decode;
     v2.encode = NULL;
     tsc_saving_register(v2);
-    
+
     tsc_saving_format v1 = {};
     v1.name = "V1";
     v1.header = "V1;";
