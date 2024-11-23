@@ -1,6 +1,6 @@
 print("Loading TimeClock")
 
-IDs.TimeClock = TSC.AddCell {
+IDs.TimeClock = TSC.Cell.Add {
     "timeclock",
     "Time Clock",
     "A cell which can store and restore the world",
@@ -29,3 +29,5 @@ IDs.TimeClock = TSC.AddCell {
         cell:resetFlag() -- Resets all flags
     end
 }
+
+TSC.Categories.Root:addCell(IDs.TimeClock)
