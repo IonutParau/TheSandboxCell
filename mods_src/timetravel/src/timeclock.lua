@@ -7,7 +7,7 @@ IDs.TimeClock = TSC.Cell.Add {
     update = function(cell, x, y)
         -- This means "backup"
         if cell:hasFlag(1) then
-            cell:set("backup", TSC.Grid.save())
+            cell:set("backup", TSC.Grid:save())
         end
         -- This means restore
         if cell:hasFlag(2) then

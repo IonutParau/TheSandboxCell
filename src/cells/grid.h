@@ -11,16 +11,6 @@ typedef struct tsc_cellreg {
     size_t len;
 } tsc_cellreg;
 
-typedef struct tsc_cell tsc_cell;
-
-// hideapi
-typedef struct tsc_private_cell_stuff_do_not_touch {
-    int lx;
-    int ly;
-    signed char addedRot;
-    bool updated;
-} tsc_private_cell_stuff_do_not_touch;
-
 typedef struct tsc_cell {
     const char *id;
     const char *texture;
@@ -33,7 +23,6 @@ typedef struct tsc_cell {
     signed char addedRot;
     bool updated;
 } tsc_cell;
-// hideapi
 
 typedef struct tsc_grid tsc_grid;
 
@@ -82,16 +71,16 @@ typedef struct tsc_setting_id_pool_t {
 } tsc_setting_id_pool_t;
 
 typedef struct tsc_id_pool_t {
-    const char *empty; 
-    const char *placeable; 
-    const char *mover; 
-    const char *generator; 
+    const char *empty;
+    const char *placeable;
+    const char *mover;
+    const char *generator;
     const char *push;
     const char *slide;
-    const char *rotator_cw; 
-    const char *rotator_ccw; 
-    const char *enemy; 
-    const char *trash; 
+    const char *rotator_cw;
+    const char *rotator_ccw;
+    const char *enemy;
+    const char *trash;
     const char *wall;
     tsc_texture_id_pool_t textures;
     tsc_audio_id_pool_t audio;
@@ -112,19 +101,7 @@ void tsc_cell_destroy(tsc_cell cell);
 const char *tsc_cell_get(const tsc_cell *cell, const char *key);
 const char *tsc_cell_nthKey(const tsc_cell *cell, size_t idx);
 void tsc_cell_set(tsc_cell *cell, const char *key, const char *value);
-size_t tsc_cell_getFlags(tsc_cell *cell);
-void tsc_cell_setFlags(tsc_cell *cell, size_t flags);
-
-// Cell API stuff (TODO: everything)
-
-const char *tsc_cell_getID(tsc_cell *cell);
-char tsc_cell_getRotation(tsc_cell *cell);
-void tsc_cell_setRotation(tsc_cell *cell, char rot);
 void tsc_cell_rotate(tsc_cell *cell, signed char amount);
-
-// hideapi
-tsc_private_cell_stuff_do_not_touch *tsc_cell_privateStuff(tsc_cell *cell);
-// hideapi
 
 typedef struct tsc_grid {
     tsc_cell *cells;
@@ -186,7 +163,7 @@ bool tsc_grid_checkColumn(tsc_grid *grid, int x);
 bool tsc_grid_checkOptimization(tsc_grid *grid, int x, int y, size_t optimization);
 void tsc_grid_setOptimization(tsc_grid *grid, int x, int y, size_t optimization, bool enabled);
 
-// Cell interactions 
+// Cell interactions
 
 int tsc_cell_canMove(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force);
 float tsc_cell_getBias(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force);

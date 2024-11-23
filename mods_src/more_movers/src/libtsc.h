@@ -37,16 +37,21 @@ typedef struct tsc_cell {
 
 typedef struct tsc_grid tsc_grid;
 
+#define TSC_FLAGS_PLACEABLE 1
+
 // Stores function pointers and payload for everything we might need from a modded cell.
 // Can be used in place of ID comparison (technically) but it's not much of a benefit.
 typedef struct tsc_celltable {
     void *payload;
     void (*update)(tsc_cell *cell, int x, int y, int ux, int uy, void *payload);
     int (*canMove)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, void *payload);
+    char *(*signal)(tsc_cell *cell, int x, int y, const char *protocol, const char *data, tsc_cell *sender, int sx, int sy, void *payload);
+    size_t flags;
 } tsc_celltable;
 
 tsc_celltable *tsc_cell_newTable(const char *id);
 tsc_celltable *tsc_cell_getTable(tsc_cell *cell);
+size_t tsc_cell_getTableFlags(tsc_cell *cell);
 
 typedef struct tsc_texture_id_pool_t {
     const char *icon;
@@ -62,20 +67,36 @@ typedef struct tsc_audio_id_pool_t {
     const char *explosion;
 } tsc_audio_id_pool_t;
 
+typedef struct tsc_optimization_id_pool_t {
+    size_t gens[4];
+} tsc_optimization_id_pool_t;
+
+typedef struct tsc_setting_id_pool_t {
+    const char *vsync;
+    const char *fullscreen;
+    const char *threadCount;
+    const char *savingFormat;
+    const char *musicVolume;
+    const char *sfxVolume;
+    const char *unfocusedVolume;
+} tsc_setting_id_pool_t;
+
 typedef struct tsc_id_pool_t {
-    const char *empty; 
-    const char *placeable; 
-    const char *mover; 
-    const char *generator; 
+    const char *empty;
+    const char *placeable;
+    const char *mover;
+    const char *generator;
     const char *push;
     const char *slide;
-    const char *rotator_cw; 
-    const char *rotator_ccw; 
-    const char *enemy; 
-    const char *trash; 
+    const char *rotator_cw;
+    const char *rotator_ccw;
+    const char *enemy;
+    const char *trash;
     const char *wall;
     tsc_texture_id_pool_t textures;
     tsc_audio_id_pool_t audio;
+    tsc_optimization_id_pool_t optimizations;
+    tsc_setting_id_pool_t settings;
 } tsc_cell_id_pool_t;
 
 extern tsc_cell_id_pool_t builtin;
@@ -88,11 +109,11 @@ void tsc_cell_destroy(tsc_cell cell);
 const char *tsc_cell_get(const tsc_cell *cell, const char *key);
 const char *tsc_cell_nthKey(const tsc_cell *cell, size_t idx);
 void tsc_cell_set(tsc_cell *cell, const char *key, const char *value);
-size_t tsc_cell_getFlags(tsc_cell *cell);
-void tsc_cell_setFlags(tsc_cell *cell, size_t flags);
+void tsc_cell_rotate(tsc_cell *cell, signed char amount);
 
 typedef struct tsc_grid {
     tsc_cell *cells;
+    tsc_cell *bgs;
     int width;
     int height;
     const char *title;
@@ -101,6 +122,7 @@ typedef struct tsc_grid {
     bool *chunkdata;
     int chunkwidth;
     int chunkheight;
+    char *optData;
 } tsc_grid;
 
 typedef struct tsc_gridStorage {
@@ -110,6 +132,7 @@ typedef struct tsc_gridStorage {
 } tsc_gridStorage;
 
 extern tsc_grid *currentGrid;
+extern int tsc_maxSliceSize;
 
 tsc_grid *tsc_getGrid(const char *name);
 tsc_grid *tsc_createGrid(const char *id, int width, int height, const char *title, const char *description);
@@ -120,8 +143,18 @@ void tsc_copyGrid(tsc_grid *dest, tsc_grid *src);
 void tsc_clearGrid(tsc_grid *grid, int width, int height);
 void tsc_nukeGrids();
 
+size_t tsc_allocOptimization(const char *id);
+size_t tsc_findOptimization(const char *trueID);
+size_t tsc_defineEffect(const char *id);
+size_t tsc_findEffect(const char *trueID);
+
+size_t tsc_optSize();
+size_t tsc_effectSize();
+
 tsc_cell *tsc_grid_get(tsc_grid *grid, int x, int y);
 void tsc_grid_set(tsc_grid *grid, int x, int y, tsc_cell *cell);
+tsc_cell *tsc_grid_background(tsc_grid *grid, int x, int y);
+void tsc_grid_setBackground(tsc_grid *grid, int x, int y, tsc_cell *cell);
 int tsc_grid_frontX(int x, char dir);
 int tsc_grid_frontY(int y, char dir);
 int tsc_grid_shiftX(int x, char dir, int amount);
@@ -131,8 +164,10 @@ void tsc_grid_disableChunk(tsc_grid *grid, int x, int y);
 bool tsc_grid_checkChunk(tsc_grid *grid, int x, int y);
 bool tsc_grid_checkRow(tsc_grid *grid, int y);
 bool tsc_grid_checkColumn(tsc_grid *grid, int x);
+bool tsc_grid_checkOptimization(tsc_grid *grid, int x, int y, size_t optimization);
+void tsc_grid_setOptimization(tsc_grid *grid, int x, int y, size_t optimization, bool enabled);
 
-// Cell interactions 
+// Cell interactions
 
 int tsc_cell_canMove(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force);
 float tsc_cell_getBias(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force);
@@ -141,6 +176,7 @@ int tsc_cell_isTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, con
 void tsc_cell_onTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, tsc_cell *eating);
 int tsc_cell_isAcid(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy);
 void tsc_cell_onAcid(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy);
+char *tsc_cell_signal(tsc_cell *cell, int x, int y, const char *protocol, const char *data, tsc_cell *sender, int sx, int sy);
 
 // Returns how many cells were pushed.
 int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell *replacement);
@@ -282,6 +318,8 @@ void tsc_sound_play(const char *id);
 #define WIDTH(x) (((double)(x) / 100.0) * GetScreenWidth())
 #define HEIGHT(y) (((double)(y) / 100.0) * GetScreenHeight())
 
+extern const char *tsc_currentMenu;
+
 typedef struct ui_frame ui_frame;
 
 #define UI_BUTTON_CLICK 1
@@ -290,6 +328,7 @@ typedef struct ui_frame ui_frame;
 #define UI_BUTTON_RIGHTCLICK 4
 #define UI_BUTTON_RIGHTPRESS 5
 #define UI_BUTTON_RIGHTLONGPRESS 6
+#define UI_BUTTON_HOVER 7
 
 typedef struct ui_button {
     float pressTime;
@@ -299,6 +338,7 @@ typedef struct ui_button {
     bool wasClicked;
     bool clicked;
     bool rightClick;
+    bool hovered;
 } ui_button;
 
 #define UI_INPUT_DEFAULT 0
@@ -409,6 +449,53 @@ int workers_amount();
 #define TSC_UTILS
 
 #include <stddef.h>
+#include <stdbool.h>
+
+// Based off https://stackoverflow.com/questions/5919996/how-to-detect-reliably-mac-os-x-ios-linux-windows-in-c-preprocessor
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+   //define something for Windows (32-bit and 64-bit, this part is common)
+   #ifdef _WIN64
+        #define TSC_WINDOWS
+   #else
+        #error "Windows 32-bit is not supported"
+   #endif
+#elif __APPLE__
+    #include <TargetConditionals.h>
+    #if TARGET_IPHONE_SIMULATOR
+        #error "iPhone Emulators are not supported"
+    #elif TARGET_OS_MACCATALYST
+        // I guess?
+        #define TSC_MACOS
+    #elif TARGET_OS_IPHONE
+        #error "iPhone are not supported"
+    #elif TARGET_OS_MAC
+        #define TSC_MACOS
+    #else
+        #error "Unknown Apple platform"
+    #endif
+#elif __ANDROID__
+    #error "Android is not supported"
+#elif __linux__
+    #define TSC_LINUX
+#endif
+
+#if __unix__ // all unices not caught above
+    // Unix
+    #define TSC_UNIX
+    #define TSC_POSIX
+#elif defined(_POSIX_VERSION)
+    // POSIX
+    #define TSC_POSIX
+#endif
+
+// x64 gives us 64 bit pointers, but in virtual memory, they become 48-bit pointers.
+// 12 bits for a 4kb index within a page, 4 indexes 9 bits each which tell the CPU how to traverse the page table.
+// The remaining 16 bits must be empty in case the 5th index is ever implemented, but it can be used to store extra info.
+#if defined(__x86_64) || defined(_M_X64)
+    #define TSC_PTR_HAS_SHORT 1
+#else
+    #define TSC_PTR_HAS_SHORT 0
+#endif
 
 const char *tsc_strintern(const char *str);
 int tsc_streql(const char *a, const char *b);
@@ -433,6 +520,22 @@ const char *tsc_fextension(char *path);
 
 char **tsc_dirfiles(const char *path, size_t *len);
 void tsc_freedirfiles(char **dirfiles);
+
+void *tsc_malloc(size_t len);
+void *tsc_realloc(void *buffer, size_t len);
+void tsc_free(void *buffer);
+
+bool tsc_getBit(char *num, size_t bit);
+void tsc_setBit(char *num, size_t bit, bool value);
+
+unsigned char tsc_getUnusedPointerByte(void *pointer);
+void *tsc_getPointerWithoutByte(void *pointer);
+void *tsc_setUnusedPointerByte(void *pointer, unsigned char byte);
+// x64 only
+unsigned short tsc_getUnusedPointerShort(void *pointer);
+void *tsc_getPointerWithoutShort(void *pointer);
+// x64 only
+void *tsc_setUnusedPointerShort(void *pointer, unsigned short byte);
 
 #endif
 #ifndef TSC_VALUE_H
@@ -630,6 +733,15 @@ typedef struct tsc_category {
     bool usedAsCell;
 } tsc_category;
 
+#define TSC_SETTING_TOGGLE 0
+#define TSC_SETTING_LIST 1
+#define TSC_SETTING_SLIDER 2
+#define TSC_SETTING_INTEGER 3
+#define TSC_SETTING_NUMBER 3
+
+
+typedef void tsc_settingCallback(const char *settingID);
+
 tsc_category *tsc_rootCategory();
 tsc_category *tsc_newCategory(const char *title, const char *description, const char *icon);
 tsc_category *tsc_newCellGroup(const char *title, const char *description, const char *mainCell);
@@ -637,6 +749,11 @@ void tsc_addCategory(tsc_category *category, tsc_category *toAdd);
 void tsc_addCell(tsc_category *category, const char *cell);
 void tsc_addButton(tsc_category *category, const char *icon, const char *name, const char *description, void (*click)(void *), void *payload);
 tsc_category *tsc_getCategory(tsc_category *category, const char *path);
+
+
+tsc_value tsc_getSetting(const char *settingID);
+const char *tsc_addSettingCategory(const char *settingCategoryID, const char *settingTitle);
+const char *tsc_addSetting(const char *settingID, const char *name, const char *categoryID, unsigned char kind, void *data, tsc_settingCallback *callback);
 
 
 #endif

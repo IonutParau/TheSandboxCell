@@ -139,6 +139,13 @@ void tsc_cell_set(tsc_cell *cell, const char *key, const char *value) {
     cell->data->values[idx] = tsc_strdup(value);
 }
 
+void tsc_cell_rotate(tsc_cell *cell, signed char amount) {
+	cell->rot += amount;
+	cell->rot %= 4;
+	while(cell->rot < 0) cell->rot += 4;
+	cell->addedRot += amount;
+}
+
 void tsc_cell_swap(tsc_cell *a, tsc_cell *b) {
     tsc_cell c = *a;
     *a = *b;

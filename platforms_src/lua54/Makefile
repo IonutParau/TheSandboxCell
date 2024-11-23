@@ -17,7 +17,7 @@ ifeq ($(MODE),RELEASE)
 	LFLAGS += -O3
 endif
 
-objects=main.o common.o api.o
+objects=main.o common.o api.o cell_api.o category_api.o
 
 LFLAGS += $(LINKLUA)
 
@@ -37,3 +37,7 @@ common.o: src/common.c
 	$(CC) -c -fPIC -o common.o src/common.c $(CFLAGS)
 api.o: src/api/api.c
 	$(CC) -c -fPIC -o api.o src/api/api.c $(CFLAGS)
+cell_api.o: src/api/cell_api.c
+	$(CC) -c -fPIC -o cell_api.o src/api/cell_api.c $(CFLAGS)
+category_api.o: src/api/category_api.c
+	$(CC) -c -fPIC -o category_api.o src/api/category_api.c $(CFLAGS)
