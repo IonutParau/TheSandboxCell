@@ -214,19 +214,28 @@ float tsc_cell_getBias(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, c
         return 0;
     }
 
-    return 0;
+    tsc_celltable *celltable = tsc_cell_getTable(cell);
+    if(celltable == NULL) return 0;
+    if(celltable->getBias == NULL) return 0;
+    return celltable->getBias(grid, cell, x, y, dir, forceType, force, celltable->payload);
 }
 
 int tsc_cell_canGenerate(tsc_grid *grid, tsc_cell *cell, int x, int y, tsc_cell *generator, int gx, int gy, char dir) {
     // Can't generate air
     if(cell->id == builtin.empty) return 0;
-    return 1;
+    tsc_celltable *celltable = tsc_cell_getTable(cell);
+    if(celltable == NULL) return 1;
+    if(celltable->canGenerate == NULL) return 1;
+    return celltable->canGenerate(grid, cell, x, y, generator, gx, gy, dir, celltable->payload);
 }
 
 int tsc_cell_isTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, tsc_cell *eating) {
     if(cell->id == builtin.trash) return 1;
     if(cell->id == builtin.enemy) return 1;
-    return 0;
+    tsc_celltable *celltable = tsc_cell_getTable(cell);
+    if(celltable == NULL) return 0;
+    if(celltable->isTrash == NULL) return 0;
+    return celltable->isTrash(grid, cell, x, y, dir, forceType, force, eating, celltable->payload);
 }
 
 void tsc_cell_onTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, tsc_cell *eating) {
@@ -238,14 +247,24 @@ void tsc_cell_onTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, co
     if(cell->id == builtin.trash) {
         tsc_sound_play(builtin.audio.destroy);
     }
+    tsc_celltable *celltable = tsc_cell_getTable(cell);
+    if(celltable == NULL) return;
+    if(celltable->onTrash == NULL) return;
+    return celltable->onTrash(grid, cell, x, y, dir, forceType, force, eating, celltable->payload);
 }
 
 int tsc_cell_isAcid(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy) {
-    return 0;
+    tsc_celltable *celltable = tsc_cell_getTable(cell);
+    if(celltable == NULL) return 0;
+    if(celltable->onAcid == NULL) return 0;
+    return celltable->isAcid(grid, cell, dir, forceType, force, dissolving, dx, dy, celltable->payload);
 }
 
 void tsc_cell_onAcid(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy) {
-
+    tsc_celltable *celltable = tsc_cell_getTable(cell);
+    if(celltable == NULL) return;
+    if(celltable->onAcid == NULL) return;
+    return celltable->onAcid(grid, cell, dir, forceType, force, dissolving, dx, dy, celltable->payload);
 }
 
 char *tsc_cell_signal(tsc_cell *cell, int x, int y, const char *protocol, const char *data, tsc_cell *sender, int sx, int sy) {

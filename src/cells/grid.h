@@ -36,6 +36,12 @@ typedef struct tsc_celltable {
     int (*canMove)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, void *payload);
     char *(*signal)(tsc_cell *cell, int x, int y, const char *protocol, const char *data, tsc_cell *sender, int sx, int sy, void *payload);
     size_t flags;
+    float (*getBias)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, void *payload);
+    int (*canGenerate)(tsc_grid *grid, tsc_cell *cell, int x, int y, tsc_cell *generator, int gx, int gy, char dir, void *payload);
+    int (*isTrash)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, tsc_cell *eating, void *payload);
+    void (*onTrash)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, tsc_cell *eating, void *payload);
+    int (*isAcid)(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy, void *payload);
+    void (*onAcid)(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy, void *payload);
 } tsc_celltable;
 
 tsc_celltable *tsc_cell_newTable(const char *id);
