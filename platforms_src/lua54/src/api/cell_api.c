@@ -90,6 +90,7 @@ void lua54_tsc_loadCellPtrMeta(lua_State *L) {
     lua_setfield(L, meta, "__index");
     lua_pushcfunction(L, lua54_tsc_cellptr_index);
     lua_setfield(L, meta, "__newindex");
+    lua_pop(L, 1);
 }
 
 void lua54_tsc_pushcellptr(lua_State *L, tsc_cell *cell) {
@@ -168,4 +169,5 @@ void lua54_tsc_loadCellBindings(lua54_LuaVM *vm) {
 	int cellFuncs = lua_gettop(vm->state);
 	lua_pushcfunction(vm->state, lua54_tsc_addCell);
 	lua_setfield(vm->state, cellFuncs, "Add");
+    lua54_tsc_loadCellPtrMeta(vm->state);
 }

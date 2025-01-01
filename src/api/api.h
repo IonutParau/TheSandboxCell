@@ -72,14 +72,16 @@ typedef struct tsc_category {
 #define TSC_SETTING_TOGGLE 0
 #define TSC_SETTING_LIST 1
 #define TSC_SETTING_SLIDER 2
-#define TSC_SETTING_INTEGER 3
-#define TSC_SETTING_NUMBER 3
+#define TSC_SETTING_INPUT 3
+
+typedef void tsc_settingCallback(const char *settingID);
 
 // hideapi
 typedef struct tsc_setting {
     unsigned char kind;
     const char *id;
     const char *name;
+    tsc_settingCallback *callback;
     union {
         struct {
             const char **items;
@@ -90,13 +92,11 @@ typedef struct tsc_setting {
             float max;
         } slider;
         struct {
-            int min;
-            int max;
-        } integer;
-        struct {
-            float min;
-            float max;
-        } number;
+            const char *charset;
+            char *buffer;
+            size_t bufferlen;
+            bool selected;
+        } string;
     };
 } tsc_setting;
 
@@ -108,8 +108,6 @@ typedef struct tsc_settingCategory {
     size_t settingcap;
 } tsc_settingCategory;
 // hideapi
-
-typedef void tsc_settingCallback(const char *settingID);
 
 tsc_category *tsc_rootCategory();
 tsc_category *tsc_newCategory(const char *title, const char *description, const char *icon);
@@ -126,6 +124,7 @@ void tsc_loadDefaultCellBar();
 // hideapi
 
 tsc_value tsc_getSetting(const char *settingID);
+void tsc_setSetting(const char *settingID, tsc_value v);
 const char *tsc_addSettingCategory(const char *settingCategoryID, const char *settingTitle);
 const char *tsc_addSetting(const char *settingID, const char *name, const char *categoryID, unsigned char kind, void *data, tsc_settingCallback *callback);
 

@@ -14,6 +14,9 @@
 #include "graphics/ui.h"
 #include "cells/ticking.h"
 
+#define RAYGUI_IMPLEMENTATION
+#include "raygui.h"
+
 void doShit(void *thing) {
     int *num = thing;
     *num += 1;
@@ -110,6 +113,8 @@ int main(int argc, char **argv) {
     tsc_mainMenuBtn.settings = tsc_ui_newButtonState();
     tsc_mainMenuBtn.credits = tsc_ui_newButtonState();
 
+    int off = 0;
+
     while(!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(GetColor(0x171c1fFF));
@@ -162,6 +167,96 @@ int main(int argc, char **argv) {
             tsc_ui_render();
             tsc_ui_popFrame();
         }
+        if(tsc_streql(tsc_currentMenu, "settings")) {
+            GuiEnable();
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
+            if(GuiButton((Rectangle) { 20, 20, 100, 50 }, "Back")) {
+                tsc_currentMenu = "main";
+                tsc_resetRendering();
+            }
+            size_t titleSize = 128;
+            size_t settingSize = 64;
+            size_t settingSpacing = 20;
+            size_t settingVertOff = 70;
+            size_t settingDeadSpace = 50;
+            BeginScissorMode(0, settingVertOff, width, height - settingVertOff);
+            size_t curY = settingVertOff;
+            Font font = GetFontDefault();
+            for(size_t i = 0; i < tsc_settingLen; i++) {
+                tsc_settingCategory cat = tsc_settingCategories[i];
+                GuiSetStyle(DEFAULT, TEXT_SIZE, titleSize);
+                int titleWidth = MeasureText(cat.title, titleSize);
+                GuiLabel((Rectangle) {settingDeadSpace, curY - off, titleWidth, titleSize}, cat.title);
+                curY += titleSize + settingSpacing;
+                for(size_t j = 0; j < cat.settinglen; j++) {
+                    tsc_setting setting = cat.settings[j];
+                    int settingWidth = MeasureText(setting.name, settingSize);
+                    GuiSetStyle(DEFAULT, TEXT_SIZE, settingSize);
+                    if(setting.kind == TSC_SETTING_TOGGLE) {
+                        bool b = tsc_toBoolean(tsc_getSetting(setting.id));
+                        bool old = b;
+                        GuiCheckBox((Rectangle) {settingDeadSpace, curY - off, settingSize, settingSize}, setting.name, &b);
+                        if(old != b) {
+                            tsc_setSetting(setting.id, tsc_boolean(b));
+                            if(setting.callback != NULL) {
+                                setting.callback(setting.id);
+                            }
+                        }
+                    } else if(setting.kind == TSC_SETTING_SLIDER) {
+                        float v = tsc_toNumber(tsc_getSetting(setting.id));
+                        float old = v;
+                        int sliderWidth = width/4;
+                        GuiSlider(
+                            (Rectangle) {settingDeadSpace + settingWidth, curY - off, settingWidth + sliderWidth, settingSize},
+                            setting.name, NULL, &v, setting.slider.min, setting.slider.max);
+                        if(old != v) {
+                            tsc_setSetting(setting.id, tsc_number(v));
+                            if(setting.callback != NULL) {
+                                setting.callback(setting.id);
+                            }
+                        }
+                    } else if(setting.kind == TSC_SETTING_INPUT) {
+                        int textWidth = width/4;
+                        GuiLabel((Rectangle) {settingDeadSpace, curY - off, settingWidth, settingSize}, setting.name);
+                        Rectangle textbox = {
+                            settingDeadSpace + settingWidth + 10, curY - off,
+                            settingWidth + textWidth, settingSize,
+                        };
+                        if(GuiTextBox(textbox, setting.string.buffer, setting.string.bufferlen, setting.string.selected)) {
+                            cat.settings[j].string.selected = !setting.string.selected;
+                            tsc_value s = tsc_string(setting.string.buffer);
+                            tsc_setSetting(setting.id, s);
+                            tsc_destroy(s);
+                            if(setting.callback != NULL) {
+                                setting.callback(setting.id);
+                            }
+                        }
+                        if(setting.string.charset != NULL) {
+                            size_t l = 0;
+                            for(size_t i = 0; setting.string.buffer[i] != '\0'; i++) {
+                                bool contained = false;
+                                for(size_t j = 0; setting.string.charset[j] != '\0'; j++) {
+                                    if(setting.string.charset[j] == setting.string.buffer[i]) contained = true;
+                                }
+                                if(contained) {
+                                   setting.string.buffer[l] = setting.string.buffer[i];
+                                   l++;
+                                }
+                            }
+                            setting.string.buffer[l] = '\0';
+                        }
+                    } else {
+                        GuiLabel((Rectangle) {settingDeadSpace, curY - off, settingWidth, settingSize}, setting.name);
+                    }
+                    curY += settingSize + settingSpacing;
+                }
+            }
+            EndScissorMode();
+            size_t maxSize = curY;
+            if(maxSize > height) {
+                off = GuiScrollBar((Rectangle) {width-20, 0, 20, height}, off, 0, maxSize - height);
+            }
+        }
 
         EndDrawing();
 
@@ -174,6 +269,18 @@ int main(int argc, char **argv) {
             tsc_ui_update(delta);
             if(tsc_ui_checkbutton(tsc_mainMenuBtn.play) == UI_BUTTON_PRESS) {
                 tsc_currentMenu = "game";
+                tsc_resetRendering();
+            }
+            if(tsc_ui_checkbutton(tsc_mainMenuBtn.settings) == UI_BUTTON_PRESS) {
+                tsc_currentMenu = "settings";
+                tsc_resetRendering();
+            }
+            if(tsc_ui_checkbutton(tsc_mainMenuBtn.manual) == UI_BUTTON_PRESS) {
+                tsc_currentMenu = "manual";
+                tsc_resetRendering();
+            }
+            if(tsc_ui_checkbutton(tsc_mainMenuBtn.credits) == UI_BUTTON_PRESS) {
+                tsc_currentMenu = "credits";
                 tsc_resetRendering();
             }
             if(tsc_ui_checkbutton(tsc_mainMenuBtn.quit) == UI_BUTTON_PRESS) {

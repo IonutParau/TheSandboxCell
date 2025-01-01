@@ -566,9 +566,10 @@ void tsc_sound_playQueue() {
         bool *queued = rp_resourceTableGet(soundQueued, id);
         // Who fucked up soundQueued?
         if(queued == NULL) continue;
+        Sound sound = audio_get(id);
+        SetSoundVolume(sound, tsc_toNumber(tsc_getSetting(builtin.settings.sfxVolume)));
         if(!*queued) continue; // not queued, move on
         rp_resourceTablePut(soundQueued, id, &no);
-        Sound sound = audio_get(id);
         if(IsSoundPlaying(sound)) continue; // fixes my eardrums
         PlaySound(sound);
     }
@@ -633,12 +634,13 @@ void tsc_music_playOrKeep() {
     if(currentTrack.name == NULL) return;
     // That epic banger is still blasting so we can't stop it
     if(IsMusicStreamPlaying(currentTrack.music)) {
+        SetMusicVolume(currentTrack.music, tsc_toNumber(tsc_getSetting(builtin.settings.musicVolume)));
         UpdateMusicStream(currentTrack.music);
         return;
     }
 
     currentTrack = tsc_music_getRandom();
-    SetMusicVolume(currentTrack.music, 0.5);
+    SetMusicVolume(currentTrack.music, tsc_toNumber(tsc_getSetting(builtin.settings.musicVolume)));
     PlayMusicStream(currentTrack.music);
     printf("Playing music track %s from %s\n", currentTrack.name, currentTrack.source->id);
 }

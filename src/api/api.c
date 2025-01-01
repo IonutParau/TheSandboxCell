@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "api.h"
+#include "../threads/workers.h"
 #include "../cells/grid.h"
 #include "../utils.h"
 #include <raylib.h>
@@ -345,18 +346,34 @@ void tsc_loadSettings() {
     const char *audio = tsc_addSettingCategory("audio", "Audio");
     const char *saving = tsc_addSettingCategory("saving", "Saving");
 
+    char *tc = NULL;
+    asprintf(&tc, "%d", workers_amount());
+    const char *threadCountStuff[2] = {"-0123456789", tc};
+    builtin.settings.threadCount = tsc_addSetting("threadCount", "Thread Count", performance, TSC_SETTING_INPUT, threadCountStuff, tsc_settingHandler);
+
     builtin.settings.vsync = tsc_addSetting("vsync", "V-Sync", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
     builtin.settings.fullscreen = tsc_addSetting("fullscreen", "Fullscreen", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
+
+    float volumes[2] = {0, 1};
+    builtin.settings.sfxVolume = tsc_addSetting("sfxVolume", "SFX Volume", audio, TSC_SETTING_SLIDER, &volumes, tsc_settingHandler);
+    builtin.settings.musicVolume = tsc_addSetting("musicVolume", "Music Volume", audio, TSC_SETTING_SLIDER, &volumes, tsc_settingHandler);
+
+    tsc_setSetting(builtin.settings.sfxVolume, tsc_number(1));
+    tsc_setSetting(builtin.settings.musicVolume, tsc_number(0.5));
 }
 
 tsc_value tsc_getSetting(const char *settingID) {
     return tsc_getKey(tsc_settingStore, settingID);
 }
 
+void tsc_setSetting(const char *settingID, tsc_value v) {
+    tsc_setKey(tsc_settingStore, settingID, v);
+}
+
 const char *tsc_addSettingCategory(const char *settingCategoryID, const char *settingTitle) {
     size_t idx = tsc_settingLen++;
     tsc_settingCategories = tsc_realloc(tsc_settingCategories, sizeof(tsc_settingCategory) * tsc_settingLen);
-    const char *id = tsc_padWithModID(settingCategoryID);
+    const char *id = tsc_strdup(tsc_padWithModID(settingCategoryID));
     size_t settingcap = 10;
     tsc_settingCategory category = {
         .id = id,
@@ -376,21 +393,14 @@ const char *tsc_addSetting(const char *settingID, const char *name, const char *
             break;
         }
     }
-    settingID = tsc_padWithModID(settingID);
+    settingID = tsc_strdup(tsc_padWithModID(settingID));
     tsc_setting setting = {
         .kind = kind,
         .id = settingID,
         .name = tsc_strdup(name),
+        .callback = callback,
     };
-    if(kind == TSC_SETTING_INTEGER) {
-        int *range = data;
-        setting.integer.min = range[0];
-        setting.integer.max = range[1];
-    } else if(kind == TSC_SETTING_NUMBER) {
-        float *range = data;
-        setting.number.min = range[0];
-        setting.number.max = range[1];
-    } else if(kind == TSC_SETTING_SLIDER) {
+    if(kind == TSC_SETTING_SLIDER) {
         float *range = data;
         setting.slider.min = range[0];
         setting.slider.max = range[1];
@@ -402,16 +412,17 @@ const char *tsc_addSetting(const char *settingID, const char *name, const char *
         memcpy(buf2, buf, sizeof(const char *) * len);
         setting.list.items = buf2;
         setting.list.len = len;
+    } else if(kind == TSC_SETTING_INPUT) {
+        const char **buf = data;
+        setting.string.charset = tsc_strdup(buf[0]);
+        setting.string.bufferlen = 256;
+        setting.string.buffer = malloc(sizeof(char) * setting.string.bufferlen);
+        strncpy(setting.string.buffer, buf[1], setting.string.bufferlen - 1);
+        setting.string.selected = false;
     }
     if(tsc_isNull(tsc_getKey(tsc_settingStore, settingID))) {
         if(kind == TSC_SETTING_TOGGLE) {
             tsc_setKey(tsc_settingStore, settingID, tsc_boolean(data != NULL));
-        } else if(kind == TSC_SETTING_INTEGER) {
-            int *range = data;
-            tsc_setKey(tsc_settingStore, settingID, tsc_int(range[2]));
-        } else if(kind == TSC_SETTING_NUMBER) {
-            float *range = data;
-            tsc_setKey(tsc_settingStore, settingID, tsc_number(range[2]));
         } else if(kind == TSC_SETTING_SLIDER) {
             float *range = data;
             tsc_setKey(tsc_settingStore, settingID, tsc_number(range[2]));
@@ -420,7 +431,18 @@ const char *tsc_addSetting(const char *settingID, const char *name, const char *
             tsc_value firstVal = tsc_string(*buf);
             tsc_setKey(tsc_settingStore, settingID, firstVal); // retains
             tsc_destroy(firstVal);
+        } else if(kind == TSC_SETTING_INPUT) {
+            const char **buf = data;
+            tsc_value s = tsc_string(buf[1]);
+            tsc_setKey(tsc_settingStore, settingID, s);
+            tsc_destroy(s);
         }
     }
+    if(category->settinglen == category->settingcap) {
+        category->settingcap *= 2;
+        category->settings = realloc(category->settings, sizeof(tsc_setting) * category->settingcap);
+    }
+    size_t i = category->settinglen++;
+    category->settings[i] = setting;
     return settingID;
 }
