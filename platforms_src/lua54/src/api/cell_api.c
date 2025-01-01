@@ -80,6 +80,8 @@ int lua54_tsc_cellptr_newindex(lua_State *L) {
     if(tsc_streql(key, "addedRot")) {
         cell->addedRot = lua_tonumber(L, 3);
     }
+    luaL_getmetatable(L, lua54_tsc_cellptr_meta);
+    lua_getfield(L, -1, key);
     return 0;
 }
 
@@ -100,8 +102,32 @@ void lua54_tsc_pushcellptr(lua_State *L, tsc_cell *cell) {
     lua_setmetatable(L, -2);
 }
 
-int lua54_tsc_binding_canMove(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, void *payload) {
+int lua54_tsc_binding_canMove(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, lua54_CellPayload *payload) {
+    mtx_lock(&payload->vm->gil);
+    lua_State *L = payload->vm->state;
+    int otop = lua_gettop(L);
+    int result = true;
+    lua_rawgeti(L, LUA_REGISTRYINDEX, payload->configRef);
+    lua_getfield(L, -1, "canMove");
+    int f = lua_gettop(L);
+    if(lua_isfunction(L, f)) {
+        lua_pushnil(L); // no grid
+        lua54_tsc_pushcellptr(L, cell);
+        lua_pushinteger(L, x);
+        lua_pushinteger(L, y);
+        lua_pushinteger(L, dir);
+        lua_pushstring(L, forceType);
+        lua_pushnumber(L, force);
 
+        if(lua_pcall(L, 7, 1, 0) == LUA_OK) {
+            result = lua_toboolean(L, -1);
+        }
+    }
+
+    lua_settop(L, otop); // prevent leaks
+
+    mtx_unlock(&payload->vm->gil);
+    return result;
 }
 
 int lua54_tsc_addCell(lua_State *L) {
@@ -155,7 +181,7 @@ int lua54_tsc_addCell(lua_State *L) {
     lua_pushvalue(L, config);
     lua_getfield(L, -1, "canMove");
     if(lua_isfunction(L, -1)) {
-        table->canMove = lua54_tsc_binding_canMove;
+        table->canMove = (void *)lua54_tsc_binding_canMove;
     }
     lua_pop(L, 1);
 
