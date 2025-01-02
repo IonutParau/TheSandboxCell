@@ -83,6 +83,7 @@ const char *tsc_sound_load(tsc_resourcepack *pack, const char *id, const char *f
 void tsc_sound_play(const char *id);
 
 // hideapi
+extern tsc_music_t tsc_currentTrack;
 void tsc_music_load(tsc_resourcepack *pack, const char *name, const char *file);
 void tsc_sound_playQueue();
 tsc_music_t tsc_music_getRandom();

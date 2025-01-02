@@ -77,6 +77,19 @@ tsc_mainMenuParticle_t tsc_randomMainMenuParticle(bool respawn) {
     return particle;
 }
 
+float tsc_magicMusicSampleDoNotTouchEver = 0;
+
+void tsc_magicStreamProcessorDoNotUseEver(void *buffer, unsigned int sampleCount) {
+    float *samples = buffer;
+    if(sampleCount > 0) {
+        tsc_magicMusicSampleDoNotTouchEver = 0;
+        for(size_t i = 0; i < sampleCount; i++) {
+            tsc_magicMusicSampleDoNotTouchEver += fabs(samples[i]);
+        }
+        tsc_magicMusicSampleDoNotTouchEver /= sampleCount;
+    }
+}
+
 int main(int argc, char **argv) {
     srand(time(NULL));
 
@@ -166,6 +179,8 @@ int main(int argc, char **argv) {
         mainMenuParticles[i] = tsc_randomMainMenuParticle(false);
     }
 
+    AttachAudioMixedProcessor(tsc_magicStreamProcessorDoNotUseEver);
+
     while(!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(GetColor(0x171c1fFF));
@@ -198,13 +213,15 @@ int main(int argc, char **argv) {
                         origin, particle.rot * 180 / PI, c
                     );
             }
-            DrawCircle(bx, by, r, BLACK); // BLACK HOLE
+            float blackHoleExtra = tsc_magicMusicSampleDoNotTouchEver*2;
+            if(blackHoleExtra > 0.5) blackHoleExtra = 0.5;
+            DrawCircle(bx, by, r * (1 + blackHoleExtra), BLACK); // BLACK HOLE
         }
 
         if(tsc_streql(tsc_currentMenu, "main")) {
             tsc_ui_pushFrame(tsc_mainMenu);
             int textHeight = 100;
-            tsc_ui_text("The Sandbox Cell v0.0.1", 50, WHITE);
+            tsc_ui_text("The Sandbox Cell v0.1.0", 50, WHITE);
             tsc_ui_pad(20, 20);
             tsc_ui_align(0.5, 0, width, textHeight);
             Color buttonHoverColor = GetColor(0x3275A8FF);

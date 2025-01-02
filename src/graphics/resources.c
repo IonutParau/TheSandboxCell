@@ -623,24 +623,24 @@ tsc_music_t tsc_music_getRandom() {
     return choice;
 }
 
-static tsc_music_t currentTrack = {NULL, {0}, NULL};
+tsc_music_t tsc_currentTrack = {NULL, {0}, NULL};
 
 void tsc_music_playOrKeep() {
-    if(currentTrack.name == NULL) {
-        currentTrack = tsc_music_getRandom();
+    if(tsc_currentTrack.name == NULL) {
+        tsc_currentTrack = tsc_music_getRandom();
     }
 
     // If it is STILL NULL, then somehow no music exists so do nothing
-    if(currentTrack.name == NULL) return;
+    if(tsc_currentTrack.name == NULL) return;
     // That epic banger is still blasting so we can't stop it
-    if(IsMusicStreamPlaying(currentTrack.music)) {
-        SetMusicVolume(currentTrack.music, tsc_toNumber(tsc_getSetting(builtin.settings.musicVolume)));
-        UpdateMusicStream(currentTrack.music);
+    if(IsMusicStreamPlaying(tsc_currentTrack.music)) {
+        SetMusicVolume(tsc_currentTrack.music, tsc_toNumber(tsc_getSetting(builtin.settings.musicVolume)));
+        UpdateMusicStream(tsc_currentTrack.music);
         return;
     }
 
-    currentTrack = tsc_music_getRandom();
-    SetMusicVolume(currentTrack.music, tsc_toNumber(tsc_getSetting(builtin.settings.musicVolume)));
-    PlayMusicStream(currentTrack.music);
-    printf("Playing music track %s from %s\n", currentTrack.name, currentTrack.source->id);
+    tsc_currentTrack = tsc_music_getRandom();
+    SetMusicVolume(tsc_currentTrack.music, tsc_toNumber(tsc_getSetting(builtin.settings.musicVolume)));
+    PlayMusicStream(tsc_currentTrack.music);
+    printf("Playing music track %s from %s\n", tsc_currentTrack.name, tsc_currentTrack.source->id);
 }
