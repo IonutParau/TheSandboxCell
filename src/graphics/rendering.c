@@ -184,7 +184,7 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
         size};
     Color color = WHITE;
     color.a = opacity * 255;
-    if(renderingCamera.cellSize <= trueApproximationSize || forceRectangle) {
+    if(renderingCamera.cellSize < trueApproximationSize || forceRectangle) {
         Color approx = textures_getApproximation(cell->texture == NULL ? cell->id : cell->texture);
         //approx = ColorAlphaBlend(approx, approx, color);
         approx.a = color.a;
@@ -308,14 +308,14 @@ void tsc_drawGrid() {
     Vector2 emptyOrigin = {0, 0};
     Rectangle emptyDest = {-renderingCamera.x, -renderingCamera.y, renderingCamera.cellSize * currentGrid->width, renderingCamera.cellSize * currentGrid->height};
     if(renderingCamera.cellSize < trueApproximationSize) {
-        if(GetFPS() > 120 && renderingCamera.cellSize > tsc_sizeOptimizedByApproximation) {
+        if(GetFPS() > 60 && renderingCamera.cellSize > tsc_sizeOptimizedByApproximation) {
             trueApproximationSize /= 2;
             tsc_sizeOptimizedByApproximation = renderingCamera.cellSize;
         }
         Color approx = textures_getApproximation(builtin.empty);
         DrawRectanglePro(emptyDest, emptyOrigin, 0, approx);
     } else {
-        if(GetFPS() < 60) {
+        if(GetFPS() < 30) {
             trueApproximationSize *= 2;
         }
         Texture empty = textures_get(builtin.empty);

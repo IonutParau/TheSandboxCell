@@ -74,6 +74,8 @@ typedef struct tsc_setting_id_pool_t {
     const char *musicVolume;
     const char *sfxVolume;
     const char *unfocusedVolume;
+    const char *updateDelay;
+    const char *mtpf;
 } tsc_setting_id_pool_t;
 
 typedef struct tsc_id_pool_t {

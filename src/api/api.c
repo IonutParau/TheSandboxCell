@@ -47,20 +47,22 @@ void tsc_addCoreSplashes() {
     tsc_addSplash("tpc bad", 1);
     tsc_addSplash("cellua bad", 1);
     tsc_addSplash("kell buggy", 1);
-    tsc_addSplash("yo my name is Jeremy", 1);
+    tsc_addSplash("Yo my name is Jeremy", 1);
     tsc_addSplash("Pesky Windows", 1);
     tsc_addSplash("Photon dev helped", 1);
     tsc_addSplash("go suck an egg with your small brain", 0.01);
     tsc_addSplash("PhoenixCM", 1);
     tsc_addSplash("Program in C, program in C", 0.05);
     tsc_addSplash("No memory leaks ever seen", 1);
-    tsc_addSplash("Segmentation Fault (Core Dumped)", 1);
+    tsc_addSplash("Segmentation Fault (Core Dumped)", 5);
     tsc_addSplash("Cancer cause new cells", 1);
     tsc_addSplash("Mods, give him more cells (cancer)", 1);
     tsc_addSplash("Free & Open Source Software", 1);
     tsc_addSplash("\"🔥\" - k_lemon", 1);
     tsc_addSplash("Mods, nuke his grid", 1);
     tsc_addSplash("Mods, use 100% of his CPU", 1);
+    tsc_addSplash("Hope ya used Clang!", 1);
+    tsc_addSplash("\"The best Cell Machine remake!\"", 1);
 }
 
 const char *tsc_randomSplash() {
@@ -338,6 +340,13 @@ void tsc_settingHandler(const char *title) {
             // TODO: fix this buggy as shit raylib goofy ah glitchyness
             // ToggleFullscreen();
         }
+    } else if(title == builtin.settings.updateDelay) {
+        tickDelay = tsc_toNumber(tsc_getSetting(builtin.settings.updateDelay));
+    } else if(title == builtin.settings.mtpf) {
+        multiTickPerFrame = tsc_toBoolean(tsc_getSetting(builtin.settings.mtpf));
+        if(multiTickPerFrame) {
+            tsc_signalUpdateShouldHappen();
+        }
     }
 }
 
@@ -354,6 +363,11 @@ void tsc_loadSettings() {
     asprintf(&tc, "%d", workers_amount());
     const char *threadCountStuff[2] = {"-0123456789", tc};
     builtin.settings.threadCount = tsc_addSetting("threadCount", "Thread Count", performance, TSC_SETTING_INPUT, threadCountStuff, tsc_settingHandler);
+    float updateDelayStuff[2] = {0, 1};
+    builtin.settings.updateDelay = tsc_addSetting("updateDelay", "Update Delay", performance, TSC_SETTING_SLIDER, updateDelayStuff, tsc_settingHandler);
+    builtin.settings.mtpf = tsc_addSetting("mtpf", "Multi-Tick Per Frame", performance, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
+    tsc_setSetting(builtin.settings.updateDelay, tsc_number(tickDelay));
+    tsc_setSetting(builtin.settings.mtpf, tsc_boolean(multiTickPerFrame));
 
     builtin.settings.vsync = tsc_addSetting("vsync", "V-Sync", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
     builtin.settings.fullscreen = tsc_addSetting("fullscreen", "Fullscreen", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);

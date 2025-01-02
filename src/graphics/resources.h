@@ -3,6 +3,9 @@
 
 #include <raylib.h>
 #include <stddef.h>
+// hideapi
+#include "../api/value.h"
+// hideapi
 
 // hideapi
 
@@ -47,13 +50,14 @@ typedef struct tsc_resourcepack
     Font *font;
     tsc_music_t *musictrack;
     size_t trackcount;
+    tsc_value value;
 }
 // hideapi
 tsc_resourcepack;
 
 // This is highly important shit
 // If something isn't found, it is yoinked from here.
-// If somehting isn't found here, then you'll likely get segfaults (or errors).
+// If something isn't found here, then you'll likely get segfaults (or errors).
 extern tsc_resourcepack *defaultResourcePack;
 tsc_resourcepack *tsc_getResourcePack(const char *id);
 
@@ -74,6 +78,10 @@ Color textures_getApproximation(const char *key);
 Sound audio_get(const char *key);
 
 Font font_get();
+
+// Default is black with 0 opacity
+int tsc_queryColor(const char *key);
+int tsc_queryOptionalColor(const char *key, int defaultColor);
 
 // hideapi
 

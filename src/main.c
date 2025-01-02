@@ -18,19 +18,17 @@
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
-void doShit(void *thing) {
-    int *num = thing;
-    *num += 1;
-}
+// dont worry about this this would never fuck shit up
+void *rp_resourceTableGet(tsc_resourcetable *table, const char *id); 
 
 ui_frame *tsc_mainMenu;
-ui_frame *tsc_settingsMenu;
+ui_frame *tsc_creditsMenu;
 
 typedef struct tsc_mainMenuBtn_t {
     ui_button *play;
     ui_button *settings;
     ui_button *credits;
-    ui_button *manual;
+    ui_button *texturepacks;
     ui_button *quit;
 } tsc_mainMenuBtn_t;
 
@@ -94,7 +92,7 @@ int main(int argc, char **argv) {
     srand(time(NULL));
 
     // Suppress raylib debug messages
-    //SetTraceLogLevel(LOG_ERROR);
+    SetTraceLogLevel(LOG_ERROR);
 
     workers_setupBest();
 
@@ -127,7 +125,7 @@ int main(int argc, char **argv) {
     tsc_loadDefaultCellBar();
 
     tsc_mainMenu = tsc_ui_newFrame();
-    tsc_settingsMenu = tsc_ui_newFrame();
+    tsc_creditsMenu = tsc_ui_newFrame();
 
     tsc_grid *grid = tsc_createGrid("main", width, height, NULL, NULL);
     tsc_switchGrid(grid);
@@ -157,6 +155,15 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    size_t allPackC = 0;
+    char **allPacks = tsc_dirfiles("resources", &allPackC);
+    for(size_t i = 0; i < allPackC; i++) {
+        if(!tsc_streql(allPacks[i], "default")) {
+            tsc_createResourcePack(tsc_strintern(allPacks[i]));
+        }
+    }
+    tsc_freedirfiles(allPacks);
+
     tsc_loadSettings();
 
     if(tsc_toBoolean(tsc_getSetting(builtin.settings.fullscreen))) {
@@ -170,7 +177,7 @@ int main(int argc, char **argv) {
 
     tsc_mainMenuBtn.play = tsc_ui_newButtonState();
     tsc_mainMenuBtn.quit = tsc_ui_newButtonState();
-    tsc_mainMenuBtn.manual = tsc_ui_newButtonState();
+    tsc_mainMenuBtn.texturepacks = tsc_ui_newButtonState();
     tsc_mainMenuBtn.settings = tsc_ui_newButtonState();
     tsc_mainMenuBtn.credits = tsc_ui_newButtonState();
 
@@ -191,20 +198,33 @@ int main(int argc, char **argv) {
 
     AttachAudioMixedProcessor(tsc_magicStreamProcessorDoNotUseEver);
 
+    double particleHalvingTimer = 0;
+
+    double blackHoleSoundBonus = 0;
+
+    tsc_addCoreSplashes();
+    const char *splash = tsc_randomSplash();
+
+    const char *creditsContent = tsc_hasfile("CREDITS.txt") ? tsc_allocfile("CREDITS.txt", NULL) : NULL;
+
     while(!WindowShouldClose()) {
         BeginDrawing();
-        ClearBackground(GetColor(0x171c1fFF));
+        ClearBackground(GetColor(tsc_queryOptionalColor("bgColor", 0x171c1fFF)));
 
         int width = GetScreenWidth();
         int height = GetScreenHeight();
 
         timeElapsed += GetFrameTime();
+        blackHoleSoundBonus = tsc_magicMusicSampleDoNotTouchEver;
+
+        particleHalvingTimer -= GetFrameTime();
 
         if(tsc_streql(tsc_currentMenu, "game")) {
             tsc_drawGrid();
         } else {
-            // Dont worry potato PCs we got you
-            if(GetFPS() < 60 && timeElapsed < 0.5) {
+            // Dont worry potato PCs we got you... though credits will kill you
+            if(GetFPS() < 30 && timeElapsed > 0.5 && particleHalvingTimer <= 0 && !tsc_streql(tsc_currentMenu, "credits")) {
+                particleHalvingTimer = 0.5;
                 mainMenuParticleCount /= 2;
                 for(size_t i = 0; i < mainMenuParticleCount; i++) {
                     const char *builtinCells[] = {
@@ -213,7 +233,8 @@ int main(int argc, char **argv) {
                         builtin.rotator_ccw,
                     };
                     size_t builtinCellCount = sizeof(builtinCells) / sizeof(const char *);
-                    mainMenuParticles[i].id = builtinCells[(i / (mainMenuParticleCount / builtinCellCount)) % builtinCellCount];
+                    double f = (double)i / ((double)mainMenuParticleCount / (double)builtinCellCount);
+                    mainMenuParticles[i].id = builtinCells[(size_t)(f * builtinCellCount) % builtinCellCount];
                 }
             }
             // Super epic background
@@ -233,15 +254,16 @@ int main(int argc, char **argv) {
                 c.a = x > 1 ? 255 : x * 255;
                 Vector2 origin = {particle.r/2, particle.r/2};
                 DrawTexturePro(t,
-                        (Rectangle) {0, 0, t.width, t.height},
-                        (Rectangle) {pos.x + origin.x, pos.y + origin.y, particle.r, particle.r},
-                        origin, particle.rot * 180 / PI, c
-                    );
+                    (Rectangle) {0, 0, t.width, t.height},
+                    (Rectangle) {pos.x, pos.y, particle.r, particle.r},
+                   origin, particle.rot * 180 / PI, c
+                );
             }
             float blackHoleExtra = tsc_magicMusicSampleDoNotTouchEver;
-            if(blackHoleExtra > 0.5) blackHoleExtra = 0.5;
+            blackHoleExtra = blackHoleSoundBonus;
+            float blackHoleLimit = 1;
+            if(blackHoleExtra > blackHoleLimit) blackHoleExtra = blackHoleLimit;
             DrawCircle(bx, by, r * (1 + blackHoleExtra), BLACK); // BLACK HOLE
-            DrawFPS(10, 10);
         }
 
         if(tsc_streql(tsc_currentMenu, "main")) {
@@ -249,6 +271,9 @@ int main(int argc, char **argv) {
             int textHeight = 100;
             tsc_ui_text("The Sandbox Cell v0.1.0", 50, WHITE);
             tsc_ui_pad(20, 20);
+            tsc_ui_align(0.5, 0, width, textHeight);
+            tsc_ui_text(splash, 25, WHITE);
+            tsc_ui_pad(10, 70);
             tsc_ui_align(0.5, 0, width, textHeight);
             Color buttonHoverColor = GetColor(0x3275A8FF);
             tsc_ui_row({
@@ -262,9 +287,9 @@ int main(int argc, char **argv) {
                 if(tsc_ui_button(tsc_mainMenuBtn.settings) == UI_BUTTON_HOVER) {
                     tsc_ui_box(buttonHoverColor);
                 }
-                tsc_ui_text("Manual", 20, WHITE);
+                tsc_ui_text("Texture Packs", 20, WHITE);
                 tsc_ui_pad(10, 10);
-                if(tsc_ui_button(tsc_mainMenuBtn.manual) == UI_BUTTON_HOVER) {
+                if(tsc_ui_button(tsc_mainMenuBtn.texturepacks) == UI_BUTTON_HOVER) {
                     tsc_ui_box(buttonHoverColor);
                 }
                 tsc_ui_text("Credits", 20, WHITE);
@@ -282,9 +307,12 @@ int main(int argc, char **argv) {
             tsc_ui_align(0.5, 0, width, 0);
             tsc_ui_render();
             tsc_ui_popFrame();
+        } else {
+            splash = tsc_randomSplash();
         }
         if(tsc_streql(tsc_currentMenu, "settings")) {
             GuiEnable();
+            GuiLoadStyleDefault();
             GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
             if(GuiButton((Rectangle) { 20, 20, 100, 50 }, "Back")) {
                 tsc_currentMenu = "main";
@@ -322,15 +350,18 @@ int main(int argc, char **argv) {
                         float v = tsc_toNumber(tsc_getSetting(setting.id));
                         float old = v;
                         int sliderWidth = width/4;
+                        char *theValue = NULL;
+                        asprintf(&theValue, "%.2f", v);
                         GuiSlider(
                             (Rectangle) {settingDeadSpace + settingWidth, curY - off, settingWidth + sliderWidth, settingSize},
-                            setting.name, NULL, &v, setting.slider.min, setting.slider.max);
+                            setting.name, theValue, &v, setting.slider.min, setting.slider.max);
                         if(old != v) {
                             tsc_setSetting(setting.id, tsc_number(v));
                             if(setting.callback != NULL) {
                                 setting.callback(setting.id);
                             }
                         }
+                        free(theValue);
                     } else if(setting.kind == TSC_SETTING_INPUT) {
                         int textWidth = width/4;
                         GuiLabel((Rectangle) {settingDeadSpace, curY - off, settingWidth, settingSize}, setting.name);
@@ -374,15 +405,84 @@ int main(int argc, char **argv) {
             }
         }
 
-        EndDrawing();
+        if(tsc_streql(tsc_currentMenu, "texturepacks")) {
+            GuiEnable();
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
+            if(GuiButton((Rectangle) { 20, 20, 100, 50 }, "Back")) {
+                tsc_currentMenu = "main";
+                tsc_resetRendering();
+            }
+            float offset = 40;
+            float texturePackTitleSize = 100;
+            float texturePackAuthorSize = 30;
+            const char *defaultTexturePackName = "Unnamed";
+            const char *defaultTexturePackAuthor = "Unknown";
 
-        double delta = GetFrameTime();
+            float curY = 90;
+            for(size_t i = 0; tsc_indexResourcePack(i) != NULL; i++) {
+                tsc_resourcepack *pack = tsc_indexResourcePack(i);
+                bool enabled = false;
+                for(size_t j = 0; tsc_indexEnabledResourcePack(j) != NULL; j++) {
+                    if(tsc_indexEnabledResourcePack(j) == pack) {
+                        enabled = true;
+                        break;
+                    }
+                }
+                const char *name = pack->name == NULL ? defaultTexturePackName : pack->name;
+                const char *authorSuffix = TextFormat("by %s", pack->author == NULL ? defaultTexturePackAuthor : pack->author);
+                int nameWidth = MeasureText(name, texturePackTitleSize);
+                GuiSetStyle(DEFAULT, TEXT_SIZE, texturePackTitleSize);
+                if(GuiCheckBox((Rectangle) {offset + texturePackTitleSize, curY, texturePackTitleSize, texturePackTitleSize}, name, &enabled)) {
+                    if(enabled) {
+                        tsc_enableResourcePack(pack);
+                    } else if(pack != defaultResourcePack) {
+                        tsc_disableResourcePack(pack);
+                    }
+                }
+                // this works for the wrong reason
+                Texture *resource = rp_resourceTableGet(pack->textures, builtin.textures.icon);
+                if(resource != NULL) {
+                    DrawTexturePro(
+                        *resource, (Rectangle) {0, 0, resource->width, resource->height},
+                        (Rectangle) {offset, curY, texturePackTitleSize, texturePackTitleSize},
+                        (Vector2) {0, 0}, 0, WHITE
+                    );
+                }
+                GuiSetStyle(DEFAULT, TEXT_SIZE, texturePackAuthorSize);
+                int authorWidth = MeasureText(authorSuffix, texturePackAuthorSize);
+                GuiLabel(
+                    (Rectangle) {
+                        offset + nameWidth + texturePackTitleSize * 2,
+                        curY + texturePackTitleSize - texturePackAuthorSize,
+                        authorWidth, texturePackAuthorSize
+                    },
+                    authorSuffix);
+                curY += texturePackTitleSize;
+            }
+        }
+        if(tsc_streql(tsc_currentMenu, "credits")) {
+            tsc_ui_bringBackFrame(tsc_creditsMenu);
+            tsc_ui_text(creditsContent == NULL ? "No CREDITS.txt" : creditsContent, 50, WHITE);
+            tsc_ui_align(0.5, 0.5, width, height);
+            tsc_ui_render();
+            tsc_ui_popFrame();
+            GuiEnable();
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
+            if(GuiButton((Rectangle) { 20, 20, 100, 50 }, "Back")) {
+                tsc_currentMenu = "main";
+                particleHalvingTimer = 2;
+                tsc_resetRendering();
+            }
+        }
+
+        EndDrawing();
 
         if(tsc_streql(tsc_currentMenu, "game")) {
             tsc_handleRenderInputs();
         } else {
+            double delta = GetFrameTime();
             if(!IsWindowFocused()) {
-                delta *= 10;
+                delta /= 2;
             }
             int r = (width < height ? width : height) / 4;
             int bx = width/2;
@@ -407,6 +507,7 @@ int main(int argc, char **argv) {
                 mainMenuParticles[i] = particle;
             }
         }
+        double delta = GetFrameTime();
         if(tsc_streql(tsc_currentMenu, "main")) {
             tsc_ui_bringBackFrame(tsc_mainMenu);
             tsc_ui_update(delta);
@@ -418,8 +519,8 @@ int main(int argc, char **argv) {
                 tsc_currentMenu = "settings";
                 tsc_resetRendering();
             }
-            if(tsc_ui_checkbutton(tsc_mainMenuBtn.manual) == UI_BUTTON_PRESS) {
-                tsc_currentMenu = "manual";
+            if(tsc_ui_checkbutton(tsc_mainMenuBtn.texturepacks) == UI_BUTTON_PRESS) {
+                tsc_currentMenu = "texturepacks";
                 tsc_resetRendering();
             }
             if(tsc_ui_checkbutton(tsc_mainMenuBtn.credits) == UI_BUTTON_PRESS) {

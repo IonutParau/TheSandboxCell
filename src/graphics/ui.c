@@ -130,7 +130,8 @@ static void ui_destroyNode(ui_node *node) {
 
 static int ui_widthOf(ui_node *node) {
     if (node->tag == UI_TEXT) {
-        return MeasureText(node->text->text, node->text->size);
+        Font font = font_get();
+        return MeasureTextEx(font, node->text->text, node->text->size, (float)node->text->size / font.baseSize).x;
     } else if (node->tag == UI_IMAGE) {
         return node->image->width;
     } else if (node->tag == UI_SPACING) {
@@ -174,7 +175,8 @@ static int ui_widthOf(ui_node *node) {
 
 static int ui_heightOf(ui_node *node) {
     if (node->tag == UI_TEXT) {
-        return node->text->size;
+        Font font = font_get();
+        return MeasureTextEx(font, node->text->text, node->text->size, (float)node->text->size / font.baseSize).y;
     } else if (node->tag == UI_IMAGE) {
         return node->image->height;
     } else if (node->tag == UI_SPACING) {

@@ -1,0 +1,4 @@
+atomic_codes (Quantum Tomato) for making this game
+fenikkuusu (Phoenix) for helping with optimizations
+blendigoose for emotional support and helping with cross-compilation
+Sam Hogan for making the original Cell Machine

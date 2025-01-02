@@ -1,16 +1,17 @@
 // The soon-to-be general resource pack manager
 // Fairly efficient, very high-level and fault tolerant.
 
-#include "resources.h"
 #include <math.h>
 #include <raylib.h>
-#include "../utils.h"
-#include "../api/api.h"
-#include "../cells/grid.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include "resources.h"
+#include "../utils.h"
+#include "../api/api.h"
+#include "../cells/grid.h"
+#include "../api/tscjson.h"
 
 tsc_resourcepack *defaultResourcePack;
 
@@ -83,7 +84,8 @@ static tsc_resourcetable *rp_createResourceTable(size_t itemsize) {
     return table;
 }
 
-static void *rp_resourceTableGet(tsc_resourcetable *table, const char *id) {
+// not static so main can do weird stuff
+void *rp_resourceTableGet(tsc_resourcetable *table, const char *id) {
     size_t hash = (size_t)id;
     size_t idx = hash % table->arrayc;
 
@@ -383,10 +385,35 @@ static void rp_init(tsc_resourcepack *pack) {
 
 tsc_resourcepack *tsc_createResourcePack(const char *id) {
     tsc_resourcepack *pack = malloc(sizeof(tsc_resourcepack));
+
+    static char packFileBuf[2048];
+    size_t packFileBufSize = 2048;
+
+    snprintf(packFileBuf, packFileBufSize, "resources/%s/pack.json", id);
+
+    char *packJson = tsc_allocfile(packFileBuf, NULL);
+
+    tsc_saving_buffer jsonErr = tsc_saving_newBuffer("");
+    pack->value = tsc_json_decode(packJson, &jsonErr);
+    if(!tsc_isObject(pack->value)) {
+        tsc_destroy(pack->value);
+        pack->value = tsc_object();
+    }
+    if(jsonErr.len != 0) {
+        fprintf(stderr, "JSON Error: %s\n", jsonErr.mem);
+    }
+
     pack->id = id;
-    // Start with a nothingburger
-    pack->name = NULL;
-    pack->description = NULL;
+    // Start with a nothingburger (not really a nothingburger anymore)
+    pack->name = tsc_toString(tsc_getKey(pack->value, "name"));
+    if(pack->name[0] == '\0') pack->name = NULL;
+    
+    pack->description = tsc_toString(tsc_getKey(pack->value, "description"));
+    if(pack->description[0] == '\0') pack->description = NULL;
+    
+    pack->author = tsc_toString(tsc_getKey(pack->value, "author"));
+    if(pack->author[0] == '\0') pack->author = NULL;
+
     pack->readme = NULL;
     pack->license = NULL;
 
@@ -453,18 +480,24 @@ found:;
         free(rp_enabled);
         rp_enabled = NULL;
     }
+    Texture icon = textures_get(builtin.textures.icon);
+    Image image = LoadImageFromTexture(icon);
+    SetWindowIcon(image);
+    UnloadImage(image);
 }
 
 tsc_resourcepack *tsc_indexEnabledResourcePack(size_t idx) {
     if(idx >= rp_enabledc) return NULL;
-    return rp_enabled[rp_enabledc - idx - 1];
+    return rp_enabled[idx];
 }
 
 Texture textures_get(const char *key) {
 start:;
     for(size_t i = 0; i < rp_enabledc; i++) {
         tsc_resourcepack *pack = tsc_indexEnabledResourcePack(rp_enabledc - i - 1);
-        if(pack == NULL) continue;
+        if(pack == NULL) {
+            continue;
+        }
         tsc_texture_resource *texture = rp_resourceTableGet(pack->textures, key);
         if(texture != NULL) return texture->texture;
     }
@@ -520,11 +553,61 @@ Font font_get() {
     if(rp_enabledc == 0) return GetFontDefault();
 
     for(size_t i = 0; i < rp_enabledc; i++) {
-        tsc_resourcepack *pack = tsc_indexEnabledResourcePack(i);
+        tsc_resourcepack *pack = tsc_indexEnabledResourcePack(rp_enabledc - i - 1);
         if(pack->font != NULL) return *pack->font;
     }
 
     return GetFontDefault();
+}
+
+int tsc_queryColor(const char *key) {
+    return tsc_queryOptionalColor(key, 0);
+}
+
+int tsc_queryOptionalColor(const char *key, int defaultColor) {
+    if(rp_enabledc == 0) return defaultColor;
+
+    for(size_t i = 0; i < rp_enabledc; i++) {
+        tsc_resourcepack *pack = tsc_indexEnabledResourcePack(rp_enabledc - i - 1);
+        if(pack == NULL) continue;
+
+        const char *s = tsc_toString(tsc_getKey(pack->value, key));
+        if(s[0] == '\0') continue; // Not valid, whatever
+        if(s[0] == '#') s++;
+        
+        int c = 0;
+
+        // yes invalid shit can give you weird colors, no I don't care
+        for(int i = 0; s[i] != '\0'; i++) {
+            char x = s[i];
+            int y = 0;
+            if(x >= '0' && x <= '9') {
+                y = x - '0';
+            }
+            if(x >= 'A' && x <= 'F') {
+                y = x - 'A';
+            }
+            if(x >= 'a' && x <= 'f') {
+                y = x - 'a';
+            }
+            c *= 0x10;
+            c += y;
+        }
+
+        if(strlen(s) == 6) {
+            c *= 0x100;
+            c += 0xFF;
+        }
+        // Color is actually read in reverse byte order so we just reverse it again
+        char buf[4] = {0};
+        for(int i = 0; i < 4; i++) {
+            buf[3 - i] = (c >> (i*8)) & 0xFF;
+        }
+
+        return c;
+    }
+
+    return defaultColor;
 }
 
 const char *tsc_textures_load(tsc_resourcepack *pack, const char *id, const char *file) {

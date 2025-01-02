@@ -27,10 +27,9 @@ static int tsc_gridUpdateThread(void *_) {
         if(!multiTickPerFrame) {
             cnd_wait(&renderingTickUpdateSignal, &renderingUselessMutex);
             mtx_unlock(&renderingUselessMutex);
-        } else {
-            if((tickTime < tickDelay || isGamePaused) && !onlyOneTick) {
-                continue;
-            }
+        }
+        if((tickTime < tickDelay || isGamePaused) && !onlyOneTick) {
+            continue;
         }
         // Fixed SO MANY BUGS
         //if(isGamePaused) continue;
