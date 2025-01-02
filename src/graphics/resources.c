@@ -2,6 +2,7 @@
 // Fairly efficient, very high-level and fault tolerant.
 
 #include "resources.h"
+#include <math.h>
 #include <raylib.h>
 #include "../utils.h"
 #include "../api/api.h"
@@ -29,16 +30,9 @@ __attribute__((optnone,optimize("O3"))) static Color tsc_texture_computeApproxim
     // Copy to CPU the image buffer
     Image image = LoadImageFromTexture(texture);
     Color *colors = LoadImageColors(image);
-    double alphaSum = 0;
-    for(int x = 0; x < image.width; x++) {
-        for(int y = 0; y < image.height; y++) {
-            int i = y * image.width + x;
-            Color pixel = colors[i];
-            alphaSum += ((double)pixel.a) / 255;
-        }
-    }
 
-    double r, g, b, a = 0;
+    double r, g, b = 0;
+    double div = 0;
     for(int x = 0; x < image.width; x++) {
         for(int y = 0; y < image.height; y++) {
             int i = y * image.width + x;
@@ -48,19 +42,26 @@ __attribute__((optnone,optimize("O3"))) static Color tsc_texture_computeApproxim
             green = ((double)pixel.g) / 255;
             blue = ((double)pixel.b) / 255;
             alpha = ((double)pixel.a) / 255;
+            div += alpha;
+            red *= red;
+            green *= green;
+            blue *= blue;
 
-            r += ((red * alpha) / alphaSum);
-            g += ((green * alpha) / alphaSum);
-            b += ((blue * alpha) / alphaSum);
-            a += ((alpha * alpha) / alphaSum);
+            r += red * alpha;
+            g += green * alpha;
+            b += blue * alpha;
         }
     }
+
+    r = sqrt(r/div);
+    g = sqrt(g/div);
+    b = sqrt(b/div);
 
     // Cleanup
     UnloadImageColors(colors);
     UnloadImage(image);
 
-    Color out = {(char) (r * 255), (char) (g * 255), (char) (b * 255), (char) (a * 255)};
+    Color out = {.r = (unsigned char) (r * 255), .g = (unsigned char) (g * 255), .b = (unsigned char) (b * 255), .a = 255};
     return out;
 }
 
@@ -633,7 +634,7 @@ void tsc_music_playOrKeep() {
     // If it is STILL NULL, then somehow no music exists so do nothing
     if(tsc_currentTrack.name == NULL) return;
     // That epic banger is still blasting so we can't stop it
-    if(IsMusicStreamPlaying(tsc_currentTrack.music)) {
+    if(IsMusicStreamPlaying(tsc_currentTrack.music) && !IsKeyPressed(KEY_M)) {
         SetMusicVolume(tsc_currentTrack.music, tsc_toNumber(tsc_getSetting(builtin.settings.musicVolume)));
         UpdateMusicStream(tsc_currentTrack.music);
         return;
@@ -641,6 +642,7 @@ void tsc_music_playOrKeep() {
 
     tsc_currentTrack = tsc_music_getRandom();
     SetMusicVolume(tsc_currentTrack.music, tsc_toNumber(tsc_getSetting(builtin.settings.musicVolume)));
+    SeekMusicStream(tsc_currentTrack.music, 0);
     PlayMusicStream(tsc_currentTrack.music);
     printf("Playing music track %s from %s\n", tsc_currentTrack.name, tsc_currentTrack.source->id);
 }

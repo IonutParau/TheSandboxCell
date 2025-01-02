@@ -3,6 +3,7 @@
 #include "../saving/saving.h"
 #include "resources.h"
 #include "../utils.h"
+#include <limits.h>
 #include <raylib.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -28,6 +29,7 @@ static ui_frame *renderingGameUI;
 static tsc_categorybutton *renderingCellButtons = NULL;
 static double renderingApproximationSize = 4;
 static double trueApproximationSize;
+static double tsc_sizeOptimizedByApproximation;
 static float tsc_zoomScrollTotal = 0;
 static float tsc_brushScrollBuf = 0;
 
@@ -116,6 +118,7 @@ void tsc_resetRendering() {
     tsc_zoomScrollTotal = 0;
     tsc_brushScrollBuf = 0;
     trueApproximationSize = renderingApproximationSize;
+    tsc_sizeOptimizedByApproximation = 0;
     tsc_ui_clearButtonState(renderingSelectionButtons.copy);
     tsc_ui_clearButtonState(renderingSelectionButtons.cut);
     tsc_ui_clearButtonState(renderingSelectionButtons.del);
@@ -183,7 +186,8 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
     color.a = opacity * 255;
     if(renderingCamera.cellSize <= trueApproximationSize || forceRectangle) {
         Color approx = textures_getApproximation(cell->texture == NULL ? cell->id : cell->texture);
-        approx = ColorAlphaBlend(approx, approx, color);
+        //approx = ColorAlphaBlend(approx, approx, color);
+        approx.a = color.a;
         Vector2 origin = {size / 2, size / 2};
         // My precious little hack
         // Makes sense if you think about it... but I never think
@@ -299,12 +303,14 @@ static void tsc_updateCellbar(tsc_category *category, tsc_categorybutton *button
     }
 }
 
+
 void tsc_drawGrid() {
     Vector2 emptyOrigin = {0, 0};
     Rectangle emptyDest = {-renderingCamera.x, -renderingCamera.y, renderingCamera.cellSize * currentGrid->width, renderingCamera.cellSize * currentGrid->height};
     if(renderingCamera.cellSize < trueApproximationSize) {
-        if(GetFPS() > 60) {
+        if(GetFPS() > 120 && renderingCamera.cellSize > tsc_sizeOptimizedByApproximation) {
             trueApproximationSize /= 2;
+            tsc_sizeOptimizedByApproximation = renderingCamera.cellSize;
         }
         Color approx = textures_getApproximation(builtin.empty);
         DrawRectanglePro(emptyDest, emptyOrigin, 0, approx);
@@ -336,13 +342,13 @@ void tsc_drawGrid() {
 
     int maxRenderCount = 50000;
     int skipLevel = 1;
-    int maxSkipLevel = 3;
+    int maxSkipLevel = INT_MAX;
     int renderCount = (ex - sx + 1) * (ey - sy + 1);
     while(renderCount > maxRenderCount && skipLevel < maxSkipLevel) {
         skipLevel++;
         renderCount /= 4;
     }
-    if(renderingCamera.cellSize >= renderingApproximationSize) {
+    if(renderingCamera.cellSize >= trueApproximationSize) {
         skipLevel = 1;
     }
 

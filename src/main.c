@@ -142,6 +142,8 @@ int main(int argc, char **argv) {
     SetWindowState(FLAG_MSAA_4X_HINT);
     SetWindowMonitor(0);
 
+    double timeElapsed = 0;
+
     // L + ratio
     SetExitKey(KEY_NULL);
 
@@ -175,8 +177,16 @@ int main(int argc, char **argv) {
     int off = 0;
     
     tsc_mainMenuParticle_t mainMenuParticles[TSC_MAINMENU_PARTICLE_COUNT];
+    size_t mainMenuParticleCount = TSC_MAINMENU_PARTICLE_COUNT;
     for(size_t i = 0; i < TSC_MAINMENU_PARTICLE_COUNT; i++) {
+        const char *builtinCells[] = {
+            builtin.push, builtin.wall, builtin.enemy, builtin.mover,
+            builtin.trash, builtin.slide, builtin.generator, builtin.rotator_cw,
+            builtin.rotator_ccw,
+        };
+        size_t builtinCellCount = sizeof(builtinCells) / sizeof(const char *);
         mainMenuParticles[i] = tsc_randomMainMenuParticle(false);
+        mainMenuParticles[i].id = builtinCells[(i / (TSC_MAINMENU_PARTICLE_COUNT / builtinCellCount)) % builtinCellCount];
     }
 
     AttachAudioMixedProcessor(tsc_magicStreamProcessorDoNotUseEver);
@@ -188,14 +198,29 @@ int main(int argc, char **argv) {
         int width = GetScreenWidth();
         int height = GetScreenHeight();
 
+        timeElapsed += GetFrameTime();
+
         if(tsc_streql(tsc_currentMenu, "game")) {
             tsc_drawGrid();
         } else {
+            // Dont worry potato PCs we got you
+            if(GetFPS() < 60 && timeElapsed < 0.5) {
+                mainMenuParticleCount /= 2;
+                for(size_t i = 0; i < mainMenuParticleCount; i++) {
+                    const char *builtinCells[] = {
+                        builtin.push, builtin.wall, builtin.enemy, builtin.mover,
+                        builtin.trash, builtin.slide, builtin.generator, builtin.rotator_cw,
+                        builtin.rotator_ccw,
+                    };
+                    size_t builtinCellCount = sizeof(builtinCells) / sizeof(const char *);
+                    mainMenuParticles[i].id = builtinCells[(i / (mainMenuParticleCount / builtinCellCount)) % builtinCellCount];
+                }
+            }
             // Super epic background
             int r = (width < height ? width : height) / 4;
             int bx = width/2;
             int by = height/2;
-            for(size_t i = 0; i < TSC_MAINMENU_PARTICLE_COUNT; i++) {
+            for(size_t i = 0; i < mainMenuParticleCount; i++) {
                 tsc_mainMenuParticle_t particle = mainMenuParticles[i];
                 Texture t = textures_get(particle.id);
                 Vector2 pos = {
@@ -213,9 +238,10 @@ int main(int argc, char **argv) {
                         origin, particle.rot * 180 / PI, c
                     );
             }
-            float blackHoleExtra = tsc_magicMusicSampleDoNotTouchEver*2;
+            float blackHoleExtra = tsc_magicMusicSampleDoNotTouchEver;
             if(blackHoleExtra > 0.5) blackHoleExtra = 0.5;
             DrawCircle(bx, by, r * (1 + blackHoleExtra), BLACK); // BLACK HOLE
+            DrawFPS(10, 10);
         }
 
         if(tsc_streql(tsc_currentMenu, "main")) {
@@ -355,10 +381,13 @@ int main(int argc, char **argv) {
         if(tsc_streql(tsc_currentMenu, "game")) {
             tsc_handleRenderInputs();
         } else {
+            if(!IsWindowFocused()) {
+                delta *= 10;
+            }
             int r = (width < height ? width : height) / 4;
             int bx = width/2;
             int by = height/2;
-            for(size_t i = 0; i < TSC_MAINMENU_PARTICLE_COUNT; i++) {
+            for(size_t i = 0; i < mainMenuParticleCount; i++) {
                 tsc_mainMenuParticle_t particle = mainMenuParticles[i];
                 Texture t = textures_get(particle.id);
                 Vector2 pos = {
@@ -371,7 +400,9 @@ int main(int argc, char **argv) {
                 particle.angle += y * delta;
                 particle.rot += y * 2 * PI * delta;
                 if(particle.dist < (float)r/2) {
+                    const char *oldID = particle.id;
                     particle = tsc_randomMainMenuParticle(true);
+                    particle.id = oldID; // phoenix told me something something GPU hates texture swapping
                 }
                 mainMenuParticles[i] = particle;
             }
