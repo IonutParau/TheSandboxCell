@@ -326,13 +326,17 @@ tsc_value tsc_settingStore;
 
 void tsc_settingHandler(const char *title) {
     if(title == builtin.settings.vsync) {
-        ClearWindowState(FLAG_VSYNC_HINT);
         if(tsc_toBoolean(tsc_getSetting(builtin.settings.vsync))) {
-            SetWindowState(FLAG_VSYNC_HINT);
+            SetTargetFPS(GetMonitorRefreshRate(GetCurrentMonitor()));
+        } else {
+            SetTargetFPS(0);
         }
     } else if(title == builtin.settings.fullscreen) {
         if(tsc_toBoolean(tsc_getSetting(builtin.settings.fullscreen)) != IsWindowFullscreen()) {
-            ToggleFullscreen();
+            // TOGGLE FULLSCREEN DOES NOT CHANGE THE RENDERED WIDTH SO EVERYTHING ELSE IS FUCKED.
+            // SETWINDOWSIZE DOES NOTHING.
+            // TODO: fix this buggy as shit raylib goofy ah glitchyness
+            // ToggleFullscreen();
         }
     }
 }

@@ -121,6 +121,8 @@ tsc_category *tsc_getCategory(tsc_category *category, const char *path);
 void tsc_openCategory(tsc_category *category);
 void tsc_closeCategory(tsc_category *category);
 void tsc_loadDefaultCellBar();
+
+void tsc_settingHandler(const char *title);
 // hideapi
 
 tsc_value tsc_getSetting(const char *settingID);

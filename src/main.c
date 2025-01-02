@@ -12,6 +12,7 @@
 #include "utils.h"
 #include "api/api.h"
 #include "graphics/ui.h"
+#include "graphics/resources.h"
 #include "cells/ticking.h"
 
 #define RAYGUI_IMPLEMENTATION
@@ -34,6 +35,47 @@ typedef struct tsc_mainMenuBtn_t {
 } tsc_mainMenuBtn_t;
 
 tsc_mainMenuBtn_t tsc_mainMenuBtn;
+
+#define TSC_MAINMENU_PARTICLE_COUNT 32768
+
+typedef struct tsc_mainMenuParticle_t {
+    const char *id;
+    float r;
+    float g;
+    float dist;
+    float angle;
+    float rot;
+} tsc_mainMenuParticle_t;
+
+float tsc_randFloat() {
+    return (float)rand() / RAND_MAX;
+}
+
+tsc_mainMenuParticle_t tsc_randomMainMenuParticle(bool respawn) {
+    const char *builtinCells[] = {
+        builtin.push, builtin.wall, builtin.enemy, builtin.mover,
+        builtin.trash, builtin.slide, builtin.generator, builtin.rotator_cw,
+        builtin.rotator_ccw,
+    };
+    size_t builtinCellCount = sizeof(builtinCells) / sizeof(const char *);
+
+    int w = GetScreenWidth();
+    int h = GetScreenHeight();
+    int r = (w < h ? w : h) / 4;
+    int m = w > h ? w : h;
+
+    tsc_mainMenuParticle_t particle;
+    particle.id = builtinCells[rand() % builtinCellCount];
+    particle.angle = tsc_randFloat() * 2 * PI;
+    particle.r = tsc_randFloat() * (float)r / 10;
+    particle.g = tsc_randFloat() * (r/particle.r) * 2;
+    particle.dist = r + tsc_randFloat() * r * 10;
+    if(respawn) {
+        particle.dist = m + tsc_randFloat() * r * 3;
+    }
+    particle.rot += tsc_randFloat() * 2 * PI;
+    return particle;
+}
 
 int main(int argc, char **argv) {
     srand(time(NULL));
@@ -102,6 +144,10 @@ int main(int argc, char **argv) {
 
     tsc_loadSettings();
 
+    if(tsc_toBoolean(tsc_getSetting(builtin.settings.fullscreen))) {
+        tsc_settingHandler(builtin.settings.fullscreen);
+    }
+
     tsc_loadAllMods();
     
     tsc_enableResourcePack(defaultResourcePack);
@@ -114,6 +160,11 @@ int main(int argc, char **argv) {
     tsc_mainMenuBtn.credits = tsc_ui_newButtonState();
 
     int off = 0;
+    
+    tsc_mainMenuParticle_t mainMenuParticles[TSC_MAINMENU_PARTICLE_COUNT];
+    for(size_t i = 0; i < TSC_MAINMENU_PARTICLE_COUNT; i++) {
+        mainMenuParticles[i] = tsc_randomMainMenuParticle(false);
+    }
 
     while(!WindowShouldClose()) {
         BeginDrawing();
@@ -124,16 +175,38 @@ int main(int argc, char **argv) {
 
         if(tsc_streql(tsc_currentMenu, "game")) {
             tsc_drawGrid();
+        } else {
+            // Super epic background
+            int r = (width < height ? width : height) / 4;
+            int bx = width/2;
+            int by = height/2;
+            for(size_t i = 0; i < TSC_MAINMENU_PARTICLE_COUNT; i++) {
+                tsc_mainMenuParticle_t particle = mainMenuParticles[i];
+                Texture t = textures_get(particle.id);
+                Vector2 pos = {
+                    bx + cos(particle.angle) * particle.dist,
+                    by + sin(particle.angle) * particle.dist,
+                };
+                float scale = particle.r/t.width;
+                Color c = WHITE;
+                float x = r/particle.dist;
+                c.a = x > 1 ? 255 : x * 255;
+                Vector2 origin = {particle.r/2, particle.r/2};
+                DrawTexturePro(t,
+                        (Rectangle) {0, 0, t.width, t.height},
+                        (Rectangle) {pos.x + origin.x, pos.y + origin.y, particle.r, particle.r},
+                        origin, particle.rot * 180 / PI, c
+                    );
+            }
+            DrawCircle(bx, by, r, BLACK); // BLACK HOLE
         }
+
         if(tsc_streql(tsc_currentMenu, "main")) {
             tsc_ui_pushFrame(tsc_mainMenu);
             int textHeight = 100;
             tsc_ui_text("The Sandbox Cell v0.0.1", 50, WHITE);
             tsc_ui_pad(20, 20);
             tsc_ui_align(0.5, 0, width, textHeight);
-            tsc_ui_space(width/4);
-            tsc_ui_box(GRAY);
-            tsc_ui_align(0.5, 0.5, width, height);
             Color buttonHoverColor = GetColor(0x3275A8FF);
             tsc_ui_row({
                 tsc_ui_text("Play", 20, WHITE);
@@ -260,10 +333,32 @@ int main(int argc, char **argv) {
 
         EndDrawing();
 
+        double delta = GetFrameTime();
+
         if(tsc_streql(tsc_currentMenu, "game")) {
             tsc_handleRenderInputs();
+        } else {
+            int r = (width < height ? width : height) / 4;
+            int bx = width/2;
+            int by = height/2;
+            for(size_t i = 0; i < TSC_MAINMENU_PARTICLE_COUNT; i++) {
+                tsc_mainMenuParticle_t particle = mainMenuParticles[i];
+                Texture t = textures_get(particle.id);
+                Vector2 pos = {
+                    bx + cos(particle.angle) * particle.dist,
+                    by + sin(particle.angle) * particle.dist,
+                };
+                float x = 0.5*r/(particle.dist-r);
+                float y = x * sqrt(x);
+                particle.dist -= particle.g * delta;
+                particle.angle += y * delta;
+                particle.rot += y * 2 * PI * delta;
+                if(particle.dist < (float)r/2) {
+                    particle = tsc_randomMainMenuParticle(true);
+                }
+                mainMenuParticles[i] = particle;
+            }
         }
-        double delta = GetFrameTime();
         if(tsc_streql(tsc_currentMenu, "main")) {
             tsc_ui_bringBackFrame(tsc_mainMenu);
             tsc_ui_update(delta);
