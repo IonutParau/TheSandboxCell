@@ -66,7 +66,7 @@ tsc_mainMenuParticle_t tsc_randomMainMenuParticle(bool respawn) {
     particle.id = builtinCells[rand() % builtinCellCount];
     particle.angle = tsc_randFloat() * 2 * PI;
     particle.r = tsc_randFloat() * (float)r / 10;
-    particle.g = tsc_randFloat() * (r/particle.r) * 2;
+    particle.g = tsc_randFloat() * (r/particle.r) * 4;
     particle.dist = r + tsc_randFloat() * r * 4;
     if(respawn) {
         particle.dist = m + tsc_randFloat() * r;
@@ -545,7 +545,7 @@ int main(int argc, char **argv) {
         } else {
             double delta = GetFrameTime();
             if(!IsWindowFocused()) {
-                delta /= 2;
+                delta *= 5;
             }
             int r = (width < height ? width : height) / 4;
             int bx = width/2;
@@ -559,6 +559,7 @@ int main(int argc, char **argv) {
                 };
                 float x = 0.5*r/(particle.dist-r);
                 float y = x * sqrt(x);
+                float z = x * pow(x, 0.1);
                 particle.dist -= particle.g * delta;
                 particle.angle += y * delta;
                 particle.rot += y * 2 * PI * delta;

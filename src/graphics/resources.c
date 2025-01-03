@@ -599,7 +599,6 @@ int tsc_queryOptionalColor(const char *key, int defaultColor) {
             c += 0xFF;
         }
 
-        printf("%x\n", c);
         // Color is actually read in reverse byte order so we just reverse it again
         char buf[4] = {0};
         for(int i = 0; i < 4; i++) {
