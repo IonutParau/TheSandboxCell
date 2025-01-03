@@ -32,9 +32,8 @@ static int tsc_gridUpdateThread(void *_) {
             cnd_wait(&renderingTickUpdateSignal, &renderingUselessMutex);
             mtx_unlock(&renderingUselessMutex);
         }
-        if(isGamePaused) continue;
         // Fixed SO MANY BUGS
-        //if(isGamePaused) continue;
+        if(isGamePaused && !onlyOneTick) continue;
         // Nothing here is thread-safe except the waiting
         // The only thing keeping this from exploding is
         // high IQ code I wrote that I forgot to understand
@@ -51,7 +50,7 @@ static int tsc_gridUpdateThread(void *_) {
         double delta = difftime(now, last);
         if(delta >= 1) {
             time(&last);
-            gameTPS = ticksInSecond / (size_t)delta;
+            gameTPS = ticksInSecond / delta;
             ticksInSecond = 0;
         }
         onlyOneTick = false;

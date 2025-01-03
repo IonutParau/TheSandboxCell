@@ -78,6 +78,7 @@ tsc_mainMenuParticle_t tsc_randomMainMenuParticle(bool respawn) {
 float tsc_magicMusicSampleDoNotTouchEver = 0;
 
 void tsc_magicStreamProcessorDoNotUseEver(void *buffer, unsigned int sampleCount) {
+    if(tsc_streql(tsc_currentMenu, "game")) return;
     float *samples = buffer;
     if(sampleCount > 0) {
         tsc_magicMusicSampleDoNotTouchEver = 0;

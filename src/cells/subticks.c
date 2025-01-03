@@ -269,12 +269,9 @@ static void tsc_subtick_doGen(struct tsc_cell *cell, int x, int y, int _ux, int 
     int fy = tsc_grid_frontY(y, cell->rot);
     tsc_cell *front = tsc_grid_get(currentGrid, fx, fy);
     if(front == NULL) return;
-    bool useOptimization = true;
-    if(useOptimization && tsc_grid_checkOptimization(currentGrid, fx, fy, builtin.optimizations.gens[cell->rot])) {
+    if(tsc_grid_checkOptimization(currentGrid, fx, fy, builtin.optimizations.gens[cell->rot])) {
         tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[cell->rot], true);
         return;
-    } else {
-        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[cell->rot], false);
     }
     int bx = tsc_grid_shiftX(x, cell->rot, -1);
     int by = tsc_grid_shiftY(y, cell->rot, -1);

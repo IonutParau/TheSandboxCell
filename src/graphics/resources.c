@@ -27,7 +27,7 @@ typedef struct tsc_texture_resource {
 } tsc_texture_resource;
 
 // Not good for BIG textures.
-__attribute__((optnone,optimize("O3"))) static Color tsc_texture_computeApproximation(Texture texture) {
+static Color tsc_texture_computeApproximation(Texture texture) {
     // Copy to CPU the image buffer
     Image image = LoadImageFromTexture(texture);
     Color *colors = LoadImageColors(image);
