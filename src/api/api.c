@@ -51,7 +51,7 @@ void tsc_addCoreSplashes() {
     tsc_addSplash("Pesky Windows", 1);
     tsc_addSplash("Photon dev helped", 1);
     tsc_addSplash("go suck an egg with your small brain", 0.01);
-    tsc_addSplash("PhoenixCM", 1);
+    tsc_addSplash("not by PhoenixCM", 1);
     tsc_addSplash("Program in C, program in C", 0.05);
     tsc_addSplash("No memory leaks ever seen", 1);
     tsc_addSplash("Segmentation Fault (Core Dumped)", 5);
