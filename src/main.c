@@ -543,7 +543,7 @@ int main(int argc, char **argv) {
         if(tsc_streql(tsc_currentMenu, "game")) {
             tsc_handleRenderInputs();
         } else {
-            double delta = GetFrameTime() * (1 + blackHoleSoundBonus*10);
+            double delta = GetFrameTime();
             if(!IsWindowFocused()) {
                 delta /= 2;
             }
