@@ -881,6 +881,7 @@ void tsc_handleRenderInputs() {
     if(!isGamePaused && !multiTickPerFrame) {
         if(tickTime >= tickDelay && !isGameTicking) {
             tickTime = 0;
+            printf("Tick should happen\n");
             tsc_signalUpdateShouldHappen();
         }
     }

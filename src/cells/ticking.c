@@ -24,13 +24,15 @@ static int tsc_gridUpdateThread(void *_) {
     size_t ticksInSecond = 0;
     time(&last);
     while(true) {
-        if(!multiTickPerFrame) {
+        if(multiTickPerFrame) {
+            if((tickTime < tickDelay || isGamePaused) && !onlyOneTick) {
+                continue;
+            }
+        } else {
             cnd_wait(&renderingTickUpdateSignal, &renderingUselessMutex);
             mtx_unlock(&renderingUselessMutex);
         }
-        if((tickTime < tickDelay || isGamePaused) && !onlyOneTick) {
-            continue;
-        }
+        if(isGamePaused) continue;
         // Fixed SO MANY BUGS
         //if(isGamePaused) continue;
         // Nothing here is thread-safe except the waiting
