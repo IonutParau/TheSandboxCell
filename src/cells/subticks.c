@@ -146,13 +146,17 @@ static void tsc_subtick_worker(void *data) {
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                 if(cell == NULL) continue;
                 if(cell->rot != 0) continue;
+                #ifndef TSC_TURBO
                 if(cell->updated) continue;
+                #endif
                 for(size_t i = 0; i < info->subtick->idc; i++) {
                     if(info->subtick->ids[i] == cell->id) {
                         tsc_celltable *table = tsc_cell_getTable(cell);
                         if(table == NULL) break; // breaks out of id loop.
                         if(table->update == NULL) break;
+                        #ifndef TSC_TURBO
                         cell->updated = true;
+                        #endif
                         table->update(cell, x, y, x, y, table->payload);
                         break;
                     }
@@ -163,13 +167,17 @@ static void tsc_subtick_worker(void *data) {
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                 if(cell == NULL) continue;
                 if(cell->rot != 2) continue;
+                #ifndef TSC_TURBO
                 if(cell->updated) continue;
+                #endif
                 for(size_t i = 0; i < info->subtick->idc; i++) {
                     if(info->subtick->ids[i] == cell->id) {
                         tsc_celltable *table = tsc_cell_getTable(cell);
                         if(table == NULL) break; // breaks out of id loop.
                         if(table->update == NULL) break;
+                        #ifndef TSC_TURBO
                         cell->updated = true;
+                        #endif
                         table->update(cell, x, y, x, y, table->payload);
                         break;
                     }
@@ -181,13 +189,17 @@ static void tsc_subtick_worker(void *data) {
                 int x = info->x;
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                 if(cell->rot != 3) continue;
+                #ifndef TSC_TURBO
                 if(cell->updated) continue;
+                #endif
                 for(size_t i = 0; i < info->subtick->idc; i++) {
                     if(info->subtick->ids[i] == cell->id) {
                         tsc_celltable *table = tsc_cell_getTable(cell);
                         if(table == NULL) break; // breaks out of id loop.
                         if(table->update == NULL) break;
+                        #ifndef TSC_TURBO
                         cell->updated = true;
+                        #endif
                         table->update(cell, x, y, x, y, table->payload);
                         break;
                     }
@@ -197,13 +209,17 @@ static void tsc_subtick_worker(void *data) {
                 int x = info->x;
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                 if(cell->rot != 1) continue;
+                #ifndef TSC_TURBO
                 if(cell->updated) continue;
+                #endif
                 for(size_t i = 0; i < info->subtick->idc; i++) {
                     if(info->subtick->ids[i] == cell->id) {
                         tsc_celltable *table = tsc_cell_getTable(cell);
                         if(table == NULL) break; // breaks out of id loop.
                         if(table->update == NULL) break;
+                        #ifndef TSC_TURBO
                         cell->updated = true;
+                        #endif
                         table->update(cell, x, y, x, y, table->payload);
                         break;
                     }
@@ -221,7 +237,9 @@ static void tsc_subtick_worker(void *data) {
                     tsc_celltable *table = tsc_cell_getTable(cell);
                     if(table == NULL) break; // breaks out of id loop.
                     if(table->update == NULL) break;
+                    #ifndef TSC_TURBO
                     cell->updated = true;
+                    #endif
                     table->update(cell, info->x, y, info->x, y, table->payload);
                     break;
                 }
@@ -352,18 +370,19 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
             }
             return;
         }
-        // TODO: Single-threaded tracked updates
         for(int i = 0; i < rotc; i++) {
             char rot = rots[i];
             if(rot == 0) {
                 for(int y = 0; y < currentGrid->height; y++) {
                     for(int x = currentGrid->width - 1; x >= 0; x--) {
                         tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
+                        #ifndef TSC_TURBO
+                        if(cell->updated) continue;
+                        #endif
+                        if(cell->rot != rot) continue;
+                        cell->updated = true;
                         for(size_t i = 0; i < subtick->idc; i++) {
                             if(subtick->ids[i] == cell->id) {
-                                if(cell->updated) break;
-                                if(cell->rot != rot) break;
-                                cell->updated = true;
                                 tsc_celltable *table = tsc_cell_getTable(cell);
                                 if(table == NULL) break;
                                 if(table->update == NULL) break;
@@ -377,11 +396,13 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                 for(int x = 0; x < currentGrid->width; x++) {
                     for(int y = currentGrid->height-1; y >= 0; y--) {
                         tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
+                        #ifndef TSC_TURBO
+                        if(cell->updated) continue;
+                        #endif
+                        if(cell->rot != rot) continue;
+                        cell->updated = true;
                         for(size_t i = 0; i < subtick->idc; i++) {
                             if(subtick->ids[i] == cell->id) {
-                                if(cell->updated) break;
-                                if(cell->rot != rot) break;
-                                cell->updated = true;
                                 tsc_celltable *table = tsc_cell_getTable(cell);
                                 if(table == NULL) break;
                                 if(table->update == NULL) break;
@@ -395,11 +416,15 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                 for(int y = 0; y < currentGrid->height; y++) {
                     for(int x = 0; x < currentGrid->width; x++) {
                         tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
+                        #ifndef TSC_TURBO
+                        if(cell->updated) continue;
+                        #endif
+                        if(cell->rot != rot) continue;
                         for(size_t i = 0; i < subtick->idc; i++) {
                             if(subtick->ids[i] == cell->id) {
-                                if(cell->updated) break;
-                                if(cell->rot != rot) break;
+                                #ifndef TSC_TURBO
                                 cell->updated = true;
+                                #endif
                                 tsc_celltable *table = tsc_cell_getTable(cell);
                                 if(table == NULL) break;
                                 if(table->update == NULL) break;
@@ -413,11 +438,15 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                 for(int x = 0; x < currentGrid->width; x++) {
                     for(int y = 0; y < currentGrid->height; y++) {
                         tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
+                        #ifndef TSC_TURBO
+                        if(cell->updated) continue;
+                        #endif
+                        if(cell->rot != rot) continue;
                         for(size_t i = 0; i < subtick->idc; i++) {
                             if(subtick->ids[i] == cell->id) {
-                                if(cell->updated) break;
-                                if(cell->rot != rot) break;
+                                #ifndef TSC_TURBO
                                 cell->updated = true;
+                                #endif
                                 tsc_celltable *table = tsc_cell_getTable(cell);
                                 if(table == NULL) break;
                                 if(table->update == NULL) break;
@@ -461,7 +490,6 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                     int cy = y + off[i*2+1];
                     tsc_cell *cell = tsc_grid_get(currentGrid, cx, cy);
                     if(cell == NULL) continue;
-                    if(cell->updated) continue;
                     for(size_t i = 0; i < subtick->idc; i++) {
                         if(subtick->ids[i] == cell->id) {
                             tsc_celltable *table = tsc_cell_getTable(cell);
@@ -496,13 +524,17 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
         for(int x = 0; x < currentGrid->width; x++) {
             for(int y = 0; y < currentGrid->height; y++) {
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
+                #ifndef TSC_TURBO
                 if(cell->updated) continue;
+                #endif
                 for(size_t i = 0; i < subtick->idc; i++) {
                     if(subtick->ids[i] == cell->id) {
                         tsc_celltable *table = tsc_cell_getTable(cell);
                         if(table == NULL) break;
                         if(table->update == NULL) break;
+                        #ifndef TSC_TURBO
                         cell->updated = true;
+                        #endif
                         table->update(cell, x, y, x, y, table->payload);
                         break;
                     }
@@ -531,6 +563,7 @@ static void tsc_subtick_reset(void *data) {
 }
 
 void tsc_subtick_run() {
+#ifndef TSC_TURBO
     char shouldBeParallel = 1;
     #ifdef TSC_SINGLE_THREAD
         shouldBeParallel = 0;
@@ -548,6 +581,7 @@ void tsc_subtick_run() {
             tsc_subtick_reset(bullshit);
         }
     }
+#endif
 
     for(size_t i = 0; i < subticks.subc; i++) {
         tsc_subtick_do(subticks.subs + i);
