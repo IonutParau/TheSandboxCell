@@ -67,28 +67,6 @@ ifeq ($(MARCH_NATIVE), 1)
 	CFLAGS += -march=native
 endif
 
-# Features that can be removed for performance or size
-
-ifdef SUPPORT_LUA;
-	CFLAGS += -DTSC_SUPPORT_LUA
-endif
-
-ifdef JIT_LUA;
-	CFLAGS += -DTSC_JIT_LUA
-endif
-
-ifdef SUPPORT_PYTHON;
-	CFLAGS += -DTSC_SUPPORT_PYTHON
-endif
-
-ifdef NOGIL_PYTHON;
-	CFLAGS += -DTSC_NOGIL_PYTHON
-endif
-
-ifdef SUPPORT_WASM;
-	CFLAGS += -DTSC_SUPPORT_WASM
-endif
-
 CFLAGS += $(ECFLAGS)
 LFLAGS += $(ELFLAGS)
 
