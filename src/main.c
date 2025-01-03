@@ -545,7 +545,7 @@ int main(int argc, char **argv) {
         } else {
             double delta = GetFrameTime();
             if(!IsWindowFocused()) {
-                delta *= 5;
+                delta /= 2;
             }
             int r = (width < height ? width : height) / 4;
             int bx = width/2;
