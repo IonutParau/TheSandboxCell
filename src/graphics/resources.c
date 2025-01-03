@@ -585,10 +585,10 @@ int tsc_queryOptionalColor(const char *key, int defaultColor) {
                 y = x - '0';
             }
             if(x >= 'A' && x <= 'F') {
-                y = x - 'A';
+                y = x - 'A' + 10;
             }
             if(x >= 'a' && x <= 'f') {
-                y = x - 'a';
+                y = x - 'a' + 10;
             }
             c *= 0x10;
             c += y;
@@ -598,6 +598,8 @@ int tsc_queryOptionalColor(const char *key, int defaultColor) {
             c *= 0x100;
             c += 0xFF;
         }
+
+        printf("%x\n", c);
         // Color is actually read in reverse byte order so we just reverse it again
         char buf[4] = {0};
         for(int i = 0; i < 4; i++) {

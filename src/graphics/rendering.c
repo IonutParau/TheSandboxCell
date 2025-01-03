@@ -59,6 +59,9 @@ static bool renderingIsSelecting = false;
 static bool renderingIsDragging = false;
 static bool renderingIsPasting = false;
 static bool renderingBlockPlacing = false;
+static bool tsc_isResizingGrid = false;
+static char tsc_sideResized = 4;
+static int tsc_sideExtension = 0;
 
 static selection_t tsc_fixSelection(selection_t sel) {
     selection_t fixed = sel;
@@ -475,12 +478,14 @@ void tsc_drawGrid() {
     int padding = 10;
     int cellButton = 60;
     int rowHeight = cellButton + padding * 2;
-    // Cellbar background
-    tsc_ui_space(GetScreenWidth());
-    tsc_ui_box(GetColor(0x00000055));
-    tsc_ui_translate(0, height - rowHeight);
-    tsc_buildCellbar(tsc_rootCategory(), renderingCellButtons, cellButton, padding, 0);
-    tsc_ui_render();
+    if(!tsc_isResizingGrid) {
+        // Cellbar background
+        tsc_ui_space(GetScreenWidth());
+        tsc_ui_box(GetColor(0x00000055));
+        tsc_ui_translate(0, height - rowHeight);
+        tsc_buildCellbar(tsc_rootCategory(), renderingCellButtons, cellButton, padding, 0);
+        tsc_ui_render();
+    }
     tsc_ui_popFrame();
 }
 
@@ -747,7 +752,13 @@ void tsc_handleRenderInputs() {
         renderingIsDragging = false;
     }
 
-    if(!absorbed && !renderingIsSelecting && !renderingIsPasting && !renderingBlockPlacing) tsc_handleCellPlace();
+    if(!absorbed && !renderingIsSelecting && !renderingIsPasting && !renderingBlockPlacing && !tsc_isResizingGrid) tsc_handleCellPlace();
+
+    if(!renderingIsSelecting && !renderingIsPasting) {
+        if(IsKeyPressed(KEY_LEFT_ALT)) {
+            tsc_isResizingGrid = !tsc_isResizingGrid;
+        }
+    }
 
     if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT) || IsMouseButtonReleased(MOUSE_BUTTON_RIGHT)) {
         renderingBlockPlacing = false;

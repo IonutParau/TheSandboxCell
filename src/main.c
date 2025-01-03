@@ -263,11 +263,10 @@ int main(int argc, char **argv) {
                    origin, particle.rot * 180 / PI, c
                 );
             }
-            float blackHoleExtra = tsc_magicMusicSampleDoNotTouchEver;
-            blackHoleExtra = blackHoleSoundBonus;
+            float blackHoleExtra = blackHoleSoundBonus;
             float blackHoleLimit = 1;
             if(blackHoleExtra > blackHoleLimit) blackHoleExtra = blackHoleLimit;
-            DrawCircle(bx, by, r * (1 + blackHoleExtra), BLACK); // BLACK HOLE
+            DrawCircle(bx, by, r * (1 + blackHoleExtra), GetColor(0x0b0c0dFF)); // BLACK HOLE
         }
 
         if(tsc_streql(tsc_currentMenu, "main")) {
@@ -530,6 +529,7 @@ int main(int argc, char **argv) {
                 tsc_grid *initial = tsc_createGrid("initial", grid->width, grid->height, NULL, NULL);
                 tsc_copyGrid(initial, grid);
                 tsc_currentMenu = "game";
+                tsc_resetRendering();
                 goto valid;
 
                 invalid:
@@ -543,7 +543,7 @@ int main(int argc, char **argv) {
         if(tsc_streql(tsc_currentMenu, "game")) {
             tsc_handleRenderInputs();
         } else {
-            double delta = GetFrameTime();
+            double delta = GetFrameTime() * (1 + blackHoleSoundBonus*10);
             if(!IsWindowFocused()) {
                 delta /= 2;
             }
