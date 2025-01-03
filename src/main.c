@@ -34,7 +34,7 @@ typedef struct tsc_mainMenuBtn_t {
 
 tsc_mainMenuBtn_t tsc_mainMenuBtn;
 
-#define TSC_MAINMENU_PARTICLE_COUNT 32768
+#define TSC_MAINMENU_PARTICLE_COUNT 8192
 
 typedef struct tsc_mainMenuParticle_t {
     const char *id;
@@ -67,9 +67,9 @@ tsc_mainMenuParticle_t tsc_randomMainMenuParticle(bool respawn) {
     particle.angle = tsc_randFloat() * 2 * PI;
     particle.r = tsc_randFloat() * (float)r / 10;
     particle.g = tsc_randFloat() * (r/particle.r) * 2;
-    particle.dist = r + tsc_randFloat() * r * 10;
+    particle.dist = r + tsc_randFloat() * r * 4;
     if(respawn) {
-        particle.dist = m + tsc_randFloat() * r * 3;
+        particle.dist = m + tsc_randFloat() * r;
     }
     particle.rot += tsc_randFloat() * 2 * PI;
     return particle;
@@ -137,8 +137,8 @@ int main(int argc, char **argv) {
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 600, "The Sandbox Cell");
-    SetWindowState(FLAG_MSAA_4X_HINT);
     SetWindowMonitor(0);
+    SetWindowState(FLAG_MSAA_4X_HINT | FLAG_WINDOW_MAXIMIZED);
 
     double timeElapsed = 0;
 
@@ -184,17 +184,8 @@ int main(int argc, char **argv) {
     int off = 0;
     
     tsc_mainMenuParticle_t mainMenuParticles[TSC_MAINMENU_PARTICLE_COUNT];
-    size_t mainMenuParticleCount = TSC_MAINMENU_PARTICLE_COUNT;
-    for(size_t i = 0; i < TSC_MAINMENU_PARTICLE_COUNT; i++) {
-        const char *builtinCells[] = {
-            builtin.push, builtin.wall, builtin.enemy, builtin.mover,
-            builtin.trash, builtin.slide, builtin.generator, builtin.rotator_cw,
-            builtin.rotator_ccw,
-        };
-        size_t builtinCellCount = sizeof(builtinCells) / sizeof(const char *);
-        mainMenuParticles[i] = tsc_randomMainMenuParticle(false);
-        mainMenuParticles[i].id = builtinCells[(i / (TSC_MAINMENU_PARTICLE_COUNT / builtinCellCount)) % builtinCellCount];
-    }
+    size_t mainMenuParticleCount = 0;
+    bool particlesInitialized = false;
 
     AttachAudioMixedProcessor(tsc_magicStreamProcessorDoNotUseEver);
 
@@ -213,6 +204,21 @@ int main(int argc, char **argv) {
 
         int width = GetScreenWidth();
         int height = GetScreenHeight();
+
+        if(!particlesInitialized && timeElapsed > 0.2) {
+            particlesInitialized = true;
+            mainMenuParticleCount = TSC_MAINMENU_PARTICLE_COUNT;
+            for(size_t i = 0; i < mainMenuParticleCount; i++) {
+                const char *builtinCells[] = {
+                    builtin.push, builtin.wall, builtin.enemy, builtin.mover,
+                    builtin.trash, builtin.slide, builtin.generator, builtin.rotator_cw,
+                    builtin.rotator_ccw,
+                };
+                size_t builtinCellCount = sizeof(builtinCells) / sizeof(const char *);
+                mainMenuParticles[i] = tsc_randomMainMenuParticle(false);
+                mainMenuParticles[i].id = builtinCells[(i / (mainMenuParticleCount / builtinCellCount)) % builtinCellCount];
+            }
+        }
 
         timeElapsed += GetFrameTime();
         blackHoleSoundBonus = tsc_magicMusicSampleDoNotTouchEver;
@@ -499,7 +505,7 @@ int main(int argc, char **argv) {
                 particle.dist -= particle.g * delta;
                 particle.angle += y * delta;
                 particle.rot += y * 2 * PI * delta;
-                if(particle.dist < (float)r/2) {
+                if(particle.dist < (float)r-particle.r) {
                     const char *oldID = particle.id;
                     particle = tsc_randomMainMenuParticle(true);
                     particle.id = oldID; // phoenix told me something something GPU hates texture swapping
