@@ -3,7 +3,7 @@ CFLAGS=-c -fPIC
 # Extra C Flags (for cross-compiling)
 ECFLAGS=
 
-LINKER=gcc
+LINKER=$(CC)
 LFLAGS=-lm -lpthread -ldl
 # Extra linking flags (for cross-compiling)
 ELFLAGS=
@@ -34,6 +34,12 @@ ifeq ($(MODE), RELEASE)
 	CFLAGS += -O3
 	ifeq ($(CC), gcc)
 		CFLAGS += -flto=auto
+	endif
+	ifeq ($(CC), clang)
+		CFLAGS += -flto=thin
+	endif
+	ifeq ($(LINKER), clang)
+		LFLAGS += -flto=thin
 	endif
 	# No LTO with clang, because it keeps causing linking issues
 	#ifeq ($(CC), clang)

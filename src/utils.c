@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdarg.h>
 
 #ifdef linux
 #include <dirent.h>
@@ -361,3 +362,27 @@ void *tsc_setUnusedPointerShort(void *pointer, unsigned short byte) {
     val |= byte << shift;
     return (void *)val;
 }
+
+#ifndef TSC_POSIX
+
+int asprintf(char **s, const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+
+    size_t len = vsnprintf(NULL, 0, fmt, args);
+    va_end(args);
+    char *buffer = malloc(sizeof(char)*(len+1));
+    if(buffer == NULL) {
+        return -1;
+    }
+    buffer[len] = '\0';
+    va_start(args, fmt);
+    vsprintf(buffer, fmt, args);
+
+    *s = buffer;
+
+    va_end(args);
+    return len;
+}
+
+#endif

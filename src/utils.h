@@ -93,4 +93,10 @@ void *tsc_getPointerWithoutShort(void *pointer);
 // x64 only
 void *tsc_setUnusedPointerShort(void *pointer, unsigned short byte);
 
+#ifndef TSC_POSIX
+
+int asprintf(char **s, const char *fmt, ...);
+
+#endif
+
 #endif

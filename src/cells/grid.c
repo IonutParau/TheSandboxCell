@@ -1,6 +1,7 @@
 #include "grid.h"
 #include "../utils.h"
 #include "../api/api.h"
+#include "../graphics/resources.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -366,6 +367,8 @@ int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell
     
     tsc_cell_destroy(replacecell);
 
+    tsc_sound_play(builtin.audio.move);
+
     // +1 cuz replacement. This also means 0 only happens if pushing failed
     return amount + 1;
 }
@@ -374,6 +377,7 @@ int tsc_grid_pull(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell
     int m = 0;
 
     while(true) {
+        tsc_sound_play(builtin.audio.move);
         tsc_cell *current = tsc_grid_get(grid, x, y);
         if(current == NULL) return m;
 
@@ -408,6 +412,7 @@ int tsc_grid_pull(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell
 
         x = tsc_grid_shiftX(x, dir, -1);
         y = tsc_grid_shiftY(y, dir, -1);
+        m++;
     }
 }
 

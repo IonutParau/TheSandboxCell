@@ -639,8 +639,10 @@ void tsc_handleRenderInputs() {
         renderingCamera.x += speed * delta;
     }
 
-    if(IsKeyPressed(KEY_ESCAPE)) {
+    if(IsKeyPressed(KEY_ESCAPE) && !isGameTicking && isGamePaused) {
         tsc_currentMenu = "main";
+        tsc_nukeGrids();
+        return; // game is done.
     }
 
     if(IsKeyPressed(KEY_Q)) {

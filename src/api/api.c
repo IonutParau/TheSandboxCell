@@ -344,9 +344,7 @@ void tsc_settingHandler(const char *title) {
         tickDelay = tsc_toNumber(tsc_getSetting(builtin.settings.updateDelay));
     } else if(title == builtin.settings.mtpf) {
         multiTickPerFrame = tsc_toBoolean(tsc_getSetting(builtin.settings.mtpf));
-        if(multiTickPerFrame) {
-            tsc_signalUpdateShouldHappen();
-        }
+        tsc_signalUpdateShouldHappen();
     }
 }
 

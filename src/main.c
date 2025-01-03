@@ -88,6 +88,8 @@ void tsc_magicStreamProcessorDoNotUseEver(void *buffer, unsigned int sampleCount
     }
 }
 
+#define TSC_GRID_SIZE_BUFSIZE 16
+
 int main(int argc, char **argv) {
     srand(time(NULL));
 
@@ -99,16 +101,19 @@ int main(int argc, char **argv) {
     tsc_init_builtin_ids();
 
     char *level = NULL;
-    int width, height;
-    width = height = 512;
+    char gridWidth[TSC_GRID_SIZE_BUFSIZE];
+    char gridHeight[TSC_GRID_SIZE_BUFSIZE];
+    bool gridWidthSel, gridHeightSel = false;
+    strcpy(gridWidth, "100");
+    strcpy(gridHeight, "100");
     for(int i = 1; i < argc; i++) {
         char *arg = argv[i];
         if(strncmp(arg, "--width=", 8) == 0) {
             char *svalue = arg + 8;
-            width = atoi(svalue);
+            strncpy(gridWidth, svalue, TSC_GRID_SIZE_BUFSIZE-1);
         } else if(strncmp(arg, "--height=", 9) == 0) {
             char *svalue = arg + 9;
-            height = atoi(svalue);
+            strncpy(gridHeight, svalue, TSC_GRID_SIZE_BUFSIZE-1);
         } else if(strncmp(arg, "--level=", 8) == 0) {
             level = arg + 8;
         } else if(strcmp(arg, "--mtpf") == 0) {
@@ -127,13 +132,6 @@ int main(int argc, char **argv) {
     tsc_mainMenu = tsc_ui_newFrame();
     tsc_creditsMenu = tsc_ui_newFrame();
 
-    tsc_grid *grid = tsc_createGrid("main", width, height, NULL, NULL);
-    tsc_switchGrid(grid);
-    if(level != NULL) {
-        tsc_saving_decodeWithAny(level, grid);
-    }
-    tsc_grid *initial = tsc_createGrid("initial", grid->width, grid->height, NULL, NULL);
-    tsc_copyGrid(initial, grid);
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 600, "The Sandbox Cell");
@@ -480,6 +478,65 @@ int main(int argc, char **argv) {
                 tsc_resetRendering();
             }
         }
+        if(tsc_streql(tsc_currentMenu, "play")) {
+            GuiEnable();
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
+            if(GuiButton((Rectangle) { 20, 20, 100, 50 }, "Back")) {
+                tsc_currentMenu = "main";
+                particleHalvingTimer = 2;
+                tsc_resetRendering();
+            }
+            float inputWidth = (float)width/5;
+            float inputSpacing = inputWidth/5;
+            float inputHeight = inputWidth/3; // 3:1 aspect ratio
+            float inputY = (float)height/2-inputHeight;
+
+            GuiSetStyle(DEFAULT,TEXT_SIZE, inputHeight);
+            if(GuiTextBox((Rectangle) {(float)width/2-inputWidth-inputSpacing, inputY, inputWidth, inputHeight}, gridWidth, TSC_GRID_SIZE_BUFSIZE, gridWidthSel)) {
+                gridWidthSel = !gridWidthSel;
+            }
+            if(GuiTextBox((Rectangle) {(float)width/2+inputSpacing, inputY, inputWidth, inputHeight}, gridHeight, TSC_GRID_SIZE_BUFSIZE, gridHeightSel)) {
+                gridHeightSel = !gridHeightSel;
+            }
+            GuiSetStyle(DEFAULT,TEXT_SIZE, inputSpacing);
+            int xWidth = MeasureText("by", inputSpacing);
+            GuiLabel((Rectangle) {(float)(width-xWidth)/2, inputY+(inputHeight-inputSpacing), xWidth, inputSpacing}, "by");
+
+
+            GuiSetStyle(DEFAULT,TEXT_SIZE, inputHeight);
+            int playWidth = MeasureText("Play", inputHeight);
+            if(GuiLabelButton((Rectangle) {(float)(width-playWidth)/2, inputY+inputHeight+inputSpacing, playWidth, inputHeight}, "Play")) {
+                if(strlen(gridWidth) == 0) {
+                    goto invalid;
+                }
+                if(strlen(gridHeight) == 0) {
+                    goto invalid;
+                }
+                if(strspn(gridWidth, "0123456789") != strlen(gridWidth)) {
+                    goto invalid;
+                }
+                if(strspn(gridHeight, "0123456789") != strlen(gridHeight)) {
+                    goto invalid;
+                }
+                int w = atoi(gridWidth);
+                int h = atoi(gridHeight);
+                if(w == 0) goto invalid;
+                if(h == 0) goto invalid;
+                tsc_grid *grid = tsc_createGrid("main", w, h, NULL, NULL);
+                tsc_switchGrid(grid);
+                if(level != NULL) {
+                    tsc_saving_decodeWithAny(level, grid);
+                }
+                tsc_grid *initial = tsc_createGrid("initial", grid->width, grid->height, NULL, NULL);
+                tsc_copyGrid(initial, grid);
+                tsc_currentMenu = "game";
+                goto valid;
+
+                invalid:
+                fprintf(stderr, "Invalid dimensions: %s x %s\n", gridWidth, gridHeight);
+                valid:;
+            }
+        }
 
         EndDrawing();
 
@@ -518,7 +575,7 @@ int main(int argc, char **argv) {
             tsc_ui_bringBackFrame(tsc_mainMenu);
             tsc_ui_update(delta);
             if(tsc_ui_checkbutton(tsc_mainMenuBtn.play) == UI_BUTTON_PRESS) {
-                tsc_currentMenu = "game";
+                tsc_currentMenu = "play";
                 tsc_resetRendering();
             }
             if(tsc_ui_checkbutton(tsc_mainMenuBtn.settings) == UI_BUTTON_PRESS) {

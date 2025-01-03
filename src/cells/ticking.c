@@ -49,7 +49,7 @@ static int tsc_gridUpdateThread(void *_) {
         double delta = difftime(now, last);
         if(delta >= 1) {
             time(&last);
-            gameTPS = ticksInSecond / delta;
+            gameTPS = ticksInSecond / (size_t)delta;
             ticksInSecond = 0;
         }
         onlyOneTick = false;

@@ -32,6 +32,7 @@ void tsc_init_builtin_ids() {
 
     builtin.audio.destroy = tsc_strintern("destroy");
     builtin.audio.explosion = tsc_strintern("explosion");
+    builtin.audio.move = tsc_strintern("move");
 
     builtin.optimizations.gens[0] = tsc_allocOptimization("gen0");
     builtin.optimizations.gens[1] = tsc_allocOptimization("gen1");

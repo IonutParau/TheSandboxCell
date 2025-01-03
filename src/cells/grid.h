@@ -60,6 +60,7 @@ typedef struct tsc_texture_id_pool_t {
 typedef struct tsc_audio_id_pool_t {
     const char *destroy;
     const char *explosion;
+    const char *move;
 } tsc_audio_id_pool_t;
 
 typedef struct tsc_optimization_id_pool_t {
