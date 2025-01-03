@@ -33,7 +33,6 @@ void tsc_addSplash(const char *splash, double weight) {
 }
 
 void tsc_addCoreSplashes() {
-    tsc_addSplash("Beware of viruses lurking in mods!", 10);
     tsc_addSplash("When in doubt, nuke it", 2);
     tsc_addSplash("Optimized by nerds for nerds", 0.5);
     tsc_addSplash("tim travl", 1);
@@ -42,6 +41,8 @@ void tsc_addCoreSplashes() {
     tsc_addSplash("Never gonna give you up", 0.01);
 #ifdef TSC_TURBO
     tsc_addSplash("Who needs mods when you have speed", 10);
+#else
+    tsc_addSplash("Beware of viruses lurking in mods!", 10);
 #endif
     tsc_addSplash("Check out Create Mod", 1);
     tsc_addSplash("tpc bad", 1);
