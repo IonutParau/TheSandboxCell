@@ -389,7 +389,7 @@ void tsc_drawGrid() {
     float selthickness = renderingCamera.cellSize / 4;
     float selrowpad = renderingCamera.cellSize;
     float selbtnsize = renderingCamera.cellSize * 2;
-    float selbtnpad = renderingCamera.cellSize / 2;
+    float selbtnpad = selbtnsize / 4;
 
     if(renderingIsSelecting) {
         selection_t fixedSel = tsc_fixSelection(renderingSelection);
@@ -414,6 +414,8 @@ void tsc_drawGrid() {
 
         DrawRectangleLinesEx(rect, selthickness, WHITE);
         DrawRectangle(selx, sely, selw, selh, GetColor(0x00000066));
+        float sizeHeight = (float)GetScreenHeight()/40;
+        DrawText(TextFormat("%d x %d\n", width, height), selx, sely - sizeHeight, sizeHeight, WHITE);
     } else if(renderingIsPasting) {
         int mx = tsc_cellMouseX();
         int my = tsc_cellMouseY();
@@ -466,6 +468,10 @@ void tsc_drawGrid() {
 
     tsc_ui_pushFrame(renderingGameUI);
     if(renderingIsSelecting && !renderingIsDragging) {
+        float minselbtnsize = (float)GetScreenWidth()/40;
+        if(selbtnsize < minselbtnsize) {
+            selbtnsize = minselbtnsize;
+        }
         tsc_ui_row({
             tsc_ui_image(builtin.textures.copy, selbtnsize, selbtnsize);
             tsc_ui_button(renderingSelectionButtons.copy);
@@ -477,7 +483,7 @@ void tsc_drawGrid() {
             tsc_ui_button(renderingSelectionButtons.del);
             tsc_ui_pad(selbtnpad, selbtnpad);
         });
-        tsc_ui_translate(selx, sely + selh + selrowpad);
+        tsc_ui_translate(selx, sely + selh + (selrowpad < selbtnsize ? selrowpad : selbtnsize));
     }
     int height = GetScreenHeight();
     int padding = 10;
@@ -648,11 +654,16 @@ void tsc_handleRenderInputs() {
     if(IsKeyDown(KEY_D)) {
         renderingCamera.x += speed * delta;
     }
-
-    if(IsKeyPressed(KEY_ESCAPE) && !isGameTicking && isGamePaused) {
-        tsc_currentMenu = "main";
-        tsc_nukeGrids();
-        return; // game is done.
+   
+    if(IsKeyPressed(KEY_ESCAPE)) {
+        if(renderingIsSelecting && !renderingIsDragging) {
+            renderingIsSelecting = false;
+            renderingIsDragging = false;
+        } else if(!isGameTicking && isGamePaused) {
+            tsc_currentMenu = "main";
+            tsc_nukeGrids();
+            return; // game is done.
+        }
     }
 
     if(IsKeyPressed(KEY_Q)) {
@@ -752,10 +763,6 @@ void tsc_handleRenderInputs() {
         renderingSelection.ey = tsc_cellMouseY();
     }
 
-    if(renderingIsSelecting && !renderingIsDragging && IsKeyPressed(KEY_ESCAPE)) {
-        renderingIsSelecting = false;
-        renderingIsDragging = false;
-    }
 
     if(IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE)) {
         renderingIsDragging = false;
@@ -842,7 +849,7 @@ void tsc_handleRenderInputs() {
         tsc_setZoomLevel(32.0 * (pow(2, tsc_zoomScrollTotal / 1.5)));
     }
 
-    if(IsKeyPressed(KEY_SPACE)) {
+    if(IsKeyPressed(KEY_SPACE) && !renderingIsPasting && !renderingIsSelecting && !renderingIsDragging && !tsc_isResizingGrid) {
         isGamePaused = !isGamePaused;
     }
 
