@@ -118,6 +118,11 @@ void tsc_resetRendering() {
     isInitial = true;
     renderingCellBrushSize = 0;
     renderingCellBrushId = NULL;
+    renderingIsSelecting = false;
+    renderingIsPasting = false;
+    tsc_isResizingGrid = false;
+    tsc_sideResized = 4;
+    tsc_sideExtension = 0;
     tsc_zoomScrollTotal = 0;
     tsc_brushScrollBuf = 0;
     trueApproximationSize = renderingApproximationSize;
@@ -712,18 +717,22 @@ void tsc_handleRenderInputs() {
         }
     }
 
-#define CELL_KEY(key, cell) if(IsKeyPressed(key)) currentId = cell
+#define CELL_KEY(key1, key2, cell) do {if(IsKeyPressed(key1) || (ch == key2)) currentId = cell;} while(0)
 
-    CELL_KEY(KEY_KP_0, builtin.placeable);
-    CELL_KEY(KEY_KP_1, builtin.generator);
-    CELL_KEY(KEY_KP_2, builtin.rotator_cw);
-    CELL_KEY(KEY_KP_3, builtin.rotator_ccw);
-    CELL_KEY(KEY_KP_4, builtin.mover);
-    CELL_KEY(KEY_KP_5, builtin.push);
-    CELL_KEY(KEY_KP_6, builtin.slide);
-    CELL_KEY(KEY_KP_7, builtin.enemy);
-    CELL_KEY(KEY_KP_8, builtin.trash);
-    CELL_KEY(KEY_KP_9, builtin.wall);
+    while(true) {
+        char ch = GetCharPressed();
+        if(ch == 0) break;
+        CELL_KEY(KEY_KP_0, '0', builtin.placeable);
+        CELL_KEY(KEY_KP_1, '1', builtin.generator);
+        CELL_KEY(KEY_KP_2, '2', builtin.rotator_cw);
+        CELL_KEY(KEY_KP_3, '3', builtin.rotator_ccw);
+        CELL_KEY(KEY_KP_4, '4', builtin.mover);
+        CELL_KEY(KEY_KP_5, '5', builtin.push);
+        CELL_KEY(KEY_KP_6, '6', builtin.slide);
+        CELL_KEY(KEY_KP_7, '7', builtin.enemy);
+        CELL_KEY(KEY_KP_8, '8', builtin.trash);
+        CELL_KEY(KEY_KP_9, '9', builtin.wall);
+    }
 
 #undef CELL_KEY
 

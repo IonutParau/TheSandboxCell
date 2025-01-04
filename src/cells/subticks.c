@@ -327,6 +327,7 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
     #endif
     // Not worth the overhead
     if(currentGrid->width * currentGrid->height < 10000) parallel = 0;
+    if(workers_isDisabled()) parallel = 0;
     char spacing = subtick->spacing;
 
     // If bad, blame Blendy
@@ -568,6 +569,7 @@ void tsc_subtick_run() {
     #ifdef TSC_SINGLE_THREAD
         shouldBeParallel = 0;
     #endif
+    if(workers_isDisabled()) shouldBeParallel = 0;
     if(currentGrid->width * currentGrid->height < 10000) shouldBeParallel = 0;
     if(shouldBeParallel) {
         // This absolutely evil hack will call the tsc_subtick_reset with a data pointer who's address is the x.

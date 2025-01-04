@@ -118,9 +118,14 @@ static worker_task_info_t workers_getTask() {
     return workers_channel.info[--workers_channel.len];
 }
 
-static int workers_worker(void *_) {
+static int workers_worker(void *pid) {
+    size_t id = (size_t)pid;
     mtx_lock(&workers_channel.lock);
     while(1) {
+        if(id >= workers_count) {
+            mtx_unlock(&workers_channel.lock);
+            thrd_exit(0);
+        }
         worker_task_info_t task = workers_getTask();
         if(task.task == NULL) {
             cnd_wait(&workers_channel.taskGiven, &workers_channel.lock);
@@ -136,6 +141,39 @@ static int workers_worker(void *_) {
     return 0;
 }
 
+void workers_setAmount(int newCount) {
+    size_t amount = workers_idealAmount();
+    while(newCount < 0) {
+        newCount += amount;
+    }
+    // 0 threads is valid btw!
+    if(newCount > amount) {
+        newCount = amount;
+    }
+    size_t old = workers_count;
+    workers_count = newCount;
+    if(workers_count == 0) {
+        // Nothing left
+        free(workers_threads);
+        workers_threads = NULL;
+        cnd_broadcast(&workers_channel.taskGiven);
+    } else if(workers_count < old) {
+        // Shrink
+        workers_threads = realloc(workers_threads, sizeof(thrd_t) * workers_count);
+        cnd_broadcast(&workers_channel.taskGiven);
+    } else if(workers_count > old) {
+        // Grow
+        workers_threads = realloc(workers_threads, sizeof(thrd_t) * workers_count);
+        for(size_t i = old; i < workers_count; i++) {
+            thrd_create(workers_threads + i, workers_worker, (void *)(size_t)i);
+        }
+    }
+}
+
+bool workers_isDisabled() {
+    return workers_count == 0;
+}
+
 void workers_setup(int count) {
     mtx_init(&workers_channel.lock, mtx_recursive);
     cnd_init(&workers_channel.taskCompleted);
@@ -146,19 +184,23 @@ void workers_setup(int count) {
     workers_count = count;
     workers_threads = malloc(sizeof(thrd_t) * count);
     for(int i = 0; i < count; i++) {
-        thrd_create(workers_threads + i, &workers_worker, NULL);
+        thrd_create(workers_threads + i, &workers_worker, (void *)(size_t)i);
     }
 }
 
-void workers_setupBest() {
+size_t workers_idealAmount() {
 #ifdef _WIN32
     SYSTEM_INFO info;
     GetSystemInfo(&info);
-    workers_setup(info.dwNumberOfProcessors);
+    return info.dwNumberOfProcessors;
 #endif
 #ifdef linux
-    workers_setup(sysconf(_SC_NPROCESSORS_ONLN));
+    return sysconf(_SC_NPROCESSORS_ONLN);
 #endif
+}
+
+void workers_setupBest() {
+    workers_setup(workers_idealAmount());
 }
 
 void workers_addTask(worker_task_t *task, void *data) {

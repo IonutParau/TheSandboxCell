@@ -346,6 +346,10 @@ void tsc_settingHandler(const char *title) {
     } else if(title == builtin.settings.mtpf) {
         multiTickPerFrame = tsc_toBoolean(tsc_getSetting(builtin.settings.mtpf));
         tsc_signalUpdateShouldHappen();
+    } else if(title == builtin.settings.threadCount) {
+        const char *threadCountStr = tsc_toString(tsc_getSetting(builtin.settings.threadCount));
+        int threadCount = atoi(threadCountStr);
+        workers_setAmount(threadCount);
     }
 }
 

@@ -117,8 +117,8 @@ void tsc_ui_center(int width, int height);
 void tsc_ui_box(Color background);
 
 // Macros
-#define tsc_ui_row(body) {tsc_ui_pushRow(); body; tsc_ui_finishRow();}
-#define tsc_ui_column(body) {tsc_ui_pushColumn(); body; tsc_ui_finishColumn();}
-#define tsc_ui_stack(body) {tsc_ui_pushStack(); body; tsc_ui_finishStack();}
+#define tsc_ui_row(body) do {tsc_ui_pushRow(); body; tsc_ui_finishRow();} while(0)
+#define tsc_ui_column(body) do {tsc_ui_pushColumn(); body; tsc_ui_finishColumn();} while(0)
+#define tsc_ui_stack(body) do {tsc_ui_pushStack(); body; tsc_ui_finishStack();} while(0)
 
 #endif
