@@ -381,9 +381,11 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                         if(cell->updated) continue;
                         #endif
                         if(cell->rot != rot) continue;
-                        cell->updated = true;
                         for(size_t i = 0; i < subtick->idc; i++) {
                             if(subtick->ids[i] == cell->id) {
+                                #ifndef TSC_TURBO
+                                cell->updated = true;
+                                #endif
                                 tsc_celltable *table = tsc_cell_getTable(cell);
                                 if(table == NULL) break;
                                 if(table->update == NULL) break;
@@ -401,9 +403,11 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                         if(cell->updated) continue;
                         #endif
                         if(cell->rot != rot) continue;
-                        cell->updated = true;
                         for(size_t i = 0; i < subtick->idc; i++) {
                             if(subtick->ids[i] == cell->id) {
+                                #ifndef TSC_TURBO
+                                cell->updated = true;
+                                #endif
                                 tsc_celltable *table = tsc_cell_getTable(cell);
                                 if(table == NULL) break;
                                 if(table->update == NULL) break;

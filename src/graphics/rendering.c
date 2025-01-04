@@ -486,7 +486,7 @@ void tsc_drawGrid() {
     if(!tsc_isResizingGrid) {
         // Cellbar background
         tsc_ui_space(GetScreenWidth());
-        tsc_ui_box(GetColor(0x00000055));
+        tsc_ui_box(GetColor(tsc_queryOptionalColor("cellbarColor", 0x00000055)));
         tsc_ui_translate(0, height - rowHeight);
         tsc_buildCellbar(tsc_rootCategory(), renderingCellButtons, cellButton, padding, 0);
         tsc_ui_render();
