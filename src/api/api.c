@@ -406,7 +406,7 @@ void tsc_loadSettings() {
     const char *performance = tsc_addSettingCategory("performance", "Performance");
     const char *graphics = tsc_addSettingCategory("graphics", "Graphics");
     const char *audio = tsc_addSettingCategory("audio", "Audio");
-    const char *saving = tsc_addSettingCategory("saving", "Saving");
+    const char *saving = tsc_addSettingCategory("saving", "Saving (currently empty)");
 
     char *tc = NULL;
     asprintf(&tc, "%d", workers_amount());
@@ -419,7 +419,7 @@ void tsc_loadSettings() {
     tsc_setSetting(builtin.settings.mtpf, tsc_boolean(multiTickPerFrame));
 
     builtin.settings.vsync = tsc_addSetting("vsync", "V-Sync", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
-    builtin.settings.fullscreen = tsc_addSetting("fullscreen", "Fullscreen", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
+    builtin.settings.fullscreen = tsc_addSetting("fullscreen", "Fullscreen (currently broken)", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
 
     float volumes[2] = {0, 1};
     builtin.settings.sfxVolume = tsc_addSetting("sfxVolume", "SFX Volume", audio, TSC_SETTING_SLIDER, &volumes, tsc_settingHandler);

@@ -937,6 +937,25 @@ void tsc_ui_finishRow() {
     tsc_ui_popFrame();
 }
 
+void tsc_ui_pushColumn() {
+    ui_frame *frame = tsc_ui_topFrame();
+    if(frame == NULL) return;
+    ui_node *node = tsc_ui_askFrame(frame, UI_COLUMN);
+    if(node == NULL) {
+        node = malloc(sizeof(ui_node));
+        node->tag = UI_COLUMN;
+        node->row = tsc_ui_newFrame();
+        tsc_ui_backupInFrame(frame, node);
+    }
+    tsc_ui_giveFrame(frame, node);
+    tsc_ui_pushFrame(node->row);
+    tsc_ui_reset();
+}
+
+void tsc_ui_finishColumn() {
+    tsc_ui_popFrame();
+}
+
 void tsc_ui_translate(int x, int y) {
     ui_frame *frame = tsc_ui_topFrame();
     if(frame == NULL) return;

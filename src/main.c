@@ -195,7 +195,30 @@ int main(int argc, char **argv) {
     tsc_addCoreSplashes();
     const char *splash = tsc_randomSplash();
 
-    const char *creditsContent = tsc_hasfile("CREDITS.txt") ? tsc_allocfile("CREDITS.txt", NULL) : NULL;
+    char *creditsContent = tsc_hasfile("CREDITS.txt") ? tsc_allocfile("CREDITS.txt", NULL) : "No CREDITS.txt";
+    int creditsLineCount = 1;
+    for(size_t i = 0; creditsContent[i] != '\0'; i++) {
+        if(creditsContent[i] == '\n') creditsLineCount++;
+    }
+    const char **creditsLines = malloc(sizeof(const char *) * creditsLineCount);
+    const char *creditsLineStart = creditsContent;
+    {
+        size_t i = 0;
+        size_t j = 0;
+        while(true) {
+            if(creditsContent[i] == '\0') {
+                creditsLines[j] = creditsLineStart;
+                break;
+            }
+            if(creditsContent[i] == '\n') {
+                creditsContent[i] = '\0';
+                creditsLines[j] = creditsLineStart;
+                creditsLineStart = creditsContent + i + 1;
+                j++;
+            }
+            i++;
+        }
+    }
 
     while(!WindowShouldClose()) {
         BeginDrawing();
@@ -465,8 +488,12 @@ int main(int argc, char **argv) {
             }
         }
         if(tsc_streql(tsc_currentMenu, "credits")) {
-            tsc_ui_bringBackFrame(tsc_creditsMenu);
-            tsc_ui_text(creditsContent == NULL ? "No CREDITS.txt" : creditsContent, 50, WHITE);
+            tsc_ui_pushFrame(tsc_creditsMenu);
+            tsc_ui_column({
+                for(size_t i = 0; i < creditsLineCount; i++) {
+                    tsc_ui_text(creditsLines[i], 50, WHITE);
+                }
+            });
             tsc_ui_align(0.5, 0.5, width, height);
             tsc_ui_render();
             tsc_ui_popFrame();
