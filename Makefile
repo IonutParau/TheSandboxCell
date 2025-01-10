@@ -27,6 +27,12 @@ ifeq ($(MODE), TURBO)
 	ifeq ($(CC), gcc)
 		CFLAGS += -flto=auto
 	endif
+	ifeq ($(CC), clang)
+		CFLAGS += -flto=thin
+	endif
+	ifeq ($(LINKER), clang)
+		LFLAGS += -flto=thin
+	endif
 	LFLAGS += -Ofast
 endif
 
