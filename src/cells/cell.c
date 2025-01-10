@@ -1,6 +1,7 @@
 #include "grid.h"
 #include "../utils.h"
 #include "../graphics/resources.h"
+#include "../api/api.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -8,17 +9,17 @@
 tsc_cell_id_pool_t builtin;
 
 void tsc_init_builtin_ids() {
-    builtin.push = tsc_strintern("push");
-    builtin.slide = tsc_strintern("slide");
-    builtin.mover = tsc_strintern("mover");
-    builtin.trash = tsc_strintern("trash");
-    builtin.enemy = tsc_strintern("enemy");
-    builtin.generator = tsc_strintern("generator");
-    builtin.placeable = tsc_strintern("place");
-    builtin.rotator_cw = tsc_strintern("rotator_cw");
-    builtin.rotator_ccw = tsc_strintern("rotator_ccw");
-    builtin.empty = tsc_strintern("empty");
-    builtin.wall = tsc_strintern("wall");
+    builtin.push = tsc_registerCell("push", "Push", "Can be pushed from all directions");
+    builtin.slide = tsc_registerCell("slide", "Slide", "Can be pushed horizontally");
+    builtin.mover = tsc_registerCell("mover", "Mover", "Moves forward one tile per tick");
+    builtin.trash = tsc_registerCell("trash", "Trash", "Deletes anything that moves into it");
+    builtin.enemy = tsc_registerCell("enemy", "Enemy", "Like Trash but also dies in the process");
+    builtin.generator = tsc_registerCell("generator", "Generator", "Duplicates the cell behind it");
+    builtin.placeable = tsc_registerCell("place", "Placeable", "Meant to represent areas the player may modify.\nMostly used in puzzles and vaults.");
+    builtin.rotator_cw = tsc_registerCell("rotator_cw", "Rotator CW", "Rotates its adjacent neighbours 90 degrees clockwise per tick.");
+    builtin.rotator_ccw = tsc_registerCell("rotator_ccw", "Rotator CCW", "Rotates its adjacent neighbours 90 degrees counter-clockwise per tick.");
+    builtin.empty = tsc_registerCell("empty", "Empty", "Literally pure nothingness");
+    builtin.wall = tsc_registerCell("wall", "Wall", "Immobile");
 
     tsc_celltable *placeTable = tsc_cell_newTable(builtin.placeable);
     placeTable->flags = TSC_FLAGS_PLACEABLE;

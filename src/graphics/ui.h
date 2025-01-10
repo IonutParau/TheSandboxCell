@@ -115,6 +115,7 @@ void tsc_ui_pad(int x, int y);
 void tsc_ui_align(float x, float y, int width, int height);
 void tsc_ui_center(int width, int height);
 void tsc_ui_box(Color background);
+void tsc_ui_tooltip(const char *name, int nameSize, const char *description, int descSize, int maxLineLen);
 
 // Macros
 #define tsc_ui_row(body) do {tsc_ui_pushRow(); body; tsc_ui_finishRow();} while(0)

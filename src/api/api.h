@@ -34,7 +34,15 @@ bool tsc_hasLoadedMod(const char *id);
 // In case the mod forgets
 const char *tsc_currentModID();
 
+typedef struct tsc_cellprofile_t {
+    const char *id;
+    const char *name;
+    const char *desc;
+} tsc_cellprofile_t;
+
 const char *tsc_registerCell(const char *id, const char *name, const char *description);
+
+tsc_cellprofile_t *tsc_getProfile(const char *id);
 
 typedef struct tsc_cellbutton {
     void *payload;

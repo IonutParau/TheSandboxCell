@@ -249,25 +249,47 @@ static int tsc_cellScreenY(int screenY) {
 static void tsc_buildCellbar(tsc_category *category, tsc_categorybutton *buttons, int cellButton, int padding, int y) {
     int height = GetScreenHeight();
     int rowHeight = cellButton + padding * 2;
+    bool hasOpen = false;
+    for(size_t i = 0; i < category->itemc; i++) {
+        if(category->items[i].kind == TSC_CATEGORY_SUBCATEGORY && category->items[i].category->open) {
+            hasOpen = true;
+        }
+    }
     tsc_ui_row({
         for(size_t i = 0; i < category->itemc; i++) {
             if(category->items[i].kind == TSC_CATEGORY_SUBCATEGORY) {
-                tsc_ui_image(category->items[i].category->icon, cellButton, cellButton);
-                tsc_ui_button(buttons[i].category);
+                tsc_category *sub = category->items[i].category;
+                tsc_ui_image(sub->icon, cellButton, cellButton);
+                if(tsc_ui_button(buttons[i].category) == UI_BUTTON_HOVER || sub->open) {
+                    tsc_ui_translate(0, -10);
+                }
+                if(!sub->open && !hasOpen) tsc_ui_tooltip(sub->title, 30, sub->description, 20, 100);
                 tsc_ui_pad(padding, padding);
             } else if(category->items[i].kind == TSC_CATEGORY_BUTTON) {
-                tsc_ui_image(category->items[i].button.icon, cellButton, cellButton);
-                tsc_ui_button(buttons[i].button);
+                tsc_cellbutton btn = category->items[i].button;
+                tsc_ui_image(btn.icon, cellButton, cellButton);
+                if(tsc_ui_button(buttons[i].button) == UI_BUTTON_HOVER) {
+                    tsc_ui_translate(0, -10);
+                }
+                if(!hasOpen) tsc_ui_tooltip(btn.name, 30, btn.desc, 20, 100);
                 tsc_ui_pad(padding, padding);
             } else {
                 tsc_ui_image(category->items[i].cellID, cellButton, cellButton);
-                tsc_ui_button(buttons[i].cell);
+                if(tsc_ui_button(buttons[i].cell) == UI_BUTTON_HOVER) {
+                    tsc_ui_translate(0, -10);
+                }
+                if(!hasOpen) {
+                    tsc_cellprofile_t *profile = tsc_getProfile(category->items[i].cellID);
+                    if(profile != NULL) {
+                        tsc_ui_tooltip(profile->name, 30, profile->desc, 20, 100);
+                    }
+                }
                 tsc_ui_pad(padding, padding);
             }
         }
     });
     tsc_ui_translate(0, height - rowHeight - y);
-    for(size_t i = 0; i < category->itemc; i++) {
+    if(hasOpen) for(size_t i = 0; i < category->itemc; i++) {
         if(category->items[i].kind == TSC_CATEGORY_SUBCATEGORY && category->items[i].category->open) {
             tsc_buildCellbar(category->items[i].category, buttons[i].items, cellButton, padding, y + rowHeight);
         }

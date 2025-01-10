@@ -21,15 +21,15 @@ set(CMAKE_C_FLAGS "-fPIC")
 set(CMAKE_C_FLAGS_DEBUG "-g3")
 set(CMAKE_C_FLAGS_RELEASE "-O3")
 
-if(TSC_MODE EQUAL "DEBUG")
+if(TSC_MODE STREQUAL "DEBUG")
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-if(TSC_MODE EQUAL "RELEASE")
+if(TSC_MODE STREQUAL "RELEASE")
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-if(TSC_MODE EQUAL "TURBO")
+if(TSC_MODE STREQUAL "TURBO")
     set(CMAKE_BUILD_TYPE Release)
     set(CMAKE_C_FLAGS_RELEASE "-Ofast")
     add_compile_definitions(TSC_TURBO)

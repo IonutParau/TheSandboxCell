@@ -107,9 +107,55 @@ const char *tsc_currentModID() {
     return currentMod;
 }
 
+tsc_cellprofile_t *tsc_profiles = NULL;
+size_t tsc_profileLen = 16;
+
 const char *tsc_registerCell(const char *id, const char *name, const char *description) {
     const char *actualID = tsc_strintern(tsc_padWithModID(id));
+    if(tsc_profiles == NULL) {
+        tsc_profiles = malloc(sizeof(tsc_cellprofile_t) * tsc_profileLen);
+        for(size_t i = 0; i < tsc_profileLen; i++) {
+            tsc_profiles[i].id = NULL; // the way we mark it as unused
+        }
+    }
+insert_attempt:;
+    size_t i = (size_t)actualID / _Alignof(max_align_t);
+    i %= tsc_profileLen;
+    if(tsc_profiles[i].id == NULL) {
+        tsc_profiles[i].id = actualID;
+        tsc_profiles[i].name = name;
+        tsc_profiles[i].desc = description;
+    } else if(tsc_profiles[i].id == actualID) {
+        tsc_profiles[i].name = name;
+        tsc_profiles[i].desc = description;
+    } else {
+        // Space occupied, relocate.
+        size_t newLen = tsc_profileLen * 2;
+        tsc_cellprofile_t *newProfiles = malloc(sizeof(tsc_cellprofile_t) * newLen);
+        for(size_t i = 0; i < newLen; i++) {
+            newProfiles[i].id = NULL;
+        }
+        for(size_t i = 0; i < tsc_profileLen; i++) {
+            size_t j = (size_t)tsc_profiles[i].id / _Alignof(max_align_t);
+            j %= newLen;
+            newProfiles[j] = tsc_profiles[i];
+        }
+        free(tsc_profiles);
+        tsc_profiles = newProfiles;
+        tsc_profileLen = newLen;
+        goto insert_attempt;
+    }
     return actualID;
+}
+
+tsc_cellprofile_t *tsc_getProfile(const char *id) {
+    if(tsc_profiles == NULL) return NULL;
+    size_t i = (size_t)id / _Alignof(max_align_t); // Fancy magic to reduce RAM usage.
+    i %= tsc_profileLen;
+    if(tsc_profiles[i].id != id) {
+        return NULL;
+    }
+    return tsc_profiles + i;
 }
 
 tsc_category *rootCategory;

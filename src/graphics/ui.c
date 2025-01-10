@@ -88,6 +88,16 @@ typedef struct ui_translate {
     int y;
 } ui_translate;
 
+typedef struct ui_tooltip {
+    ui_node *child;
+    const char *name;
+    int nameSize;
+    const char *description;
+    int descSize;
+    int maxLineLen;
+    char *lineBuffer;
+} ui_tooltip;
+
 #define UI_TEXT 0
 #define UI_IMAGE 1
 #define UI_SPACING 2
@@ -102,6 +112,7 @@ typedef struct ui_translate {
 #define UI_COLUMN 11
 #define UI_STACK 12
 #define UI_TRANSLATE 13
+#define UI_TOOLTIP 14
 
 typedef struct ui_node {
     size_t tag;
@@ -120,10 +131,12 @@ typedef struct ui_node {
         ui_frame *column;
         ui_frame *stack;
         ui_translate *translate;
+        ui_tooltip *tooltip;
     };
 } ui_node;
 
 static void ui_destroyNode(ui_node *node) {
+    // TODO: actually delete stuff and not just leak memory
     free(node);
 }
 
@@ -168,6 +181,8 @@ static int ui_widthOf(ui_node *node) {
         return 0;
     } else if (node->tag == UI_TRANSLATE) {
         return ui_widthOf(node->translate->child);
+    } else if(node->tag == UI_TOOLTIP) {
+        return ui_widthOf(node->tooltip->child);
     }
     
     return 0;
@@ -213,6 +228,8 @@ static int ui_heightOf(ui_node *node) {
         return 0;
     } else if (node->tag == UI_TRANSLATE) {
         return ui_heightOf(node->translate->child);
+    } else if(node->tag == UI_TOOLTIP) {
+        return ui_heightOf(node->tooltip->child);
     }
     
     return 0;
@@ -324,6 +341,81 @@ static void ui_drawNode(ui_node *node, int x, int y) {
         ui_drawNode(align->child, x + offX, y + offY);
         return;
     }
+
+    if(node->tag == UI_TOOLTIP) {
+        ui_tooltip *tooltip = node->tooltip;
+        ui_drawNode(tooltip->child, x, y);
+        int childWidth = ui_widthOf(tooltip->child);
+        int childHeight = ui_heightOf(tooltip->child);
+        int mx = GetMouseX();
+        int my = GetMouseY();
+        if(mx < x || my < y || mx > x + childWidth || my > y + childHeight) {
+            return;
+        }
+        int maxWidth = MeasureText(tooltip->name, tooltip->nameSize);
+        int spacing = tooltip->descSize / 5;
+        int height = tooltip->nameSize;
+
+        {
+            // Loop 1: Measurements
+            int lineOff = 0;
+            int lineLen = 0;
+            const char *desc = tooltip->description;
+            char *buffer = tooltip->lineBuffer;
+
+            while(true) {
+                if(desc[lineOff+lineLen] == '\0') goto lineDone;
+                if(desc[lineOff+lineLen] == '\n') goto lineDone;
+                if(lineLen == tooltip->maxLineLen) goto lineDone;
+
+                lineLen++;
+                continue;
+
+            lineDone:
+                memcpy(buffer, desc + lineOff, lineLen * sizeof(char));
+                buffer[lineLen] = '\0';
+                int lineWidth = MeasureText(buffer, tooltip->descSize);
+                if(lineWidth > maxWidth) maxWidth = lineWidth;
+                height += spacing + tooltip->descSize;
+                if(desc[lineOff+lineLen] == '\0') break;
+                lineOff += lineLen + 1;
+                lineLen = 0;
+            }
+        }
+
+        // Draw title
+        if(x + maxWidth > GetScreenWidth()) {
+            x = GetScreenWidth() - maxWidth;
+        }
+        DrawText(tooltip->name, x, y - height, tooltip->nameSize, WHITE);
+        {
+            // Loop 2: Rendering 
+            int lineOff = 0;
+            int lineLen = 0;
+            const char *desc = tooltip->description;
+            char *buffer = tooltip->lineBuffer;
+            int offY = 0;
+
+            while(true) {
+                if(desc[lineOff+lineLen] == '\0') goto lineDone2;
+                if(desc[lineOff+lineLen] == '\n') goto lineDone2;
+                if(lineLen == tooltip->maxLineLen) goto lineDone2;
+
+                lineLen++;
+                continue;
+
+            lineDone2:
+                memcpy(buffer, desc + lineOff, lineLen * sizeof(char));
+                buffer[lineLen] = '\0';
+                offY += spacing + tooltip->descSize;
+                DrawText(buffer, x, y - height + offY, tooltip->descSize, WHITE);
+                if(desc[lineOff+lineLen] == '\0') break;
+                lineOff += lineLen + 1;
+                lineLen = 0;
+            }
+        }
+        return;
+    }
 }
 
 static void ui_updateFrame(ui_frame *frame, int x, int y, int mx, int my, double delta);
@@ -392,6 +484,11 @@ start:
         node = align->child;
         goto start;
     }
+
+    if(node->tag == UI_TOOLTIP) {
+        node = node->tooltip->child;
+        goto start;
+    }
 }
 
 static int ui_frameAbsorbs(ui_frame *frame, int x, int y, int px, int py, int mx, int my);
@@ -423,6 +520,9 @@ static int ui_nodeAbsorbs(ui_node *node, int x, int y, int px, int py) {
         int offX = align->width * align->x - ui_widthOf(align->child) * align->x;
         int offY = align->height * align->y - ui_heightOf(align->child) * align->y;
         return ui_nodeAbsorbs(align->child, x + offX, y + offY, px, py);
+    }
+    if(node->tag == UI_TOOLTIP) {
+        return ui_nodeAbsorbs(node->tooltip->child, x, y, px, py);
     }
     return false;
 }
@@ -903,5 +1003,37 @@ void tsc_ui_box(Color background) {
     }
     node->box->color = background;
     node->box->child = child;
+    tsc_ui_giveFrame(frame, node);
+}
+
+void tsc_ui_tooltip(const char *name, int nameSize, const char *description, int descSize, int maxLineLen) {
+    ui_frame *frame = tsc_ui_topFrame();
+    if(frame == NULL) return;
+    ui_node *child = tsc_ui_takeFromFrame(frame);
+    ui_node *node = tsc_ui_askFrame(frame, UI_TOOLTIP);
+    if(node == NULL) {
+        node = malloc(sizeof(ui_node));
+        node->tag = UI_TOOLTIP;
+        node->tooltip = malloc(sizeof(ui_tooltip));
+        node->tooltip->child = child;
+        node->tooltip->name = name;
+        node->tooltip->nameSize = nameSize;
+        node->tooltip->description = description;
+        node->tooltip->descSize = descSize;
+        node->tooltip->maxLineLen = maxLineLen;
+        node->tooltip->lineBuffer = malloc(sizeof(char) * (maxLineLen + 1));
+        tsc_ui_backupInFrame(frame, node);
+        tsc_ui_giveFrame(frame, node);
+        return;
+    }
+    node->tooltip->child = child;
+    node->tooltip->name = name;
+    node->tooltip->nameSize = nameSize;
+    node->tooltip->description = description;
+    node->tooltip->descSize = descSize;
+    if(node->tooltip->maxLineLen != maxLineLen) {
+        node->tooltip->maxLineLen = maxLineLen;
+        node->tooltip->lineBuffer = realloc(node->tooltip->lineBuffer, sizeof(char) * (maxLineLen + 1));
+    }
     tsc_ui_giveFrame(frame, node);
 }
