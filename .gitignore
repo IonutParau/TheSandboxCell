@@ -13,8 +13,8 @@ test_thesandboxcell
 *.png~
 # Music used for debugging
 ILLEGAL_*.*
-mods/*/
-platforms/*/
-/resources/*/
-!resources/default
+/data/mods/*/
+/data/platforms/*/
+/data/resources/*/
+!/data/resources/default
 build/

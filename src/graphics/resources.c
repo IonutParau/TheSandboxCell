@@ -360,7 +360,7 @@ static void rp_init(tsc_resourcepack *pack) {
     static char path[2048];
     size_t bufsize = 2048;
 
-    snprintf(rpPath, bufsize, "resources/%s", pack->id);
+    snprintf(rpPath, bufsize, "data/resources/%s", pack->id);
     tsc_pathfix(rpPath);
 
     snprintf(path, bufsize, "%s/textures", rpPath);
@@ -389,7 +389,7 @@ tsc_resourcepack *tsc_createResourcePack(const char *id) {
     static char packFileBuf[2048];
     size_t packFileBufSize = 2048;
 
-    snprintf(packFileBuf, packFileBufSize, "resources/%s/pack.json", id);
+    snprintf(packFileBuf, packFileBufSize, "data/resources/%s/pack.json", id);
 
     char *packJson = tsc_allocfile(packFileBuf, NULL);
 
@@ -613,7 +613,7 @@ int tsc_queryOptionalColor(const char *key, int defaultColor) {
 
 const char *tsc_textures_load(tsc_resourcepack *pack, const char *id, const char *file) {
     static char filepath[1024];
-    snprintf(filepath, 1024, "mods/%s/textures/%s", tsc_currentModID(), file);
+    snprintf(filepath, 1024, "data/mods/%s/textures/%s", tsc_currentModID(), file);
     tsc_pathfix(filepath);
 
     const char *resource = tsc_strintern(tsc_padWithModID(id));
@@ -627,7 +627,7 @@ const char *tsc_textures_load(tsc_resourcepack *pack, const char *id, const char
 
 const char *tsc_sound_load(tsc_resourcepack *pack, const char *id, const char *file) {
     static char filepath[1024];
-    snprintf(filepath, 1024, "mods/%s/audio/%s", tsc_currentModID(), file);
+    snprintf(filepath, 1024, "data/mods/%s/audio/%s", tsc_currentModID(), file);
     tsc_pathfix(filepath);
 
     const char *resource = tsc_strintern(tsc_padWithModID(id));

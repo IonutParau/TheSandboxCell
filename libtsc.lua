@@ -191,6 +191,7 @@ if task == "compile" then
         if raylibDLL ~= nil and raylibDLL ~= "raylib.dll" then
             error("Raylib DLL must be raylib.dll (for Windows reasons)")
         end
+        raylibDLL = "raylib.dll"
         -- Oh fuck
         if compiler == "gcc" then
             -- We can't use gcc, we have to use x86_64-w64-mingw32-gcc
@@ -206,9 +207,9 @@ if task == "compile" then
             local files = {
                 exe,
                 library,
-                "-r resources",
-                "-r shaders",
-                "mods",
+                raylibDLL,
+                "-r data",
+                "CREDITS.txt",
             }
             if raylibDLL ~= nil then table.insert(files, raylibDLL) end
             os.execute("zip TheSandboxCell.zip " .. table.concat(files, " ") ..  " -9")

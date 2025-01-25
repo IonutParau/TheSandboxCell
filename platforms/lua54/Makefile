@@ -22,15 +22,15 @@ objects=main.o common.o api.o cell_api.o category_api.o
 LFLAGS += $(LINKLUA)
 
 all: libtsc dll
-	mkdir -p ../../platforms/lua54
-	cp $(OUTPUT) ../../platforms/lua54/$(OUTPUT)
-	cp $(LUADLL) ../../platforms/lua54/$(LUADLL)
+	mkdir -p ../../data/platforms/lua54
+	cp $(OUTPUT) ../../data/platforms/lua54/$(OUTPUT)
+	cp $(LUADLL) ../../data/platforms/lua54/$(LUADLL)
 libtsc:
-	cd ../..; lua ./libtsc.lua generate > platforms_src/lua54/src/libtsc.h
+	cd ../..; lua ./libtsc.lua generate > platforms/lua54/src/libtsc.h
 dll: $(objects)
 	$(LINKER) -shared -o $(OUTPUT) $(objects) $(LFLAGS)
 clean:
-	rm -rf ../../platforms/lua54 $(objects)
+	rm -rf ../../data/platforms/lua54 $(objects)
 main.o: src/main.c
 	$(CC) -c -fPIC -o main.o src/main.c $(CFLAGS)
 common.o: src/common.c

@@ -18,16 +18,16 @@ endif
 objects=main.o pullers.o pushers.o
 
 all: libtsc dll
-	mkdir -p ../../mods/more_movers
-	cp $(OUTPUT) ../../mods/more_movers/$(OUTPUT)
-	cp -r textures ../../mods/more_movers
-	cp config.json ../../mods/more_movers
+	mkdir -p ../../data/mods/more_movers
+	cp $(OUTPUT) ../../data/mods/more_movers/$(OUTPUT)
+	cp -r textures ../../data/mods/more_movers
+	cp config.json ../../data/mods/more_movers
 libtsc:
-	cd ../..; lua ./libtsc.lua generate > mods_src/more_movers/src/libtsc.h
+	cd ../..; lua ./libtsc.lua generate > mods/more_movers/src/libtsc.h
 dll: $(objects)
 	$(LINKER) -shared -o $(OUTPUT) $(objects) $(LFLAGS)
 clean:
-	rm -rf ../../mods/more_movers $(objects)
+	rm -rf ../../data/mods/more_movers $(objects)
 main.o: src/main.c
 	$(CC) -c -fPIC -o main.o src/main.c $(CFLAGS)
 pullers.o: src/pullers.c

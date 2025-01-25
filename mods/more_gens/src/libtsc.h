@@ -47,6 +47,12 @@ typedef struct tsc_celltable {
     int (*canMove)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, void *payload);
     char *(*signal)(tsc_cell *cell, int x, int y, const char *protocol, const char *data, tsc_cell *sender, int sx, int sy, void *payload);
     size_t flags;
+    float (*getBias)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, void *payload);
+    int (*canGenerate)(tsc_grid *grid, tsc_cell *cell, int x, int y, tsc_cell *generator, int gx, int gy, char dir, void *payload);
+    int (*isTrash)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, tsc_cell *eating, void *payload);
+    void (*onTrash)(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, tsc_cell *eating, void *payload);
+    int (*isAcid)(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy, void *payload);
+    void (*onAcid)(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy, void *payload);
 } tsc_celltable;
 
 tsc_celltable *tsc_cell_newTable(const char *id);
@@ -65,6 +71,7 @@ typedef struct tsc_texture_id_pool_t {
 typedef struct tsc_audio_id_pool_t {
     const char *destroy;
     const char *explosion;
+    const char *move;
 } tsc_audio_id_pool_t;
 
 typedef struct tsc_optimization_id_pool_t {
@@ -79,6 +86,8 @@ typedef struct tsc_setting_id_pool_t {
     const char *musicVolume;
     const char *sfxVolume;
     const char *unfocusedVolume;
+    const char *updateDelay;
+    const char *mtpf;
 } tsc_setting_id_pool_t;
 
 typedef struct tsc_id_pool_t {
@@ -296,7 +305,7 @@ tsc_resourcepack;
 
 // This is highly important shit
 // If something isn't found, it is yoinked from here.
-// If somehting isn't found here, then you'll likely get segfaults (or errors).
+// If something isn't found here, then you'll likely get segfaults (or errors).
 extern tsc_resourcepack *defaultResourcePack;
 tsc_resourcepack *tsc_getResourcePack(const char *id);
 
@@ -425,17 +434,19 @@ void tsc_ui_pad(int x, int y);
 void tsc_ui_align(float x, float y, int width, int height);
 void tsc_ui_center(int width, int height);
 void tsc_ui_box(Color background);
+void tsc_ui_tooltip(const char *name, int nameSize, const char *description, int descSize, int maxLineLen);
 
 // Macros
-#define tsc_ui_row(body) {tsc_ui_pushRow(); body; tsc_ui_finishRow();}
-#define tsc_ui_column(body) {tsc_ui_pushColumn(); body; tsc_ui_finishColumn();}
-#define tsc_ui_stack(body) {tsc_ui_pushStack(); body; tsc_ui_finishStack();}
+#define tsc_ui_row(body) do {tsc_ui_pushRow(); body; tsc_ui_finishRow();} while(0)
+#define tsc_ui_column(body) do {tsc_ui_pushColumn(); body; tsc_ui_finishColumn();} while(0)
+#define tsc_ui_stack(body) do {tsc_ui_pushStack(); body; tsc_ui_finishStack();} while(0)
 
 #endif
 #ifndef TSC_THREAD_WORKERS
 #define TSC_THREAD_WORKERS
 
 #include <stddef.h>
+#include <stdbool.h>
 
 typedef void (worker_task_t)(void *data);
 
@@ -443,6 +454,8 @@ void workers_addTask(worker_task_t *task, void *data);
 void workers_waitForTasks(worker_task_t *task, void **dataArr, size_t len);
 void workers_waitForTasksFlat(worker_task_t *task, void *dataArr, size_t dataSize, size_t len);
 int workers_amount();
+void workers_setAmount(int newCount);
+bool workers_isDisabled();
 
 #endif
 #ifndef TSC_UTILS
@@ -536,6 +549,12 @@ unsigned short tsc_getUnusedPointerShort(void *pointer);
 void *tsc_getPointerWithoutShort(void *pointer);
 // x64 only
 void *tsc_setUnusedPointerShort(void *pointer, unsigned short byte);
+
+#ifndef TSC_POSIX
+
+int asprintf(char **s, const char *fmt, ...);
+
+#endif
 
 #endif
 #ifndef TSC_VALUE_H
@@ -698,7 +717,15 @@ bool tsc_hasLoadedMod(const char *id);
 // In case the mod forgets
 const char *tsc_currentModID();
 
+typedef struct tsc_cellprofile_t {
+    const char *id;
+    const char *name;
+    const char *desc;
+} tsc_cellprofile_t;
+
 const char *tsc_registerCell(const char *id, const char *name, const char *description);
+
+tsc_cellprofile_t *tsc_getProfile(const char *id);
 
 typedef struct tsc_cellbutton {
     void *payload;
@@ -736,11 +763,10 @@ typedef struct tsc_category {
 #define TSC_SETTING_TOGGLE 0
 #define TSC_SETTING_LIST 1
 #define TSC_SETTING_SLIDER 2
-#define TSC_SETTING_INTEGER 3
-#define TSC_SETTING_NUMBER 3
-
+#define TSC_SETTING_INPUT 3
 
 typedef void tsc_settingCallback(const char *settingID);
+
 
 tsc_category *tsc_rootCategory();
 tsc_category *tsc_newCategory(const char *title, const char *description, const char *icon);
@@ -752,6 +778,7 @@ tsc_category *tsc_getCategory(tsc_category *category, const char *path);
 
 
 tsc_value tsc_getSetting(const char *settingID);
+void tsc_setSetting(const char *settingID, tsc_value v);
 const char *tsc_addSettingCategory(const char *settingCategoryID, const char *settingTitle);
 const char *tsc_addSetting(const char *settingID, const char *name, const char *categoryID, unsigned char kind, void *data, tsc_settingCallback *callback);
 

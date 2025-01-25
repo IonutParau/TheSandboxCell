@@ -38,7 +38,7 @@ static void tsc_initDLLMod(const char *id) {
     #ifdef linux
     lib = "mod.so";
     #endif
-    snprintf(buffer, 256, "mods/%s/%s", id, lib);
+    snprintf(buffer, 256, "data/mods/%s/%s", id, lib);
     tsc_pathfix(buffer);
     static char sym[256];
     snprintf(sym, 256, "%s_init", id);
@@ -88,7 +88,7 @@ static tsc_lib_t tsc_getPlatform(const char *platform) {
 #ifdef linux
     lib = "platform.so";
 #endif
-    snprintf(buffer, 256, "platforms/%s/%s", platform, lib);
+    snprintf(buffer, 256, "data/platforms/%s/%s", platform, lib);
     tsc_pathfix(buffer);
 #ifdef _WIN32
     HINSTANCE library = LoadLibraryA(buffer);
@@ -126,7 +126,7 @@ static void tsc_initPlatformMod(const char *id, const char *platform, tsc_value 
     snprintf(sym, 256, "%s_loadMod", platform);
     static char buf[256];
     char *path;
-    snprintf(buf, 256, "mods/%s", id);
+    snprintf(buf, 256, "data/mods/%s", id);
     path = tsc_strdup(buf);
     tsc_pathfix(path);
 #ifdef _WIN32
@@ -162,7 +162,7 @@ bool tsc_hasLoadedMod(const char *id) {
 void tsc_initMod(const char *id) {
     printf("Preparing to intialize %s\n", id);
     static char configpath[256];
-    snprintf(configpath, 256, "mods/%s/config.json", id);
+    snprintf(configpath, 256, "data/mods/%s/config.json", id);
     tsc_pathfix(configpath);
 
     if(!tsc_hasfile(configpath)) {
@@ -211,7 +211,9 @@ void tsc_initMod(const char *id) {
 
 void tsc_loadAllMods() {
     size_t dirfilec;
-    char **dirfiles = tsc_dirfiles("mods", &dirfilec);
+    char buffer[] = "data/mods";
+    tsc_pathfix(buffer);
+    char **dirfiles = tsc_dirfiles(buffer, &dirfilec);
     for(int i = 0; i < dirfilec; i++) {
         // This mutates, careful you dingus
         if(tsc_fextension(dirfiles[i]) == NULL) {

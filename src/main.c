@@ -155,7 +155,9 @@ int main(int argc, char **argv) {
     }
 
     size_t allPackC = 0;
-    char **allPacks = tsc_dirfiles("resources", &allPackC);
+    char buffer[] = "data/resources";
+    tsc_pathfix(buffer);
+    char **allPacks = tsc_dirfiles(buffer, &allPackC);
     for(size_t i = 0; i < allPackC; i++) {
         if(!tsc_streql(allPacks[i], "default")) {
             tsc_createResourcePack(tsc_strintern(allPacks[i]));

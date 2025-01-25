@@ -134,7 +134,7 @@ void tsc_resetRendering() {
 }
 
 void tsc_setupRendering() {
-    renderingRepeatingShader = LoadShader(NULL, tsc_pathfixi("shaders/repeating.glsl"));
+    renderingRepeatingShader = LoadShader(NULL, tsc_pathfixi("data/shaders/repeating.glsl"));
     renderingRepeatingScaleLoc = GetShaderLocation(renderingRepeatingShader, "scale");
     renderingCellTexture = LoadRenderTexture(1, 1);
     renderingGameUI = tsc_ui_newFrame();
