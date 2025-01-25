@@ -208,7 +208,10 @@ if task == "compile" then
                 exe,
                 library,
                 raylibDLL,
-                "-r data",
+                "-r data/mods",
+                "-r data/platforms",
+                "-r data/resources",
+                "-r data/shaders",
                 "CREDITS.txt",
             }
             if raylibDLL ~= nil then table.insert(files, raylibDLL) end

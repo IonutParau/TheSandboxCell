@@ -17,4 +17,5 @@ ILLEGAL_*.*
 /data/platforms/*/
 /data/resources/*/
 !/data/resources/default
+/data/settings.json
 build/

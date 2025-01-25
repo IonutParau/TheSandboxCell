@@ -144,6 +144,7 @@ extern size_t tsc_settingLen;
 extern tsc_value tsc_settingStore;
 
 void tsc_loadSettings();
+void tsc_storeSettings();
 // hideapi
 
 #endif

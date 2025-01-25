@@ -654,6 +654,7 @@ int main(int argc, char **argv) {
         tsc_music_playOrKeep();
     }
 
+    tsc_storeSettings();
     CloseWindow();
     CloseAudioDevice();
 

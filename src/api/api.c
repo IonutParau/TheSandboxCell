@@ -10,6 +10,7 @@
 #include "../graphics/resources.h"
 #include "../cells/ticking.h"
 #include "../graphics/rendering.h"
+#include "tscjson.h"
 
 typedef struct tsc_splash_t {
     const char *splash;
@@ -399,8 +400,42 @@ void tsc_settingHandler(const char *title) {
     }
 }
 
+void tsc_storeSettings() {
+    char savingPath[] = "data/settings.json";
+    tsc_pathfix(savingPath);
+    tsc_saving_buffer err = tsc_saving_newBuffer("");
+    tsc_buffer buffer = tsc_json_encode(tsc_settingStore, &err);
+    if(err.len != 0) {
+        fprintf(stderr, "Error: %s\n", err.mem);
+        exit(1);
+    }
+    FILE *settings = fopen(savingPath, "w");
+    if(settings == NULL) {
+        fprintf(stderr, "Error: unable to open %s\n", savingPath);
+        exit(1);
+    }
+    fwrite(buffer.mem, sizeof(char), buffer.len, settings);
+    fflush(settings);
+    fclose(settings);
+}
+
 void tsc_loadSettings() {
-    tsc_settingStore = tsc_object();
+    char savingPath[] = "data/settings.json";
+    tsc_pathfix(savingPath);
+    bool isDefault = false;
+    if(tsc_hasfile(savingPath)) {
+        tsc_saving_buffer err = tsc_saving_newBuffer("");
+        char *buffer = tsc_allocfile(savingPath, NULL);
+        tsc_settingStore = tsc_json_decode(buffer, &err);
+        if(err.len != 0) {
+            fprintf(stderr, "Error: %s\n", err.mem);
+            exit(1);
+        }
+        tsc_freefile(buffer);
+    } else {
+        tsc_settingStore = tsc_object(); // my man's running a fresh install
+        isDefault = true;
+    }
 
     // Load default settings
     const char *performance = tsc_addSettingCategory("performance", "Performance");
@@ -415,8 +450,6 @@ void tsc_loadSettings() {
     float updateDelayStuff[2] = {0, 1};
     builtin.settings.updateDelay = tsc_addSetting("updateDelay", "Update Delay", performance, TSC_SETTING_SLIDER, updateDelayStuff, tsc_settingHandler);
     builtin.settings.mtpf = tsc_addSetting("mtpf", "Multi-Tick Per Frame", performance, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
-    tsc_setSetting(builtin.settings.updateDelay, tsc_number(tickDelay));
-    tsc_setSetting(builtin.settings.mtpf, tsc_boolean(multiTickPerFrame));
 
     builtin.settings.vsync = tsc_addSetting("vsync", "V-Sync", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
     builtin.settings.fullscreen = tsc_addSetting("fullscreen", "Fullscreen (currently broken)", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
@@ -425,8 +458,16 @@ void tsc_loadSettings() {
     builtin.settings.sfxVolume = tsc_addSetting("sfxVolume", "SFX Volume", audio, TSC_SETTING_SLIDER, &volumes, tsc_settingHandler);
     builtin.settings.musicVolume = tsc_addSetting("musicVolume", "Music Volume", audio, TSC_SETTING_SLIDER, &volumes, tsc_settingHandler);
 
-    tsc_setSetting(builtin.settings.sfxVolume, tsc_number(1));
-    tsc_setSetting(builtin.settings.musicVolume, tsc_number(0.5));
+    if(isDefault) {
+        tsc_setSetting(builtin.settings.updateDelay, tsc_number(tickDelay));
+        tsc_setSetting(builtin.settings.mtpf, tsc_boolean(multiTickPerFrame));
+        
+        tsc_setSetting(builtin.settings.sfxVolume, tsc_number(1));
+        tsc_setSetting(builtin.settings.musicVolume, tsc_boolean(0));
+    } else {
+        tickDelay = tsc_toNumber(tsc_getSetting(builtin.settings.updateDelay));
+        multiTickPerFrame = tsc_toNumber(tsc_getSetting(builtin.settings.mtpf));
+    }
 }
 
 tsc_value tsc_getSetting(const char *settingID) {
