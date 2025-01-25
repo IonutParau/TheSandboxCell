@@ -28,10 +28,10 @@ ifeq ($(MODE), TURBO)
 		CFLAGS += -flto=auto
 	endif
 	ifeq ($(CC), clang)
-		CFLAGS += -flto=thin
+		CFLAGS += -flto=full
 	endif
 	ifeq ($(LINKER), clang)
-		LFLAGS += -flto=thin
+		LFLAGS += -flto=full
 	endif
 	LFLAGS += -Ofast
 endif
@@ -42,10 +42,10 @@ ifeq ($(MODE), RELEASE)
 		CFLAGS += -flto=auto
 	endif
 	ifeq ($(CC), clang)
-		CFLAGS += -flto=thin
+		CFLAGS += -flto=full
 	endif
 	ifeq ($(LINKER), clang)
-		LFLAGS += -flto=thin
+		LFLAGS += -flto=full
 	endif
 	# No LTO with clang, because it keeps causing linking issues
 	#ifeq ($(CC), clang)

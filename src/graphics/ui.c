@@ -137,6 +137,51 @@ typedef struct ui_node {
 
 static void ui_destroyNode(ui_node *node) {
     // TODO: actually delete stuff and not just leak memory
+    // CHILD NODE CAN STILL BE IN BACKUPS!!!!! THUS NO DELETING CHILD NODES!!!!
+    if(node->tag == UI_TEXT) {
+        free(node->text->text);
+        free(node->text);
+    }
+    if(node->tag == UI_IMAGE) {
+        free(node->image);
+    }
+    if(node->tag == UI_BUTTON) {
+        free(node->button);
+    }
+    if(node->tag == UI_SLIDER) {
+        free(node->slider);
+    }
+    if(node->tag == UI_INPUT) {
+        free(node->input);
+    }
+    if(node->tag == UI_SCROLLABLE) {
+        free(node->scrollable);
+    }
+    if(node->tag == UI_BOX) {
+        free(node->box);
+    }
+    if(node->tag == UI_PAD) {
+        free(node->pad);
+    }
+    if(node->tag == UI_ALIGN) {
+        free(node->align);
+    }
+    if(node->tag == UI_ROW) {
+        tsc_ui_destroyFrame(node->row);
+    }
+    if(node->tag == UI_COLUMN) {
+        tsc_ui_destroyFrame(node->column);
+    }
+    if(node->tag == UI_STACK) {
+        tsc_ui_destroyFrame(node->stack);
+    }
+    if(node->tag == UI_TRANSLATE) {
+        free(node->translate);
+    }
+    if(node->tag == UI_TOOLTIP) {
+        free(node->tooltip->lineBuffer);
+        free(node->tooltip);
+    }
     free(node);
 }
 
@@ -624,8 +669,8 @@ static ui_node *tsc_ui_askFrame(ui_frame *frame, size_t type) {
     ui_node *inThere = frame->backups[idx];
     if(inThere == NULL) return NULL;
     if(inThere->tag != type) {
-        ui_destroyNode(inThere);
         frame->backups[idx] = NULL;
+        ui_destroyNode(inThere);
         return NULL;
     }
     frame->backupi++;

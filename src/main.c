@@ -575,6 +575,20 @@ int main(int argc, char **argv) {
             if(!IsWindowFocused()) {
                 delta /= 2;
             }
+            double multiplier = 1;
+            if(IsKeyDown(KEY_COMMA)) {
+                multiplier *= 2;
+            }
+            if(IsKeyDown(KEY_PERIOD)) {
+                multiplier *= 4;
+            }
+            if(IsKeyDown(KEY_SLASH)) {
+                multiplier *= 16;
+            }
+            if(IsKeyDown(KEY_LEFT_SHIFT)) {
+                multiplier = 1.0/multiplier;
+            }
+            delta *= multiplier;
             int r = (width < height ? width : height) / 4;
             int bx = width/2;
             int by = height/2;
