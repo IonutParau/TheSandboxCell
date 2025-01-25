@@ -23,7 +23,7 @@ ifdef OPENMP
 endif
 
 ifeq ($(MODE), TURBO)
-	CFLAGS += -DTSC_TURBO -Ofast
+	CFLAGS += -DTSC_TURBO -O3 -ffast-math
 	ifeq ($(CC), gcc)
 		CFLAGS += -flto=auto
 	endif

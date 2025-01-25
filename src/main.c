@@ -298,7 +298,12 @@ int main(int argc, char **argv) {
         if(tsc_streql(tsc_currentMenu, "main")) {
             tsc_ui_pushFrame(tsc_mainMenu);
             int textHeight = 100;
-            tsc_ui_text("The Sandbox Cell v0.1.0", 50, WHITE);
+            tsc_ui_row({
+                tsc_ui_text("The Sandbox Cell v0.1.0", 50, WHITE);
+                #ifdef TSC_TURBO
+                tsc_ui_text("turbo", 20, BLUE);
+                #endif
+            });
             tsc_ui_pad(20, 20);
             tsc_ui_align(0.5, 0, width, textHeight);
             tsc_ui_text(splash, 25, WHITE);

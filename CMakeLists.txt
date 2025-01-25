@@ -31,7 +31,7 @@ endif()
 
 if(TSC_MODE STREQUAL "TURBO")
     set(CMAKE_BUILD_TYPE Release)
-    set(CMAKE_C_FLAGS_RELEASE "-Ofast")
+    set(CMAKE_C_FLAGS_RELEASE "-O3 -ffast-math")
     add_compile_definitions(TSC_TURBO)
 endif()
 
