@@ -860,7 +860,6 @@ void tsc_handleRenderInputs() {
     }
 
     float mouseWheel = GetMouseWheelMove();
-    if(mouseWheel != 0) printf("%f\n", mouseWheel);
     if(IsKeyDown(KEY_LEFT_CONTROL)) {
         tsc_brushScrollBuf += mouseWheel;
         int amount = 32.0 / renderingCamera.cellSize;
