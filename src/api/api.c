@@ -42,6 +42,7 @@ void tsc_addCoreSplashes() {
     tsc_addSplash("Never gonna give you up", 0.01);
 #ifdef TSC_TURBO
     tsc_addSplash("Who needs mods when you have speed", 10);
+    tsc_addSplash("Based off Phoenix' work on Create Mod", 100);
 #else
     tsc_addSplash("Beware of viruses lurking in mods!", 10);
 #endif
