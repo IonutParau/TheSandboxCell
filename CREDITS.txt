@@ -1,4 +1,4 @@
 atomic_codes (Quantum Tomato) for making this game
-fenikkuusu (Phoenix) for helping with optimizations and his OST was used to test music
+fenikkuusu (Phoenix / Create Mod dude man bro guy) for helping with optimizations and his OST was used to test music
 blendigoose for emotional support and helping with cross-compilation
 Sam Hogan for making the original Cell Machine
