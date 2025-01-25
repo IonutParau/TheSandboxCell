@@ -24,6 +24,7 @@ typedef struct tsc_cell {
     bool updated;
 } tsc_cell;
 
+extern size_t tsc_gridChunkSize;
 typedef struct tsc_grid tsc_grid;
 
 #define TSC_FLAGS_PLACEABLE 1

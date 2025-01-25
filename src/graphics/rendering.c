@@ -183,16 +183,17 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
     double size = renderingCamera.cellSize * gridRepeat;
     Vector2 origin = {size / 2, size / 2};
     Rectangle src = {0, 0, texture.width, texture.height};
-    float ix = tsc_updateInterp(cell->lx, x);
-    float iy = tsc_updateInterp(cell->ly, y);
-    float irot = tsc_rotInterp(cell->rot, cell->addedRot);
+    bool isRect = renderingCamera.cellSize < trueApproximationSize || forceRectangle;
+    float ix = isRect ? x : tsc_updateInterp(cell->lx, x);
+    float iy = isRect ? y : tsc_updateInterp(cell->ly, y);
+    float irot = isRect ? cell->rot : tsc_rotInterp(cell->rot, cell->addedRot);
     Rectangle dest = {ix * renderingCamera.cellSize - renderingCamera.x + origin.x,
         iy * renderingCamera.cellSize - renderingCamera.y + origin.y,
         size,
         size};
     Color color = WHITE;
     color.a = opacity * 255;
-    if(renderingCamera.cellSize < trueApproximationSize || forceRectangle) {
+    if(isRect) {
         Color approx = textures_getApproximation(cell->texture == NULL ? cell->id : cell->texture);
         //approx = ColorAlphaBlend(approx, approx, color);
         approx.a = color.a;
@@ -366,24 +367,28 @@ void tsc_drawGrid() {
     int ex = tsc_cellScreenX(GetScreenWidth());
     if(ex >= currentGrid->width) ex = currentGrid->width-1;
     int ey = tsc_cellScreenY(GetScreenHeight());
+    sx -= sx % tsc_gridChunkSize;
+    sy -= sy % tsc_gridChunkSize;
     if(ey >= currentGrid->height) ey = currentGrid->height-1;
     if(ex < sx) ex = sx;
     if(ey < sy) ey = sy;
 
-    int maxRenderCount = 50000;
+    int maxRenderCount = 32768;
     int skipLevel = 1;
-    int maxSkipLevel = INT_MAX;
     int renderCount = (ex - sx + 1) * (ey - sy + 1);
-    while(renderCount > maxRenderCount && skipLevel < maxSkipLevel) {
-        skipLevel++;
+    while(renderCount > maxRenderCount) {
+        skipLevel *= 2;
         renderCount /= 4;
     }
     if(renderingCamera.cellSize >= trueApproximationSize) {
         skipLevel = 1;
     }
 
-    for(size_t x = sx; x <= ex; x = (x+skipLevel) - x % skipLevel) {
-        for(size_t y = sy; y <= ey; y = (y+skipLevel) - y % skipLevel) {
+    for(size_t y = sy; y <= ey; y = (y+skipLevel) - y % skipLevel) {
+        for(size_t x = sx; x <= ex; x = (x+skipLevel) - x % skipLevel) {
+            if(!tsc_grid_checkChunk(currentGrid, x, y)) {
+                continue;
+            }
             int repeat = skipLevel;
             if(x + repeat >= currentGrid->width) repeat = currentGrid->width - x;
             if(y + repeat >= currentGrid->height) repeat = currentGrid->height - y;
@@ -393,8 +398,11 @@ void tsc_drawGrid() {
         }
     }
 
-    for(size_t x = sx; x <= ex; x = (x+skipLevel) - x % skipLevel) {
-        for(size_t y = sy; y <= ey; y = (y+skipLevel) - y % skipLevel) {
+    for(size_t y = sy; y <= ey; y = (y+skipLevel) - y % skipLevel) {
+        for(size_t x = sx; x <= ex; x = (x+skipLevel) - x % skipLevel) {
+            if(!tsc_grid_checkChunk(currentGrid, x, y)) {
+                continue;
+            }
             int repeat = skipLevel;
             if(x + repeat >= currentGrid->width) repeat = currentGrid->width - x;
             if(y + repeat >= currentGrid->height) repeat = currentGrid->height - y;
