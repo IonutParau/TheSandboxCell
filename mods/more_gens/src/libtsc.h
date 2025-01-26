@@ -35,6 +35,7 @@ typedef struct tsc_cell {
     bool updated;
 } tsc_cell;
 
+extern size_t tsc_gridChunkSize;
 typedef struct tsc_grid tsc_grid;
 
 #define TSC_FLAGS_PLACEABLE 1
@@ -88,6 +89,7 @@ typedef struct tsc_setting_id_pool_t {
     const char *unfocusedVolume;
     const char *updateDelay;
     const char *mtpf;
+    const char *v3speed;
 } tsc_setting_id_pool_t;
 
 typedef struct tsc_id_pool_t {
@@ -724,6 +726,8 @@ typedef struct tsc_cellprofile_t {
 } tsc_cellprofile_t;
 
 const char *tsc_registerCell(const char *id, const char *name, const char *description);
+size_t tsc_countCells();
+void tsc_fillCells(const char **buf);
 
 tsc_cellprofile_t *tsc_getProfile(const char *id);
 
@@ -779,6 +783,7 @@ tsc_category *tsc_getCategory(tsc_category *category, const char *path);
 
 tsc_value tsc_getSetting(const char *settingID);
 void tsc_setSetting(const char *settingID, tsc_value v);
+bool tsc_hasSetting(const char *settingID);
 const char *tsc_addSettingCategory(const char *settingCategoryID, const char *settingTitle);
 const char *tsc_addSetting(const char *settingID, const char *name, const char *categoryID, unsigned char kind, void *data, tsc_settingCallback *callback);
 

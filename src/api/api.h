@@ -41,6 +41,8 @@ typedef struct tsc_cellprofile_t {
 } tsc_cellprofile_t;
 
 const char *tsc_registerCell(const char *id, const char *name, const char *description);
+size_t tsc_countCells();
+void tsc_fillCells(const char **buf);
 
 tsc_cellprofile_t *tsc_getProfile(const char *id);
 

@@ -49,21 +49,17 @@ float tsc_randFloat() {
     return (float)rand() / RAND_MAX;
 }
 
-tsc_mainMenuParticle_t tsc_randomMainMenuParticle(bool respawn) {
-    const char *builtinCells[] = {
-        builtin.push, builtin.wall, builtin.enemy, builtin.mover,
-        builtin.trash, builtin.slide, builtin.generator, builtin.rotator_cw,
-        builtin.rotator_ccw,
-    };
-    size_t builtinCellCount = sizeof(builtinCells) / sizeof(const char *);
+const char **tsc_main_allCells = NULL;
+size_t tsc_main_cellCount = 0;
 
+tsc_mainMenuParticle_t tsc_randomMainMenuParticle(bool respawn) {
     int w = GetScreenWidth();
     int h = GetScreenHeight();
     int r = (w < h ? w : h) / 4;
     int m = w > h ? w : h;
 
     tsc_mainMenuParticle_t particle;
-    particle.id = builtinCells[rand() % builtinCellCount];
+    particle.id = tsc_main_allCells[rand() % tsc_main_cellCount];
     particle.angle = tsc_randFloat() * 2 * PI;
     particle.r = tsc_randFloat() * (float)r / 10;
     particle.g = tsc_randFloat() * (r/particle.r) * 4;
@@ -222,6 +218,27 @@ int main(int argc, char **argv) {
         }
     }
 
+    tsc_main_cellCount = tsc_countCells();
+    tsc_main_allCells = malloc(sizeof(const char *) * tsc_main_cellCount);
+    tsc_fillCells(tsc_main_allCells);
+    // Some cells are bad
+    {
+        size_t usefulLen = 0;
+        for(size_t i = 0; i < tsc_main_cellCount; i++) {
+            bool keep = true;
+            const char *id = tsc_main_allCells[i];
+            if(id == builtin.empty) keep = false;
+            tsc_cell tmp = tsc_cell_create(id, 0);
+            size_t flags = tsc_cell_getTableFlags(&tmp);
+            if(flags & TSC_FLAGS_PLACEABLE) keep = false;
+            if(keep) {
+                tsc_main_allCells[usefulLen] = id;
+                usefulLen++;
+            }
+        }
+        tsc_main_cellCount = usefulLen;
+    }
+
     while(!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(GetColor(tsc_queryOptionalColor("bgColor", 0x171c1fFF)));
@@ -233,14 +250,8 @@ int main(int argc, char **argv) {
             particlesInitialized = true;
             mainMenuParticleCount = TSC_MAINMENU_PARTICLE_COUNT;
             for(size_t i = 0; i < mainMenuParticleCount; i++) {
-                const char *builtinCells[] = {
-                    builtin.push, builtin.wall, builtin.enemy, builtin.mover,
-                    builtin.trash, builtin.slide, builtin.generator, builtin.rotator_cw,
-                    builtin.rotator_ccw,
-                };
-                size_t builtinCellCount = sizeof(builtinCells) / sizeof(const char *);
                 mainMenuParticles[i] = tsc_randomMainMenuParticle(false);
-                mainMenuParticles[i].id = builtinCells[(i / (mainMenuParticleCount / builtinCellCount)) % builtinCellCount];
+                mainMenuParticles[i].id = tsc_main_allCells[(i / (mainMenuParticleCount / tsc_main_cellCount)) % tsc_main_cellCount];
             }
         }
 
@@ -257,14 +268,8 @@ int main(int argc, char **argv) {
                 particleHalvingTimer = 0.5;
                 mainMenuParticleCount /= 2;
                 for(size_t i = 0; i < mainMenuParticleCount; i++) {
-                    const char *builtinCells[] = {
-                        builtin.push, builtin.wall, builtin.enemy, builtin.mover,
-                        builtin.trash, builtin.slide, builtin.generator, builtin.rotator_cw,
-                        builtin.rotator_ccw,
-                    };
-                    size_t builtinCellCount = sizeof(builtinCells) / sizeof(const char *);
-                    double f = (double)i / ((double)mainMenuParticleCount / (double)builtinCellCount);
-                    mainMenuParticles[i].id = builtinCells[(size_t)(f * builtinCellCount) % builtinCellCount];
+                    double f = (double)i / ((double)mainMenuParticleCount / (double)tsc_main_cellCount);
+                    mainMenuParticles[i].id = tsc_main_allCells[(size_t)(f * tsc_main_cellCount) % tsc_main_cellCount];
                 }
             }
             // Super epic background

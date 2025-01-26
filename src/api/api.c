@@ -150,6 +150,24 @@ insert_attempt:;
     return actualID;
 }
 
+size_t tsc_countCells() {
+    size_t len = 0;
+    for(size_t i = 0; i < tsc_profileLen; i++) {
+        if(tsc_profiles[i].id != NULL) len++;
+    }
+    return len;
+}
+
+void tsc_fillCells(const char **buf) {
+    size_t j = 0;
+    for(size_t i = 0; i < tsc_profileLen; i++) {
+        const char *id = tsc_profiles[i].id;
+        if(id != NULL) {
+            buf[j++] = id;
+        }
+    }
+}
+
 tsc_cellprofile_t *tsc_getProfile(const char *id) {
     if(tsc_profiles == NULL) return NULL;
     size_t i = (size_t)id / _Alignof(max_align_t); // Fancy magic to reduce RAM usage.
