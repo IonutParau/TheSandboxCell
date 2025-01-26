@@ -297,7 +297,7 @@ int main(int argc, char **argv) {
             float blackHoleExtra = blackHoleSoundBonus;
             float blackHoleLimit = 1;
             if(blackHoleExtra > blackHoleLimit) blackHoleExtra = blackHoleLimit;
-            DrawCircle(bx, by, r * (1 + blackHoleExtra), GetColor(0x0b0c0dFF)); // BLACK HOLE
+            DrawCircle(bx, by, r * (1 + blackHoleExtra), GetColor(tsc_queryOptionalColor("bhColor", 0x0b0c0dFF))); // BLACK HOLE
         }
 
         if(tsc_streql(tsc_currentMenu, "main")) {
