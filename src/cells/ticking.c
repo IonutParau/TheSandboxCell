@@ -7,7 +7,7 @@
 volatile bool isGamePaused = true;
 volatile bool isGameTicking = false;
 volatile double tickTime = 0.0;
-volatile double tickDelay = 0.0;
+volatile double tickDelay = 0.05;
 volatile size_t tickCount = 0;
 volatile bool multiTickPerFrame = true;
 volatile bool onlyOneTick = false;
@@ -24,14 +24,16 @@ static int tsc_gridUpdateThread(void *_) {
     size_t ticksInSecond = 0;
     time(&last);
     while(true) {
+        bool wasPaused = isGamePaused;
         if(multiTickPerFrame) {
             if((tickTime < tickDelay || isGamePaused) && !onlyOneTick) {
-                time(&last);
                 continue;
             }
         } else {
             cnd_wait(&renderingTickUpdateSignal, &renderingUselessMutex);
             mtx_unlock(&renderingUselessMutex);
+        }
+        if(!isGamePaused && wasPaused) {
             time(&last);
         }
         // Fixed SO MANY BUGS
@@ -39,7 +41,7 @@ static int tsc_gridUpdateThread(void *_) {
         // Nothing here is thread-safe except the waiting
         // The only thing keeping this from exploding is
         // high IQ code I wrote that I forgot to understand
-        tickTime = 0.0;
+        tickTime -= tickDelay;
         isGameTicking = true;
         if(isInitial) {
             isInitial = false;

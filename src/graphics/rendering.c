@@ -109,6 +109,7 @@ static void tsc_clearGridClipboard() {
 }
 
 void tsc_resetRendering() {
+    brushSize = 0;
     renderingCamera.x = 0;
     renderingCamera.y = 0;
     renderingCamera.cellSize = 32;
@@ -924,7 +925,6 @@ void tsc_handleRenderInputs() {
 
     if(!isGamePaused && !multiTickPerFrame) {
         if(tickTime >= tickDelay && !isGameTicking) {
-            tickTime = 0;
             tsc_signalUpdateShouldHappen();
         }
     }

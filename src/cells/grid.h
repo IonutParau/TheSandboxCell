@@ -78,6 +78,7 @@ typedef struct tsc_setting_id_pool_t {
     const char *unfocusedVolume;
     const char *updateDelay;
     const char *mtpf;
+    const char *v3speed;
 } tsc_setting_id_pool_t;
 
 typedef struct tsc_id_pool_t {

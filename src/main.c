@@ -403,6 +403,10 @@ int main(int argc, char **argv) {
                             settingDeadSpace + settingWidth + 10, curY - off,
                             settingWidth + textWidth, settingSize,
                         };
+                        int preferredLeftBack = width/10;
+                        if(textbox.x + textbox.width + preferredLeftBack > width) {
+                            textbox.width = width - preferredLeftBack - textbox.x;
+                        }
                         if(GuiTextBox(textbox, setting.string.buffer, setting.string.bufferlen, setting.string.selected)) {
                             cat.settings[j].string.selected = !setting.string.selected;
                             tsc_value s = tsc_string(setting.string.buffer);

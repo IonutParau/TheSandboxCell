@@ -135,6 +135,7 @@ void tsc_settingHandler(const char *title);
 
 tsc_value tsc_getSetting(const char *settingID);
 void tsc_setSetting(const char *settingID, tsc_value v);
+bool tsc_hasSetting(const char *settingID);
 const char *tsc_addSettingCategory(const char *settingCategoryID, const char *settingTitle);
 const char *tsc_addSetting(const char *settingID, const char *name, const char *categoryID, unsigned char kind, void *data, tsc_settingCallback *callback);
 

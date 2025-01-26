@@ -1,11 +1,14 @@
 #include "saving.h"
 #include "../utils.h"
+#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
 #include "../utils.h"
+#include "../api/value.h"
+#include "../api/api.h"
 #include <assert.h>
 
 static tsc_saving_format *saving_arr = NULL;
@@ -403,14 +406,17 @@ static int tsc_v3_encode(tsc_buffer *buffer, tsc_grid *grid) {
         cell_len--;
     }
 
+    int speed = atoi(tsc_toString(tsc_getSetting(builtin.settings.v3speed)));
+    int maxWork = cell_len / (speed + 1);
+
     for(int i = 0; i < cell_len; i++) {
         int bestback = -1;
         int bestbacklen = 0;
 
-        for(int b = 1; b <= i; b++) {
+        for(int b = 1; b <= i && b <= maxWork; b++) {
             if(cells[i] == cells[i-b]) {
                 int len = 1;
-                while(i + len < cell_len) {
+                while(i + len < cell_len && len < maxWork) {
                     if(cells[i+len] == cells[i-b+len]) {
                         len++;
                     } else {
@@ -433,7 +439,12 @@ static int tsc_v3_encode(tsc_buffer *buffer, tsc_grid *grid) {
             tsc_v3_writeRepeater(buffer, bestbacklen, bestback);
             i += bestbacklen - 1;
         }
+
+        float progress = (float)i / (float)cell_len;
+        // Non-trivial grid, so we should let the user know we're working
+        //if(cell_len > 10000) printf("Progress: %3.2f%%\n", progress * 100);
     }
+    printf("Done\n");
 
     tsc_saving_write(buffer, ';');
 

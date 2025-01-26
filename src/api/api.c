@@ -442,7 +442,7 @@ void tsc_loadSettings() {
     const char *performance = tsc_addSettingCategory("performance", "Performance");
     const char *graphics = tsc_addSettingCategory("graphics", "Graphics");
     const char *audio = tsc_addSettingCategory("audio", "Audio");
-    const char *saving = tsc_addSettingCategory("saving", "Saving (currently empty)");
+    const char *saving = tsc_addSettingCategory("saving", "Saving");
 
     char *tc = NULL;
     asprintf(&tc, "%d", workers_amount());
@@ -458,8 +458,11 @@ void tsc_loadSettings() {
     float volumes[2] = {0, 1};
     builtin.settings.sfxVolume = tsc_addSetting("sfxVolume", "SFX Volume", audio, TSC_SETTING_SLIDER, &volumes, tsc_settingHandler);
     builtin.settings.musicVolume = tsc_addSetting("musicVolume", "Music Volume", audio, TSC_SETTING_SLIDER, &volumes, tsc_settingHandler);
+  
+    const char *v3level[2] = {"0123456789", "0"};
+    builtin.settings.v3speed = tsc_addSetting("v3speed", "V3 Speed Level (decreases compression)", saving, TSC_SETTING_INPUT, v3level, tsc_settingHandler);
 
-    if(isDefault) {
+    if(isDefault) { // just a hack, mods can use tsc_hasSetting()
         tsc_setSetting(builtin.settings.updateDelay, tsc_number(tickDelay));
         tsc_setSetting(builtin.settings.mtpf, tsc_boolean(multiTickPerFrame));
         
@@ -467,7 +470,7 @@ void tsc_loadSettings() {
         tsc_setSetting(builtin.settings.musicVolume, tsc_boolean(0));
     } else {
         tickDelay = tsc_toNumber(tsc_getSetting(builtin.settings.updateDelay));
-        multiTickPerFrame = tsc_toNumber(tsc_getSetting(builtin.settings.mtpf));
+        multiTickPerFrame = tsc_toBoolean(tsc_getSetting(builtin.settings.mtpf));
     }
 }
 
@@ -477,6 +480,10 @@ tsc_value tsc_getSetting(const char *settingID) {
 
 void tsc_setSetting(const char *settingID, tsc_value v) {
     tsc_setKey(tsc_settingStore, settingID, v);
+}
+
+bool tsc_hasSetting(const char *settingID) {
+    return !tsc_isNull(tsc_getSetting(settingID));
 }
 
 const char *tsc_addSettingCategory(const char *settingCategoryID, const char *settingTitle) {
@@ -526,7 +533,11 @@ const char *tsc_addSetting(const char *settingID, const char *name, const char *
         setting.string.charset = tsc_strdup(buf[0]);
         setting.string.bufferlen = 256;
         setting.string.buffer = malloc(sizeof(char) * setting.string.bufferlen);
-        strncpy(setting.string.buffer, buf[1], setting.string.bufferlen - 1);
+        const char *def = buf[1];
+        if(tsc_hasSetting(settingID)) {
+            def = tsc_toString(tsc_getSetting(settingID));
+        }
+        strncpy(setting.string.buffer, def, setting.string.bufferlen - 1);
         setting.string.selected = false;
     }
     if(tsc_isNull(tsc_getKey(tsc_settingStore, settingID))) {
