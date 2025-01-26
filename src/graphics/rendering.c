@@ -32,6 +32,7 @@ static double trueApproximationSize;
 static double tsc_sizeOptimizedByApproximation;
 static float tsc_zoomScrollTotal = 0;
 static float tsc_brushScrollBuf = 0;
+static int tsc_guidelineMode = 0;
 
 typedef struct selection_t {
     int sx;
@@ -469,7 +470,8 @@ void tsc_drawGrid() {
                 tsc_drawCell(&renderingGridClipboard.cells[i], mx + x, my + y, 0.5, 1, false);
             }
         }
-    } else {
+    }
+    if((!renderingIsSelecting && !renderingIsPasting) || tsc_guidelineMode != 0) {
         int cmx = tsc_cellMouseX();
         int cmy = tsc_cellMouseY();
         cmx = cmx - brushSize;
@@ -479,6 +481,61 @@ void tsc_drawGrid() {
         cell.ly = cmy;
         cell.addedRot = 0;
         tsc_drawCell(&cell, cmx, cmy, 0.5, brushSize*2+1, false);
+    }
+
+    if(tsc_guidelineMode != 0) {
+        float sx = 0;
+        float sy = 0;
+        float ex = currentGrid->width;
+        float ey = currentGrid->height;
+
+        if(renderingIsSelecting) {
+            sx = renderingSelection.sx;
+            sy = renderingSelection.sy;
+            ex = renderingSelection.ex+1;
+            ey = renderingSelection.ey+1;
+        }
+
+        sx = sx * renderingCamera.cellSize - renderingCamera.x;
+        sy = sy * renderingCamera.cellSize - renderingCamera.y;
+        ex = ex * renderingCamera.cellSize - renderingCamera.x;
+        ey = ey * renderingCamera.cellSize - renderingCamera.y;
+
+        if(tsc_guidelineMode == 1) {
+            float mx = sx+(ex-sx)/2;
+            float my = sy+(ey-sy)/2;
+
+            DrawLine(sx, my, ex, my, YELLOW);
+            DrawLine(mx, sy, mx, ey, BLUE);
+        }
+        if(tsc_guidelineMode == 2) {
+            DrawLine(sx, sy, ex, ey, YELLOW);
+            DrawLine(ex, sy, sx, ey, BLUE);
+        }
+        if(tsc_guidelineMode == 3) {
+            float mx = sx+(ex-sx)/2;
+            float my = sy+(ey-sy)/2;
+
+            DrawLine(sx, my, ex, my, YELLOW);
+            DrawLine(mx, sy, mx, ey, BLUE);
+            DrawLine(sx, sy, ex, ey, RED);
+            DrawLine(ex, sy, sx, ey, ORANGE);
+        }
+        if(tsc_guidelineMode == 4) {
+            float mx = sx+(ex-sx)/2;
+            float my = sy+(ey-sy)/2;
+            float w = ex - mx;
+            float h = ey - my;
+
+            float xDiag = cos(PI/4)*w;
+            float yDiag = sin(PI/4)*h;
+
+            DrawLine(sx, my, ex, my, YELLOW);
+            DrawLine(mx, sy, mx, ey, BLUE);
+            DrawLine(mx-xDiag, my-yDiag, mx+xDiag, my+yDiag, RED);
+            DrawLine(mx+xDiag, my-yDiag, mx-xDiag, my+yDiag, ORANGE);
+            DrawEllipseLines(mx, my, w, h, GREEN);
+        }
     }
 
     static char buffer[256];
@@ -719,6 +776,12 @@ void tsc_handleRenderInputs() {
         }
     }
 
+    if(IsKeyPressed(KEY_G)) {
+        int maxGuidelines = 5;
+        tsc_guidelineMode++;
+        tsc_guidelineMode %= maxGuidelines;
+    }
+
     if(IsKeyPressed(KEY_DELETE)) {
         if(renderingIsSelecting) {
             tsc_deleteSelection();
@@ -837,6 +900,10 @@ void tsc_handleRenderInputs() {
     if(renderingIsDragging) {
         renderingSelection.ex = tsc_cellMouseX();
         renderingSelection.ey = tsc_cellMouseY();
+        if(renderingSelection.ex < 0) renderingSelection.ex = 0;
+        if(renderingSelection.ey < 0) renderingSelection.ey = 0;
+        if(renderingSelection.ex >= currentGrid->width) renderingSelection.ex = currentGrid->width-1;
+        if(renderingSelection.ey >= currentGrid->height) renderingSelection.ey = currentGrid->height-1;
     }
 
 
@@ -844,7 +911,8 @@ void tsc_handleRenderInputs() {
         renderingIsDragging = false;
     }
 
-    if(!absorbed && !renderingIsSelecting && !renderingIsPasting && !renderingBlockPlacing && !tsc_isResizingGrid) tsc_handleCellPlace();
+    if(!absorbed && ((!renderingIsSelecting && !renderingIsPasting) || tsc_guidelineMode != 0) && !renderingBlockPlacing && !tsc_isResizingGrid)
+        tsc_handleCellPlace();
 
     if(!renderingIsSelecting && !renderingIsPasting) {
         if(IsKeyPressed(KEY_LEFT_ALT)) {
