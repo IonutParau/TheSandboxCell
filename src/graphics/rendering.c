@@ -108,12 +108,25 @@ static void tsc_clearGridClipboard() {
     renderingGridClipboard.height = 0;
 }
 
+static void tsc_centerCamera() {
+    if(currentGrid == NULL) {
+        renderingCamera.x = 0;
+        renderingCamera.y = 0;
+        return;
+    }
+    double w = GetScreenWidth();
+    double h = GetScreenHeight();
+    int cx = currentGrid->width/2;
+    int cy = currentGrid->height/2;
+    renderingCamera.x = cx * renderingCamera.cellSize - w/2;
+    renderingCamera.y = cy * renderingCamera.cellSize - h/2;
+}
+
 void tsc_resetRendering() {
     brushSize = 0;
-    renderingCamera.x = 0;
-    renderingCamera.y = 0;
     renderingCamera.cellSize = 32;
     renderingCamera.speed = 200;
+    tsc_centerCamera();
     currentId = builtin.mover;
     currentRot = 0;
     isInitial = true;
@@ -673,21 +686,53 @@ void tsc_handleRenderInputs() {
     if(IsKeyDown(KEY_LEFT_SHIFT)) {
         speed *= 2;
     }
-    if(IsKeyDown(KEY_W)) {
-        renderingCamera.y -= speed * delta;
+    if(IsKeyDown(KEY_LEFT_CONTROL)) {
+        if(IsKeyPressed(KEY_A)) {
+            renderingIsSelecting = true;
+            renderingSelection.sx = 0;
+            renderingSelection.sy = 0;
+            renderingSelection.ex = currentGrid->width-1;
+            renderingSelection.ey = currentGrid->height-1;
+        }
+        if(IsKeyPressed(KEY_C)) {
+            tsc_copySelection();
+        }
+        if(IsKeyPressed(KEY_X)) {
+            tsc_cutSelection();
+        }
+        if(IsKeyPressed(KEY_V) && renderingIsSelecting) {
+            renderingIsSelecting = false;
+            renderingIsPasting = true;
+        }
+    } else {
+        if(IsKeyDown(KEY_W)) {
+            renderingCamera.y -= speed * delta;
+        }
+        if(IsKeyDown(KEY_S)) {
+            renderingCamera.y += speed * delta;
+        }
+        if(IsKeyDown(KEY_A)) {
+            renderingCamera.x -= speed * delta;
+        }
+        if(IsKeyDown(KEY_D)) {
+            renderingCamera.x += speed * delta;
+        }
     }
-    if(IsKeyDown(KEY_S)) {
-        renderingCamera.y += speed * delta;
+
+    if(IsKeyPressed(KEY_DELETE)) {
+        if(renderingIsSelecting) {
+            tsc_deleteSelection();
+        }
     }
-    if(IsKeyDown(KEY_A)) {
-        renderingCamera.x -= speed * delta;
-    }
-    if(IsKeyDown(KEY_D)) {
-        renderingCamera.x += speed * delta;
+
+    if(IsKeyPressed(KEY_HOME)) {
+        tsc_centerCamera();
     }
    
     if(IsKeyPressed(KEY_ESCAPE)) {
-        if(renderingIsSelecting && !renderingIsDragging) {
+        if(renderingIsPasting) {
+            renderingIsPasting = false;
+        } else if(renderingIsSelecting && !renderingIsDragging) {
             renderingIsSelecting = false;
             renderingIsDragging = false;
         } else if(!isGameTicking && isGamePaused) {

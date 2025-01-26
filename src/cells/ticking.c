@@ -42,6 +42,8 @@ static int tsc_gridUpdateThread(void *_) {
         // The only thing keeping this from exploding is
         // high IQ code I wrote that I forgot to understand
         tickTime -= tickDelay;
+        if(tickTime < 0) tickTime = 0; // yeah no more super negative time
+        if(tickDelay == 0) tickTime = 0;
         isGameTicking = true;
         if(isInitial) {
             isInitial = false;

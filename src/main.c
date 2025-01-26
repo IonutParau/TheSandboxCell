@@ -355,7 +355,6 @@ int main(int argc, char **argv) {
             GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
             if(GuiButton((Rectangle) { 20, 20, 100, 50 }, "Back")) {
                 tsc_currentMenu = "main";
-                tsc_resetRendering();
             }
             size_t titleSize = 128;
             size_t settingSize = 64;
@@ -453,7 +452,6 @@ int main(int argc, char **argv) {
             GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
             if(GuiButton((Rectangle) { 20, 20, 100, 50 }, "Back")) {
                 tsc_currentMenu = "main";
-                tsc_resetRendering();
             }
             float offset = 40;
             float texturePackTitleSize = 100;
@@ -518,7 +516,6 @@ int main(int argc, char **argv) {
             if(GuiButton((Rectangle) { 20, 20, 100, 50 }, "Back")) {
                 tsc_currentMenu = "main";
                 particleHalvingTimer = 2;
-                tsc_resetRendering();
             }
         }
         if(tsc_streql(tsc_currentMenu, "play")) {
@@ -527,7 +524,6 @@ int main(int argc, char **argv) {
             if(GuiButton((Rectangle) { 20, 20, 100, 50 }, "Back")) {
                 tsc_currentMenu = "main";
                 particleHalvingTimer = 2;
-                tsc_resetRendering();
             }
             float inputWidth = (float)width/5;
             float inputSpacing = inputWidth/5;
@@ -574,6 +570,7 @@ int main(int argc, char **argv) {
                 tsc_copyGrid(initial, grid);
                 tsc_currentMenu = "game";
                 tsc_resetRendering();
+                tickCount = 0;
                 goto valid;
 
                 invalid:
@@ -635,19 +632,15 @@ int main(int argc, char **argv) {
             tsc_ui_update(delta);
             if(tsc_ui_checkbutton(tsc_mainMenuBtn.play) == UI_BUTTON_PRESS) {
                 tsc_currentMenu = "play";
-                tsc_resetRendering();
             }
             if(tsc_ui_checkbutton(tsc_mainMenuBtn.settings) == UI_BUTTON_PRESS) {
                 tsc_currentMenu = "settings";
-                tsc_resetRendering();
             }
             if(tsc_ui_checkbutton(tsc_mainMenuBtn.texturepacks) == UI_BUTTON_PRESS) {
                 tsc_currentMenu = "texturepacks";
-                tsc_resetRendering();
             }
             if(tsc_ui_checkbutton(tsc_mainMenuBtn.credits) == UI_BUTTON_PRESS) {
                 tsc_currentMenu = "credits";
-                tsc_resetRendering();
             }
             if(tsc_ui_checkbutton(tsc_mainMenuBtn.quit) == UI_BUTTON_PRESS) {
                 if(rand() % 50) {
