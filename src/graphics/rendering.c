@@ -916,9 +916,8 @@ void tsc_handleRenderInputs() {
     if(!isGamePaused || isGameTicking) tickTime += delta * tickTimeScale;
 
     if((IsKeyPressed(KEY_F) || IsKeyPressedRepeat(KEY_F)) && !isGameTicking) {
-        if(multiTickPerFrame) {
-            onlyOneTick = true;
-        } else {
+        onlyOneTick = true;
+        if(!multiTickPerFrame) {
             tsc_signalUpdateShouldHappen();
         }
     }
