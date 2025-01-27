@@ -207,12 +207,12 @@ if task == "compile" then
             local files = {
                 exe,
                 library,
-                raylibDLL,
                 "-r data/mods",
                 "-r data/platforms",
                 "-r data/resources",
                 "-r data/shaders",
                 "CREDITS.txt",
+                raylibDLL, -- last cuz can be null
             }
             if raylibDLL ~= nil then table.insert(files, raylibDLL) end
             os.execute("zip TheSandboxCell.zip " .. table.concat(files, " ") ..  " -9")
