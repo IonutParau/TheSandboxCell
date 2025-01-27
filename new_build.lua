@@ -1,3 +1,4 @@
+#!/usr/bin/env lua
 -- Brand spanking new Lua-based cross-platform piece of dogshit build system
 -- Compiling for Windows was designed to be done with mingw on Linux.
 -- Compiling on Windows may exist at a specific moment in time somewhere in the future.

@@ -1,5 +1,4 @@
 #include "rendering.h"
-#include "../cells/subticks.h"
 #include "../saving/saving.h"
 #include "resources.h"
 #include "../utils.h"
@@ -464,7 +463,7 @@ void tsc_drawGrid() {
             }
         }
     }
-    if((!renderingIsSelecting && !renderingIsPasting) || tsc_guidelineMode != 0) {
+    if((!renderingIsSelecting || tsc_guidelineMode != 0) && !renderingIsPasting) {
         int cmx = tsc_cellMouseX();
         int cmy = tsc_cellMouseY();
         cmx = cmx - brushSize;
