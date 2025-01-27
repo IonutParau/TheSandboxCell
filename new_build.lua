@@ -74,6 +74,8 @@ lfs.mkdir(buildDir)
 local verbose = opts.verbose or opts.v or false
 local compiler = opts.cc or "clang" -- Default to clang cuz its cooler
 local linker = opts.ld or compiler
+local ar = opts.ar or "ar r"
+local ranlib = opts.ranlib
 local mode = opts.mode or "debug" -- Debug cool
 mode = mode:lower() -- muscle memory is a bitch sometimes
 
@@ -91,6 +93,10 @@ if not target then
     target = unixOrWindows("linux", "windows")
 end
 assert(target == "windows" or target == "linux", "bad target")
+
+if target == "linux" and not ranlib then
+    ranlib = "ranlib"
+end
 
 if mode == "debug" then
     local ourFuckingDebugger = "lldb"
@@ -163,7 +169,11 @@ cflags = cflags .. " " .. platformSpecificCBullshit[target]
 
 local libs = {
     linux = "libtsc.so",
-    windows = "libtsc.dll",
+    windows = "tsc.dll",
+}
+local slibs = {
+    linux = "libtsc.a",
+    windows = "tsc.lib",
 }
 
 local exes = {
@@ -172,6 +182,7 @@ local exes = {
 }
 
 local lib = libs[target]
+if opts.static then lib = slibs[target] end
 local exe = exes[target]
 
 ---@param file string
@@ -255,7 +266,14 @@ local function buildTheDamnLib()
         table.insert(objs, compile(libtsc[i]))
     end
 
-    link(lib, "shared", "", objs)
+    if lib:sub(-3) == ".so" or lib:sub(-4) == ".dll" then
+        link(lib, "shared", "", objs)
+    elseif lib:sub(-2) == ".a" or lib:sub(-4) == ".lib" then
+        exec("%s %s %s", ar, lib, table.concat(objs, " "))
+        if ranlib then
+            exec("%s %s", ranlib, lib)
+        end
+    end
 end
 
 local function buildTheDamnExe()
