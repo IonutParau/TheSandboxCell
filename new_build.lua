@@ -67,6 +67,9 @@ local args, opts = parseShell()
 local lfs = require(opts.lfs or "lfs")
 
 local buildDir = opts.buildDir or "build"
+
+lfs.mkdir(buildDir)
+
 local verbose = opts.verbose or opts.v or false
 local compiler = opts.cc or "clang" -- Default to clang cuz its cooler
 local linker = opts.ld or compiler
@@ -79,10 +82,13 @@ if opts.strict then
 end
 
 local lflags = opts.lflags or ""
-local target = assert(opts.target, "Missing target")
 local coolLinkFolderWithMagicLibs = opts.linkFolder or unixOrWindows("/usr/lib", ".")
 local raylibDLL = opts.raylibDLL or unixOrWindows("libraylib.so", "./raylib.dll")
 
+local target = opts.target
+if not target then
+    target = unixOrWindows("linux", "windows")
+end
 assert(target == "windows" or target == "linux", "bad target")
 
 if mode == "debug" then
@@ -184,10 +190,27 @@ local function exec(cmd, ...)
 end
 
 ---@param file string
+---@return number
+local function mtimeOf(file)
+    local attrs = lfs.attributes(file)
+    -- yeah if it errors then the last build was on January 1st, 1970, 12:00 AM GMT
+    if not attrs then return 0 end
+    return attrs.modification or 0
+end
+
+---@param file string
 ---@return string
 local function compile(file)
     local buildFile = fixPath("%s/%s.o", buildDir, cacheName(file))
-    exec("%s %s %s -o %s", compiler, cflags, file, buildFile)
+    local src = mtimeOf(file)
+    local out = mtimeOf(buildFile)
+    if (src > out) or opts.nocache then
+        exec("%s %s %s -o %s", compiler, cflags, file, buildFile)
+    else
+        if verbose then
+            print("Skipping recompilation of " .. file .. " into " .. buildFile)
+        end
+    end
     return buildFile
 end
 
@@ -294,5 +317,8 @@ end
 if args[1] == "clean" then
     os.remove(lib)
     os.remove(exe)
+    for file in lfs.dir(buildDir) do
+        os.remove(fixPath("%s/%s", buildDir, file))
+    end
     lfs.rmdir(buildDir)
 end
