@@ -24,7 +24,6 @@ static unsigned int renderingRepeatingScaleLoc;
 static RenderTexture renderingCellTexture;
 static int renderingCellBrushSize;
 static const char *renderingCellBrushId = NULL;
-static char renderingCellBrushRot = -1;
 static ui_frame *renderingGameUI;
 static tsc_categorybutton *renderingCellButtons = NULL;
 static double renderingApproximationSize = 4;
@@ -707,7 +706,6 @@ static void tsc_deleteSelection() {
     int height = fixed.ey - fixed.sy + 1;
     for(int x = 0; x < width; x++) {
         for(int y = 0; y < height; y++) {
-            int i = y * width + x;
             tsc_cell empty = tsc_cell_create(builtin.empty, 0);
             tsc_grid_set(currentGrid, fixed.sx + x, fixed.sy + y, &empty);
         }

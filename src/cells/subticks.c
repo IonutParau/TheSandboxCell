@@ -287,8 +287,8 @@ static void tsc_subtick_doGen(struct tsc_cell *cell, int x, int y, int _ux, int 
     int fy = tsc_grid_frontY(y, cell->rot);
     tsc_cell *front = tsc_grid_get(currentGrid, fx, fy);
     if(front == NULL) return;
-    if(tsc_grid_checkOptimization(currentGrid, fx, fy, builtin.optimizations.gens[cell->rot])) {
-        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[cell->rot], true);
+    if(tsc_grid_checkOptimization(currentGrid, fx, fy, builtin.optimizations.gens[(size_t)cell->rot])) {
+        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[(size_t)cell->rot], true);
         return;
     }
     int bx = tsc_grid_shiftX(x, cell->rot, -1);
@@ -297,7 +297,7 @@ static void tsc_subtick_doGen(struct tsc_cell *cell, int x, int y, int _ux, int 
     if(back == NULL) return;
     if(!tsc_cell_canGenerate(currentGrid, back, bx, by, cell, x, y, cell->rot)) return;
     if(tsc_grid_push(currentGrid, fx, fy, cell->rot, 1, back) == 0) {
-        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[cell->rot], true);
+        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[(size_t)cell->rot], true);
     }
 }
 
@@ -512,7 +512,7 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
     if(mode == TSC_SUBMODE_TICKED) {
         if(parallel) {
             tsc_updateinfo_t *buffer = subticks_getBuffer(currentGrid->width);
-            for(char space = 0; 0 <= spacing; space++) {
+            for(char space = 0; space <= spacing; space++) {
                 int j = 0;
                 for(size_t x = space; x < currentGrid->width; x += 1 + spacing) {
                     if(!tsc_grid_checkColumn(currentGrid, x)) continue;

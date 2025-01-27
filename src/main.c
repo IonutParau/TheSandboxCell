@@ -46,7 +46,7 @@ typedef struct tsc_mainMenuParticle_t {
 } tsc_mainMenuParticle_t;
 
 float tsc_randFloat() {
-    return (float)rand() / RAND_MAX;
+    return (float)rand() / (float)RAND_MAX;
 }
 
 const char **tsc_main_allCells = NULL;
@@ -283,7 +283,6 @@ int main(int argc, char **argv) {
                     bx + cos(particle.angle) * particle.dist,
                     by + sin(particle.angle) * particle.dist,
                 };
-                float scale = particle.r/t.width;
                 Color c = WHITE;
                 float x = r/particle.dist;
                 c.a = x > 1 ? 255 : x * 255;
@@ -363,7 +362,6 @@ int main(int argc, char **argv) {
             size_t settingDeadSpace = 50;
             BeginScissorMode(0, settingVertOff, width, height - settingVertOff);
             size_t curY = settingVertOff;
-            Font font = GetFontDefault();
             for(size_t i = 0; i < tsc_settingLen; i++) {
                 tsc_settingCategory cat = tsc_settingCategories[i];
                 GuiSetStyle(DEFAULT, TEXT_SIZE, titleSize);
@@ -603,18 +601,10 @@ int main(int argc, char **argv) {
             }
             delta *= multiplier;
             int r = (width < height ? width : height) / 4;
-            int bx = width/2;
-            int by = height/2;
             for(size_t i = 0; i < mainMenuParticleCount; i++) {
                 tsc_mainMenuParticle_t particle = mainMenuParticles[i];
-                Texture t = textures_get(particle.id);
-                Vector2 pos = {
-                    bx + cos(particle.angle) * particle.dist,
-                    by + sin(particle.angle) * particle.dist,
-                };
                 float x = 0.5*r/(particle.dist-r);
                 float y = x * sqrt(x);
-                float z = x * pow(x, 0.1);
                 particle.dist -= particle.g * delta;
                 particle.angle += y * delta;
                 particle.rot += y * 2 * PI * delta;

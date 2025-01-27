@@ -771,7 +771,7 @@ ui_scrollable *tsc_ui_newScrollableState() {
     return state;
 }
 
-static void tsc_ui_resizeScrollable(ui_scrollable *scrollable, int width, int height) {
+void tsc_ui_resizeScrollable(ui_scrollable *scrollable, int width, int height) {
     if(scrollable->width * scrollable->height != 0) {
         UnloadRenderTexture(scrollable->texture);
     }

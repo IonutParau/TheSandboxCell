@@ -302,65 +302,7 @@ void tsc_setBit(char *num, size_t bit, bool value) {
     size_t mask = 1 << b;
 
     if(value) num[i] |= mask;
-    else num[i] &= ~value;
-}
-
-unsigned char tsc_getUnusedPointerByte(void *pointer) {
-    size_t x = 0xFF;
-    size_t shift = (sizeof(pointer)-1) * 8;
-    size_t mask = x << shift;
-    size_t val = (size_t)pointer;
-    val &= mask;
-    val >>= shift;
-    return val;
-}
-
-void *tsc_getPointerWithoutByte(void *pointer) {
-    size_t x = 0xFF;
-    size_t shift = (sizeof(pointer)-1) * 8;
-    size_t mask = x << shift;
-    size_t val = (size_t)pointer;
-    val &= ~mask; // remove any old data
-    return (void *)val;
-}
-
-void *tsc_setUnusedPointerByte(void *pointer, unsigned char byte) {
-    size_t x = 0xFF;
-    size_t shift = (sizeof(pointer)-1) * 8;
-    pointer = tsc_getPointerWithoutByte(pointer);
-    size_t val = (size_t)pointer;
-    val |= byte << shift;
-    return (void *)val;
-}
-
-// x64 only
-unsigned short tsc_getUnusedPointerShort(void *pointer) {
-    size_t x = 0xFFFF;
-    size_t shift = (sizeof(pointer)-2) * 8;
-    size_t mask = x << shift;
-    size_t val = (size_t)pointer;
-    val &= mask;
-    val >>= shift;
-    return val;
-}
-
-void *tsc_getPointerWithoutShort(void *pointer) {
-    size_t x = 0xFFFF;
-    size_t shift = (sizeof(pointer)-2) * 8;
-    size_t mask = x << shift;
-    size_t val = (size_t)pointer;
-    val &= ~mask; // remove any old data
-    return (void *)val;
-}
-
-// x64 only
-void *tsc_setUnusedPointerShort(void *pointer, unsigned short byte) {
-    size_t x = 0xFFFF;
-    size_t shift = (sizeof(pointer)-2) * 8;
-    pointer = tsc_getPointerWithoutByte(pointer);
-    size_t val = (size_t)pointer;
-    val |= byte << shift;
-    return (void *)val;
+    else num[i] &= ~(char)value;
 }
 
 #ifndef TSC_POSIX

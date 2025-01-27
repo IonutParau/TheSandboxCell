@@ -111,7 +111,7 @@ static int tsc_json_skipWhitespace(const char **text, tsc_buffer *err) {
         }
         if(c == '/') {
             tsc_json_next(text);
-            char n = tsc_json_next(text);
+            tsc_json_next(text);
             if(c == '/') {
                 while(true) {
                     char ch = tsc_json_next(text);
@@ -186,7 +186,6 @@ static int tsc_json_hexdigit(char c) {
 
 static int tsc_json_decodeNumber(const char **text, double *out, tsc_buffer *err) {
     char c = tsc_json_next(text);
-    bool hasDot = false;
     bool shouldHaveDot = true;
     *out = 0;
     if(c == '0') {

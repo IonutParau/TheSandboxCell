@@ -316,8 +316,6 @@ int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell
 
     int cx = x;
     int cy = y;
-    int lx = x;
-    int ly = y;
     tsc_cell replacecell = tsc_cell_clone(replacement);
     while(true) {
         tsc_cell *cell = tsc_grid_get(grid, cx, cy);
@@ -338,22 +336,15 @@ int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell
             break;
         }
         replacement = cell;
-        lx = cx;
-        ly = cy;
         cx = tsc_grid_frontX(cx, dir);
         cy = tsc_grid_frontY(cy, dir);
         amount++;
     }
 
-    lx = x;
-    ly = y;
-
     // Move using tsc_cell_swap
     for(int i = 0; i < amount; i++) {
         tsc_cell_swap(tsc_grid_get(grid, x, y), &replacecell);
         tsc_grid_enableChunk(grid, x, y);
-        lx = x;
-        ly = y;
         x = tsc_grid_frontX(x, dir);
         y = tsc_grid_frontY(y, dir);
     }

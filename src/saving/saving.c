@@ -1,6 +1,5 @@
 #include "saving.h"
 #include "../utils.h"
-#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -114,7 +113,7 @@ static char *tsc_saving_encode74(int num) {
 
 static char tsc_saving_encodeChar74(char n) {
     assert(n < 74);
-    return saving_base74[n];
+    return saving_base74[(size_t)n];
 }
 
 static int tsc_saving_decode74(const char *num) {
@@ -124,7 +123,7 @@ static int tsc_saving_decode74(const char *num) {
 
     for(int i = 0; i < numc; i++) {
         char c = num[i];
-        int val;
+        int val = 0;
         for(int j = 0; saving_base74[j] != '\0'; j++) {
             if(saving_base74[j] == c) {
                 val = j;
@@ -141,12 +140,12 @@ static int tsc_saving_decode74(const char *num) {
 static char tsc_saving_decodeChar74(char c) {
     if(saving_base74R[0] == -1) {
         for(int i = 0; i < 74; i++) {
-            saving_base74R[tsc_saving_encodeChar74(i)] = i;
+            saving_base74R[(size_t)tsc_saving_encodeChar74(i)] = i;
         }
         saving_base74R[0] = 0;
     }
 
-    return saving_base74R[c];
+    return saving_base74R[(size_t)c];
 }
 
 
@@ -439,12 +438,7 @@ static int tsc_v3_encode(tsc_buffer *buffer, tsc_grid *grid) {
             tsc_v3_writeRepeater(buffer, bestbacklen, bestback);
             i += bestbacklen - 1;
         }
-
-        float progress = (float)i / (float)cell_len;
-        // Non-trivial grid, so we should let the user know we're working
-        //if(cell_len > 10000) printf("Progress: %3.2f%%\n", progress * 100);
     }
-    printf("Done\n");
 
     tsc_saving_write(buffer, ';');
 
