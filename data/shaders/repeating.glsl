@@ -8,13 +8,13 @@ in vec2 fragTexCoord;
 
 out vec4 fragColor;
 
-// We also ask for scale
-uniform vec2 scale;
+// We also ask for scale, and scale.z is opacity
+uniform vec3 scale;
 
 void main() {
     vec2 pos = vec2(fragTexCoord.x * scale.x, fragTexCoord.y * scale.y);
     pos = fract(pos);
-    vec4 source = texture(texture0, pos);
+    vec4 source = texture(texture0, pos) * colDiffuse;
     fragColor = source;
-    fragColor.a = source.a * colDiffuse.a;
+    fragColor.a *= scale.z;
 }

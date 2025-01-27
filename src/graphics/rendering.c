@@ -222,18 +222,11 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
     }
     // Basic cells get super optimized rendering
     if(gridRepeat > 1) {
-        // We need a render texture that is big enough
-        if(renderingCellBrushSize != gridRepeat || renderingCellBrushId != cell->id || renderingCellBrushRot != cell->rot) {
-            UnloadRenderTexture(renderingCellTexture);
-            renderingCellTexture = LoadRenderTexture(size, size);
-            renderingCellBrushSize = gridRepeat;
-            renderingCellBrushId = cell->id;
-            renderingCellBrushRot = cell->rot;
-        }
-        float repeat[] = {gridRepeat, gridRepeat};
-        SetShaderValue(renderingRepeatingShader, renderingRepeatingScaleLoc, repeat, SHADER_UNIFORM_VEC2);
+        float repeat[] = {gridRepeat, gridRepeat, opacity};
+        SetShaderValue(renderingRepeatingShader, renderingRepeatingScaleLoc, repeat, SHADER_UNIFORM_VEC3);
         //BeginTextureMode(renderingCellTexture);
         //ClearBackground(BLANK);
+        BeginBlendMode(BLEND_ALPHA);
         BeginShaderMode(renderingRepeatingShader);
         //dest.x = origin.x;
         //dest.y = origin.y;
@@ -245,6 +238,7 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
         // Weird hack science can not explain
         // DrawTexture(renderingCellTexture.texture, -renderingCamera.x + ix * renderingCamera.cellSize,
         //         -renderingCamera.y + iy * renderingCamera.cellSize, color);
+        EndBlendMode();
     }
 }
 
@@ -365,8 +359,8 @@ void tsc_drawGrid() {
             trueApproximationSize *= 2;
         }
         Texture empty = textures_get(builtin.empty);
-        float emptyScale[2] = {currentGrid->width, currentGrid->height};
-        SetShaderValue(renderingRepeatingShader, renderingRepeatingScaleLoc, emptyScale, SHADER_UNIFORM_VEC2);
+        float emptyScale[3] = {currentGrid->width, currentGrid->height, 1};
+        SetShaderValue(renderingRepeatingShader, renderingRepeatingScaleLoc, emptyScale, SHADER_UNIFORM_VEC3);
         BeginShaderMode(renderingRepeatingShader);
         {
             Rectangle emptySrc = {0, 0, empty.width, empty.height};

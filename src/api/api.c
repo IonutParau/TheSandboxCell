@@ -489,6 +489,7 @@ void tsc_loadSettings() {
     } else {
         tickDelay = tsc_toNumber(tsc_getSetting(builtin.settings.updateDelay));
         multiTickPerFrame = tsc_toBoolean(tsc_getSetting(builtin.settings.mtpf));
+        tsc_settingHandler(builtin.settings.vsync);
     }
 }
 
