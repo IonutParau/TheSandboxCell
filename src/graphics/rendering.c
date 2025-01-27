@@ -630,8 +630,6 @@ static void tsc_handleCellPlace() {
     long x = tsc_cellMouseX();
     long y = tsc_cellMouseY();
 
-    if(x < 0 || y < 0 || x >= currentGrid->width || y >= currentGrid->height) return;
-
     tsc_cell current = tsc_cell_create(currentId, currentRot);
     tsc_cell nothing = tsc_cell_create(builtin.empty, 0);
 
