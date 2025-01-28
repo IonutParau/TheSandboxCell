@@ -225,6 +225,9 @@ void tsc_grid_setBackground(tsc_grid *grid, int x, int y, tsc_cell *cell) {
     tsc_cell *old = tsc_grid_background(grid, x, y);
     tsc_cell_destroy(*old);
     *old = copy;
+    if(copy.id != builtin.empty) {
+        tsc_grid_enableChunk(grid, x, y);
+    }
 }
 
 int tsc_grid_frontX(int x, char dir) {
