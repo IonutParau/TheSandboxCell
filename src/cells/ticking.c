@@ -47,10 +47,9 @@ static int tsc_gridUpdateThread(void *_) {
             tickTime = 0;
             tsc_copyGrid(tsc_getGrid("initial"), currentGrid);
         }
+        float beforeTick = tickTime;
         tsc_subtick_run();
-        tickTime -= tickDelay;
-        if(tickTime < 0) tickTime = 0; // yeah no more super negative time
-        if(tickDelay == 0) tickTime = 0;
+        float tickDuration = tickTime - beforeTick; // THIS WORKS
         ticksInSecond++;
         tickCount++;
         time(&now);
@@ -60,6 +59,10 @@ static int tsc_gridUpdateThread(void *_) {
             gameTPS = ticksInSecond / delta;
             ticksInSecond = 0;
         }
+        tickTime -= tickDelay;
+        if(tickDuration > tickDelay) tickTime = 0; // fixes annoying stuff
+        if(tickTime < 0) tickTime = 0; // yeah no more super negative time
+        if(tickDelay == 0) tickTime = 0;
         onlyOneTick = false;
         isGameTicking = false;
     }

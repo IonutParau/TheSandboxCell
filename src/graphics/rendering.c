@@ -177,6 +177,7 @@ static float tsc_updateInterp(float a, float b) {
     if(tickDelay == 0) return b;
     if(isGamePaused) return b;
     if(a == -1) return b;
+    if(isGameTicking) return a;
     float t = tickTime / tickDelay;
     return a + (b - a) * (t >= 1 ? 1 : t);
 }
