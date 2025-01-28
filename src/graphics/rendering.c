@@ -174,21 +174,20 @@ void tsc_setupRendering() {
 }
 
 static float tsc_updateInterp(float a, float b) {
+    float time = tickTime;
     if(tickDelay == 0) return b;
     if(isGamePaused) return b;
     if(a == -1) return b;
+    if(time > tickDelay) return b;
     if(isGameTicking) return a;
-    float t = tickTime / tickDelay;
-    return a + (b - a) * (t >= 1 ? 1 : t);
+    float t = time / tickDelay;
+    return a + (b - a) * t;
 }
 
 static float tsc_rotInterp(char rot, signed char added) {
-    if(tickDelay == 0) return rot;
-    if(isGamePaused) return rot;
     float last = ((signed char)rot) - added;
     float now = rot;
-    float t = tickTime / tickDelay;
-    return last + (now - last) * (t >= 1 ? 1 : t);
+    return tsc_updateInterp(last, now);
 }
 
 static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat, bool forceRectangle) {
@@ -398,8 +397,8 @@ void tsc_drawGrid() {
                 continue;
             }
             int repeat = skipLevel;
-            if(x + repeat >= currentGrid->width) repeat = currentGrid->width - x;
-            if(y + repeat >= currentGrid->height) repeat = currentGrid->height - y;
+            //if(x + repeat >= currentGrid->width) repeat = currentGrid->width - x;
+            //if(y + repeat >= currentGrid->height) repeat = currentGrid->height - y;
             tsc_cell *bg = tsc_grid_background(currentGrid, x, y);
             if(bg == NULL) break;
             tsc_drawCell(bg, x, y, 1, repeat, repeat > 1);
@@ -412,8 +411,8 @@ void tsc_drawGrid() {
                 continue;
             }
             int repeat = skipLevel;
-            if(x + repeat >= currentGrid->width) repeat = currentGrid->width - x;
-            if(y + repeat >= currentGrid->height) repeat = currentGrid->height - y;
+            if(x + repeat > currentGrid->width) repeat = currentGrid->width - x;
+            if(y + repeat > currentGrid->height) repeat = currentGrid->height - y;
             tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
             if(cell == NULL) break;
             tsc_drawCell(cell, x, y, 1, repeat, repeat > 1);
