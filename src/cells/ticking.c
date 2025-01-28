@@ -41,15 +41,16 @@ static int tsc_gridUpdateThread(void *_) {
         // Nothing here is thread-safe except the waiting
         // The only thing keeping this from exploding is
         // high IQ code I wrote that I forgot to understand
-        tickTime -= tickDelay;
-        if(tickTime < 0) tickTime = 0; // yeah no more super negative time
-        if(tickDelay == 0) tickTime = 0;
         isGameTicking = true;
         if(isInitial) {
             isInitial = false;
+            tickTime = 0;
             tsc_copyGrid(tsc_getGrid("initial"), currentGrid);
         }
         tsc_subtick_run();
+        tickTime -= tickDelay;
+        if(tickTime < 0) tickTime = 0; // yeah no more super negative time
+        if(tickDelay == 0) tickTime = 0;
         ticksInSecond++;
         tickCount++;
         time(&now);
