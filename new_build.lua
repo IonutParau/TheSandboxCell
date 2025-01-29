@@ -312,6 +312,7 @@ local function packageTheDamnGame()
         "-r data",
         "CREDITS.txt",
         "LICENSE",
+        "README.md",
     }
 
     ---@param libs LibConfig
