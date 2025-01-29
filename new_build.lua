@@ -310,6 +310,8 @@ local function packageTheDamnGame()
         Config.exe,
         Config.lib,
         "-r data",
+        "CREDITS.txt",
+        "LICENSE",
     }
 
     ---@param libs LibConfig
