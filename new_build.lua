@@ -310,8 +310,6 @@ local function packageTheDamnGame()
         Config.exe,
         Config.lib,
         "-r data",
-        "-r mods",
-        "-r platforms",
     }
 
     ---@param libs LibConfig
