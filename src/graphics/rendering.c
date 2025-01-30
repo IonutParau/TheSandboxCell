@@ -174,6 +174,9 @@ void tsc_setupRendering() {
 }
 
 static float tsc_updateInterp(float a, float b) {
+#ifdef TSC_TURBO
+    return b;
+#endif
     float time = tickTime;
     if(tickDelay == 0) return b;
     if(isGamePaused) return b;

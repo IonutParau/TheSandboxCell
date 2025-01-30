@@ -65,6 +65,16 @@ end
 
 ---@alias LibConfig {system: string[], custom: {[string]: string[]}}
 
+local function isStaticLib(lib)
+    return lib:sub(-2) == ".a" or lib:sub(-4) == ".lib"
+end
+
+local function libName(lib)
+    local dot = string.find(lib, "%.")
+    if string.sub(lib, 1, 3) == "lib" then return string.sub(lib, 4, dot-1) end
+    return string.sub(lib, 1, dot-1)
+end
+
 ---@param lib LibConfig
 ---@return string
 local function linkFlagsOf(lib)
@@ -78,7 +88,16 @@ local function linkFlagsOf(lib)
     for dir, libs in pairs(lib.custom) do
         table.insert(flags, "-L" .. dir)
         for i=1,#libs do
-            table.insert(flags, "-l:" .. fixPath("%s/%s", dir, libs[i]))
+            if isStaticLib(libs[i]) then
+                table.insert(flags, "-l" .. libName(libs[i]))
+            else
+                table.insert(flags, "-l:" .. fixPath("%s/%s", dir, libs[i]))
+            end
+        end
+        for k, v in pairs(libs) do
+            if type(k) == "string" then
+                table.insert(flags, "-l" .. v)
+            end
         end
     end
 
@@ -125,34 +144,34 @@ end
 
 if Config.mode == "debug" then
     local ourFuckingDebugger = "lldb"
-    if Config.compiler == "gcc" or Config.compiler == "cc" then
+    if Config.compiler:match("gcc") or Config.compiler:match("cc") then
         ourFuckingDebugger = "gdb"
-    elseif Config.compiler ~= "clang" then
+    elseif not Config.compiler:match("clang") then
         ourFuckingDebugger = "" -- just pass -g and hope
     end
     Config.cflags = Config.cflags .. " -g" .. ourFuckingDebugger
     Config.cflags = Config.cflags .. " -Og" -- debug-focused optimizations
 elseif Config.mode == "release" then
     Config.cflags = Config.cflags .. " -O3"
-    if Config.compiler == "gcc" then
+    if Config.compiler:match"gcc" then
         Config.cflags = Config.cflags .. " -flto=auto"
     end
-    if Config.compiler == "clang" then
+    if Config.compiler:match"clang" then
         Config.cflags = Config.cflags .. " -flto=full"
     end
-    if Config.linker == "clang" then
+    if Config.linker:match"clang" then
         Config.lflags = Config.lflags .. " -flto=full"
     end
     Config.lflags = Config.lflags .. " -O3"
 elseif Config.mode == "turbo" then
     Config.cflags = Config.cflags .. " -DTSC_TURBO -O3 -ffast-math"
-    if Config.compiler == "gcc" then
+    if Config.compiler:match"gcc" then
         Config.cflags = Config.cflags .. " -flto=auto"
     end
-    if Config.compiler == "clang" then
+    if Config.compiler:match"clang" then
         Config.cflags = Config.cflags .. " -flto=full"
     end
-    if Config.linker == "clang" then
+    if Config.linker:match"clang" then
         Config.lflags = Config.lflags .. " -flto=full"
     end
     Config.lflags = Config.lflags .. " -Ofast"
@@ -246,7 +265,7 @@ end
 ---@param objs string[]
 local function link(out, ftype, specialFlags, objs)
     local ltypeFlag = ftype == "shared" and "-shared" or ""
-    exec("%s %s -o %s %s %s %s", Config.linker, Config.lflags, out, specialFlags, ltypeFlag, table.concat(objs, " "))
+    exec("%s %s -o %s %s %s %s", Config.linker, Config.lflags, out, ltypeFlag, table.concat(objs, " "), specialFlags)
 end
 
 -- Who needs automatic source graphs when we have manual C file lists
@@ -301,7 +320,7 @@ local function buildTheDamnExe()
         table.insert(objs, compile(game[i]))
     end
 
-    link(Config.exe, "exe", "-L. -l:./" .. Config.lib .. " " .. linkFlagsOf(Config.gameLibs), objs)
+    link(Config.exe, "exe", linkFlagsOf({system = {}, custom = {["."] = {Config.lib}}}) .. " " .. linkFlagsOf(Config.gameLibs), objs)
 end
 
 -- Depends on zip existing because yes
