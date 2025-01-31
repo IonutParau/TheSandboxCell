@@ -11,6 +11,25 @@ typedef struct tsc_cellreg {
     size_t len;
 } tsc_cellreg;
 
+#define TSC_MAX_ID 65535
+typedef unsigned short tsc_id_t;
+typedef unsigned short tsc_last_t;
+typedef int tsc_reg_t;
+#define TSC_NULL_LAST 65535
+#define TSC_NULL_TEXTURE 0
+#define TSC_NULL_EFFECT 0
+
+typedef struct tsc_cell2 {
+    tsc_id_t id;
+    tsc_id_t texture;
+    char rotData;
+    char updated;
+    tsc_id_t effect;
+    tsc_reg_t reg;
+    tsc_last_t lx;
+    tsc_last_t ly;
+} tsc_cell2;
+
 typedef struct tsc_cell {
     const char *id;
     const char *texture;
