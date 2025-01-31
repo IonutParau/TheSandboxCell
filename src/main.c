@@ -249,7 +249,7 @@ int main(int argc, char **argv) {
         
         timeElapsed += GetFrameTime();
 
-        if(!particlesInitialized) {
+        if(!particlesInitialized && timeElapsed > 0.2) {
             particlesInitialized = true;
             mainMenuParticleCount = TSC_MAINMENU_PARTICLE_COUNT;
             for(size_t i = 0; i < mainMenuParticleCount; i++) {
