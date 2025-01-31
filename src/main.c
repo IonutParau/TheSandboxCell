@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,7 +68,7 @@ tsc_mainMenuParticle_t tsc_randomMainMenuParticle(bool respawn) {
     if(respawn) {
         particle.dist = m + tsc_randFloat() * r;
     }
-    particle.rot += tsc_randFloat() * 2 * PI;
+    particle.rot = tsc_randFloat() * 2 * PI;
     return particle;
 }
 
@@ -135,7 +136,7 @@ int main(int argc, char **argv) {
     SetWindowMonitor(0);
     SetWindowState(FLAG_MSAA_4X_HINT | FLAG_WINDOW_MAXIMIZED);
 
-    double timeElapsed = 0;
+    volatile double timeElapsed = 0;
 
     // L + ratio
     SetExitKey(KEY_NULL);
@@ -181,7 +182,7 @@ int main(int argc, char **argv) {
     int off = 0;
     
     tsc_mainMenuParticle_t mainMenuParticles[TSC_MAINMENU_PARTICLE_COUNT];
-    size_t mainMenuParticleCount = 0;
+    volatile size_t mainMenuParticleCount = 0;
     bool particlesInitialized = false;
 
     AttachAudioMixedProcessor(tsc_magicStreamProcessorDoNotUseEver);
@@ -245,8 +246,10 @@ int main(int argc, char **argv) {
 
         int width = GetScreenWidth();
         int height = GetScreenHeight();
+        
+        timeElapsed += GetFrameTime();
 
-        if(!particlesInitialized && timeElapsed > 0.2) {
+        if(!particlesInitialized) {
             particlesInitialized = true;
             mainMenuParticleCount = TSC_MAINMENU_PARTICLE_COUNT;
             for(size_t i = 0; i < mainMenuParticleCount; i++) {
@@ -254,8 +257,6 @@ int main(int argc, char **argv) {
                 mainMenuParticles[i].id = tsc_main_allCells[(i / (mainMenuParticleCount / tsc_main_cellCount)) % tsc_main_cellCount];
             }
         }
-
-        timeElapsed += GetFrameTime();
         blackHoleSoundBonus = tsc_magicMusicSampleDoNotTouchEver;
 
         particleHalvingTimer -= GetFrameTime();
@@ -264,7 +265,7 @@ int main(int argc, char **argv) {
             tsc_drawGrid();
         } else {
             // Dont worry potato PCs we got you... though credits will kill you
-            if(GetFPS() < 30 && timeElapsed > 0.5 && particleHalvingTimer <= 0 && !tsc_streql(tsc_currentMenu, "credits")) {
+            if(GetFPS() < 30 && timeElapsed > 0.5 && particleHalvingTimer <= 0) {
                 particleHalvingTimer = 0.5;
                 mainMenuParticleCount /= 2;
                 for(size_t i = 0; i < mainMenuParticleCount; i++) {

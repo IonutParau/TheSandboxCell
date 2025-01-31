@@ -8,5 +8,6 @@ Config.tscLibs = {
 Config.gameLibs = Config.tscLibs
 
 if Config.host == "linux" then
-    Config.lflags = Config.lflags .. " -static-libgcc -Wl,--subsystem,windows -Wl,-Bstatic -lpthread"
+    local subsystem = Config.opts.console and "" or " -Wl,--subsystem,windows"
+    Config.lflags = Config.lflags .. subsystem .. " -static-libgcc -Wl,-Bstatic -lpthread"
 end

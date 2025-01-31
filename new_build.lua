@@ -120,6 +120,7 @@ Config.ar = opts.ar or "ar r"
 Config.ranlib = opts.ranlib
 Config.mode = opts.mode or "debug" -- Debug cool
 Config.mode = Config.mode:lower() -- muscle memory is a bitch sometimes
+Config.opts = opts
 
 Config.cflags = opts.cflags or "-c -fPIC"
 if opts.strict then
