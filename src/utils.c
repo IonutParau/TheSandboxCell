@@ -305,6 +305,11 @@ void tsc_setBit(char *num, size_t bit, bool value) {
     else num[i] &= ~(char)value;
 }
 
+double tsc_mapNumber(double x, double min1, double max1, double min2, double max2) {
+    double t = (x - min1) / (max1 - min1);
+    return min2 + t * (max2 - min2);
+}
+
 #ifndef TSC_POSIX
 
 int asprintf(char **s, const char *fmt, ...) {

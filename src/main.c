@@ -284,9 +284,10 @@ int main(int argc, char **argv) {
                     bx + cos(particle.angle) * particle.dist,
                     by + sin(particle.angle) * particle.dist,
                 };
-                Color c = WHITE;
                 float x = r/particle.dist;
-                c.a = x > 1 ? 255 : x * 255;
+                Color c = WHITE;
+                if(x > 1) x = 1;
+                c.a = x * 255;
                 Vector2 origin = {particle.r/2, particle.r/2};
                 DrawTexturePro(t,
                     (Rectangle) {0, 0, t.width, t.height},
