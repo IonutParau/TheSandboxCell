@@ -144,7 +144,7 @@ end
 
 if Config.mode == "debug" then
     local ourFuckingDebugger = "lldb"
-    if Config.compiler:match("gcc") or Config.compiler:match("cc") then
+    if (Config.compiler:match("gcc") or Config.compiler:match("cc")) then
         ourFuckingDebugger = "gdb"
     elseif not Config.compiler:match("clang") then
         ourFuckingDebugger = "" -- just pass -g and hope
@@ -153,7 +153,7 @@ if Config.mode == "debug" then
     Config.cflags = Config.cflags .. " -Og" -- debug-focused optimizations
 elseif Config.mode == "release" then
     Config.cflags = Config.cflags .. " -O3"
-    if Config.compiler:match"gcc" then
+    if Config.compiler:match"gcc" and not Config.compiler:match"mingw" then -- mingw just sucks
         Config.cflags = Config.cflags .. " -flto=auto"
     end
     if Config.compiler:match"clang" then
