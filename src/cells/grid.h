@@ -12,6 +12,7 @@ typedef struct tsc_cellreg {
 } tsc_cellreg;
 
 #define TSC_MAX_ID 65535
+#define TSC_ID_COUNT 65536
 typedef unsigned short tsc_id_t;
 typedef unsigned short tsc_last_t;
 typedef int tsc_reg_t;
