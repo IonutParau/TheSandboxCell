@@ -288,7 +288,7 @@ static void tsc_subtick_doGen(struct tsc_cell *cell, int x, int y, int _ux, int 
     int fy = tsc_grid_frontY(y, rot);
     tsc_cell *front = tsc_grid_get(currentGrid, fx, fy);
     if(front == NULL) return;
-    if(tsc_grid_checkOptimization(currentGrid, fx, fy, builtin.optimizations.gens[(size_t)rot])) {
+    if(front->id != builtin.empty && tsc_grid_checkOptimization(currentGrid, fx, fy, builtin.optimizations.gens[(size_t)rot])) {
         tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[(size_t)rot], true);
         return;
     }
@@ -553,12 +553,17 @@ static void tsc_subtick_reset(void *data) {
     size_t optSize = tsc_optSize();
 
     for(size_t y = 0; y < currentGrid->height; y++) {
+        if(!tsc_grid_checkChunk(currentGrid, x, y)) {
+            size_t i = x + y * currentGrid->width;
+            y += tsc_gridChunkSize - 1;
+            continue;
+        }
         tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
         cell->updated = false;
         cell->lx = x;
         cell->ly = y;
         char rot = tsc_cell_getRotation(cell);
-        tsc_cell_setRotationData(cell, rot, 0);
+        cell->rotData = rot;
         size_t i = x + y * currentGrid->width;
         memset(currentGrid->optData + i * optSize, 0, optSize);
         // TODO: cell reset method
@@ -580,6 +585,10 @@ void tsc_subtick_run() {
         workers_waitForTasksFlat(&tsc_subtick_reset, 0, 1, currentGrid->width);
     } else {
         for(size_t i = 0; i < currentGrid->width; i++) {
+            if(!tsc_grid_checkColumn(currentGrid, i)) {
+                i += tsc_gridChunkSize - 1;
+                continue;
+            }
             // Cast it to bullshit
             void *bullshit = (void *)i;
             tsc_subtick_reset(bullshit);

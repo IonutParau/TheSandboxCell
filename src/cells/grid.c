@@ -2,6 +2,7 @@
 #include "../utils.h"
 #include "../api/api.h"
 #include "../graphics/resources.h"
+#include "../threads/workers.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -21,7 +22,20 @@ tsc_grid *tsc_getGrid(const char *name) {
     }
     return NULL;
 }
-    
+   
+typedef struct tsc_grid_init_task_t {
+    tsc_grid *grid;
+    int y;
+} tsc_grid_init_task_t;
+
+static void tsc_initPartOfGrid(tsc_grid_init_task_t *task) {
+    size_t off = task->grid->height * task->y;
+    for(size_t i = 0; i < task->grid->width; i++) {
+        task->grid->cells[off + i] = tsc_cell_create(builtin.empty, 0);
+        task->grid->bgs[off + i] = tsc_cell_create(builtin.empty, 0);
+        memset(task->grid->optData + (off + i) * tsc_optSize(), 0, tsc_optSize());
+    }
+}
 
 tsc_grid *tsc_createGrid(const char *id, int width, int height, const char *title, const char *description) {
     assert(width > 0);
@@ -63,10 +77,20 @@ tsc_grid *tsc_createGrid(const char *id, int width, int height, const char *titl
     grid->bgs = malloc(sizeof(tsc_cell) * len);
     grid->optData = malloc(sizeof(char) * len * tsc_optSize());
 
-    for(size_t i = 0; i < len; i++) {
-        grid->cells[i] = tsc_cell_create(builtin.empty, 0);
-        grid->bgs[i] = tsc_cell_create(builtin.empty, 0);
-        memset(grid->optData + i * tsc_optSize(), 0, tsc_optSize());
+    if(len < 100000) {
+        for(size_t i = 0; i < len; i++) {
+            grid->cells[i] = tsc_cell_create(builtin.empty, 0);
+            grid->bgs[i] = tsc_cell_create(builtin.empty, 0);
+            memset(grid->optData + i * tsc_optSize(), 0, tsc_optSize());
+        }
+    } else {
+        tsc_grid_init_task_t *bullshitTaskBuffer = malloc(sizeof(tsc_grid_init_task_t) * grid->height);
+        for(size_t i = 0; i < grid->height; i++) {
+            bullshitTaskBuffer[i].grid = grid;
+            bullshitTaskBuffer[i].y = i;
+        }
+        workers_waitForTasksFlat((worker_task_t *)tsc_initPartOfGrid, bullshitTaskBuffer, sizeof(tsc_grid_init_task_t), grid->width);
+        free(bullshitTaskBuffer);
     }
 
     return grid;
