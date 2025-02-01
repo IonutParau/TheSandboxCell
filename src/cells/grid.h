@@ -1,7 +1,6 @@
 #ifndef TSC_GRID_H
 #define TSC_GRID_H
 
-#include "subticks.h"
 #include <stddef.h>
 #include <stdbool.h>
 
@@ -19,8 +18,9 @@ typedef int tsc_reg_t;
 #define TSC_NULL_LAST 65535
 #define TSC_NULL_TEXTURE 0
 #define TSC_NULL_EFFECT 0
+#define TSC_NULL_REGISTRY 0
 
-typedef struct tsc_cell2 {
+typedef struct tsc_cell {
     tsc_id_t id;
     tsc_id_t texture;
     char rotData;
@@ -29,19 +29,6 @@ typedef struct tsc_cell2 {
     tsc_reg_t reg;
     tsc_last_t lx;
     tsc_last_t ly;
-} tsc_cell2;
-
-typedef struct tsc_cell {
-    const char *id;
-    const char *texture;
-    tsc_cellreg *data;
-    struct tsc_celltable *celltable;
-    size_t flags;
-    int lx;
-    int ly;
-    char rot;
-    signed char addedRot;
-    bool updated;
 } tsc_cell;
 
 extern size_t tsc_gridChunkSize;
@@ -65,7 +52,7 @@ typedef struct tsc_celltable {
     void (*onAcid)(tsc_grid *grid, tsc_cell *cell, char dir, const char *forceType, double force, tsc_cell *dissolving, int dx, int dy, void *payload);
 } tsc_celltable;
 
-tsc_celltable *tsc_cell_newTable(const char *id);
+tsc_celltable *tsc_cell_newTable(tsc_id_t id);
 tsc_celltable *tsc_cell_getTable(tsc_cell *cell);
 size_t tsc_cell_getTableFlags(tsc_cell *cell);
 
@@ -102,17 +89,17 @@ typedef struct tsc_setting_id_pool_t {
 } tsc_setting_id_pool_t;
 
 typedef struct tsc_id_pool_t {
-    const char *empty;
-    const char *placeable;
-    const char *mover;
-    const char *generator;
-    const char *push;
-    const char *slide;
-    const char *rotator_cw;
-    const char *rotator_ccw;
-    const char *enemy;
-    const char *trash;
-    const char *wall;
+    tsc_id_t empty;
+    tsc_id_t placeable;
+    tsc_id_t mover;
+    tsc_id_t generator;
+    tsc_id_t push;
+    tsc_id_t slide;
+    tsc_id_t rotator_cw;
+    tsc_id_t rotator_ccw;
+    tsc_id_t enemy;
+    tsc_id_t trash;
+    tsc_id_t wall;
     tsc_texture_id_pool_t textures;
     tsc_audio_id_pool_t audio;
     tsc_optimization_id_pool_t optimizations;
@@ -125,14 +112,14 @@ extern tsc_cell_id_pool_t builtin;
 void tsc_init_builtin_ids();
 // hideapi
 
-tsc_cell tsc_cell_create(const char *id, char rot);
+tsc_cell tsc_cell_create(tsc_id_t id, char rot);
 tsc_cell tsc_cell_clone(tsc_cell *cell);
 void tsc_cell_swap(tsc_cell *a, tsc_cell *b);
 void tsc_cell_destroy(tsc_cell cell);
-const char *tsc_cell_get(const tsc_cell *cell, const char *key);
-const char *tsc_cell_nthKey(const tsc_cell *cell, size_t idx);
-void tsc_cell_set(tsc_cell *cell, const char *key, const char *value);
 void tsc_cell_rotate(tsc_cell *cell, signed char amount);
+char tsc_cell_getRotation(tsc_cell *cell);
+void tsc_cell_setRotationData(tsc_cell *cell, signed char rot, signed char addedRot);
+signed char tsc_cell_getAddedRotation(tsc_cell *cell);
 
 typedef struct tsc_grid {
     tsc_cell *cells;

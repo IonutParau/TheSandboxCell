@@ -109,80 +109,65 @@ const char *tsc_currentModID() {
     return currentMod;
 }
 
-tsc_cellprofile_t *tsc_profiles = NULL;
-size_t tsc_profileLen = 16;
+const char *tsc_ids[TSC_ID_COUNT] = {NULL};
+tsc_cellprofile_t tsc_profiles[TSC_ID_COUNT] = {NULL};
+tsc_id_t tsc_nextID = 0;
 
-const char *tsc_registerCell(const char *id, const char *name, const char *description) {
+tsc_id_t tsc_registerCell(const char *id, const char *name, const char *description) {
+    if(tsc_nextID == TSC_MAX_ID) {
+        fprintf(stderr, "Too many IDs (%d)\n", (int)tsc_nextID);
+        exit(1);
+    }
     const char *actualID = tsc_strintern(tsc_padWithModID(id));
-    if(tsc_profiles == NULL) {
-        tsc_profiles = malloc(sizeof(tsc_cellprofile_t) * tsc_profileLen);
-        for(size_t i = 0; i < tsc_profileLen; i++) {
-            tsc_profiles[i].id = NULL; // the way we mark it as unused
-        }
-    }
-insert_attempt:;
-    size_t i = (size_t)actualID / _Alignof(max_align_t);
-    i %= tsc_profileLen;
-    if(tsc_profiles[i].id == NULL) {
-        tsc_profiles[i].id = actualID;
-        tsc_profiles[i].name = name;
-        tsc_profiles[i].desc = description;
-    } else if(tsc_profiles[i].id == actualID) {
-        tsc_profiles[i].name = name;
-        tsc_profiles[i].desc = description;
-    } else {
-        // Space occupied, relocate.
-        size_t newLen = tsc_profileLen * 2;
-        tsc_cellprofile_t *newProfiles = malloc(sizeof(tsc_cellprofile_t) * newLen);
-        for(size_t i = 0; i < newLen; i++) {
-            newProfiles[i].id = NULL;
-        }
-        for(size_t i = 0; i < tsc_profileLen; i++) {
-            size_t j = (size_t)tsc_profiles[i].id / _Alignof(max_align_t);
-            j %= newLen;
-            newProfiles[j] = tsc_profiles[i];
-        }
-        free(tsc_profiles);
-        tsc_profiles = newProfiles;
-        tsc_profileLen = newLen;
-        goto insert_attempt;
-    }
-    return actualID;
+    tsc_id_t our_id = tsc_nextID++;
+    tsc_ids[our_id] = actualID;
+    tsc_profiles[our_id] = (tsc_cellprofile_t) {id, name, description};
+    return our_id;
+}
+
+tsc_id_t tsc_addID(const char *id) {
+    const char *actualID = tsc_strintern(tsc_padWithModID(id));
+    tsc_id_t our_id = tsc_nextID++;
+    tsc_ids[our_id] = actualID;
+    return our_id;
 }
 
 size_t tsc_countCells() {
-    size_t len = 0;
-    for(size_t i = 0; i < tsc_profileLen; i++) {
-        if(tsc_profiles[i].id != NULL) len++;
-    }
-    return len;
+    return tsc_nextID;
 }
 
-void tsc_fillCells(const char **buf) {
-    size_t j = 0;
-    for(size_t i = 0; i < tsc_profileLen; i++) {
-        const char *id = tsc_profiles[i].id;
-        if(id != NULL) {
-            buf[j++] = id;
+void tsc_fillCells(tsc_id_t *buf) {
+    for(tsc_id_t i = 0; i < tsc_nextID; i++) {
+        buf[i] = i;
+    }
+}
+
+const char *tsc_idToString(tsc_id_t id) {
+    return tsc_ids[id];
+}
+
+tsc_id_t tsc_findID(const char *id) {
+    id = tsc_strintern(id);
+    for(tsc_id_t i = 0; i < tsc_nextID; i++) {
+        if(id == tsc_ids[i]) {
+            return i;
         }
     }
+    return TSC_MAX_ID;
 }
 
-tsc_cellprofile_t *tsc_getProfile(const char *id) {
-    if(tsc_profiles == NULL) return NULL;
-    size_t i = (size_t)id / _Alignof(max_align_t); // Fancy magic to reduce RAM usage.
-    i %= tsc_profileLen;
-    if(tsc_profiles[i].id != id) {
-        return NULL;
+tsc_cellprofile_t *tsc_getProfile(tsc_id_t id) {
+    if(id < tsc_nextID) {
+        return tsc_profiles + id;
     }
-    return tsc_profiles + i;
+    return NULL;
 }
 
 tsc_category *rootCategory;
 
 tsc_category *tsc_rootCategory() {
     if(rootCategory == NULL) {
-        rootCategory = tsc_newCategory("Root", "Why are you looking at the description of root", builtin.trash);
+        rootCategory = tsc_newCategory("Root", "Why are you looking at the description of root", tsc_idToString(builtin.trash));
     }
     return rootCategory;
 }
@@ -230,13 +215,13 @@ void tsc_addCategory(tsc_category *category, tsc_category *toAdd) {
     category->itemc++;
 }
 
-void tsc_addCell(tsc_category *category, const char *cell) {
+void tsc_addCell(tsc_category *category, tsc_id_t cell) {
     if(category->itemc == category->itemcap) {
         category->itemcap *= 2;
         category->items = realloc(category->items, sizeof(tsc_categoryitem) * category->itemcap);
     }
     category->items[category->itemc].kind = TSC_CATEGORY_CELL;
-    category->items[category->itemc].cellID = cell;
+    category->items[category->itemc].cellID = tsc_idToString(cell);
     category->itemc++;
 }
 
@@ -365,26 +350,26 @@ void tsc_loadDefaultCellBar() {
     tsc_addButton(tools, "paste", "Paste", "Paste the copied selection (drag with Middle Click to select)", tsc_pasteButton, NULL);
 
     tsc_addCategory(root, tools);
-    tsc_category *movers = tsc_newCellGroup("Movers", "Cells that move by themselves and may also move other cells", builtin.mover);
+    tsc_category *movers = tsc_newCellGroup("Movers", "Cells that move by themselves and may also move other cells", tsc_idToString(builtin.mover));
     tsc_addCell(movers, builtin.mover);
     tsc_addCategory(root, movers);
-    tsc_category *generators = tsc_newCellGroup("Generators", "Cells that create other cells", builtin.generator);
+    tsc_category *generators = tsc_newCellGroup("Generators", "Cells that create other cells", tsc_idToString(builtin.generator));
     tsc_addCell(generators, builtin.generator);
     tsc_addCategory(root, generators);
-    tsc_category *pushables = tsc_newCellGroup("Pushables", "Cells that dont move by themselves but can be pushed", builtin.push);
+    tsc_category *pushables = tsc_newCellGroup("Pushables", "Cells that dont move by themselves but can be pushed", tsc_idToString(builtin.push));
     tsc_addCell(pushables, builtin.push);
     tsc_addCell(pushables, builtin.slide);
     tsc_addCell(pushables, builtin.wall);
     tsc_addCategory(root, pushables);
-    tsc_category *rotators = tsc_newCellGroup("Rotators", "Cells that rotate other nearby cells", builtin.rotator_cw);
+    tsc_category *rotators = tsc_newCellGroup("Rotators", "Cells that rotate other nearby cells", tsc_idToString(builtin.rotator_cw));
     tsc_addCell(rotators, builtin.rotator_cw);
     tsc_addCell(rotators, builtin.rotator_ccw);
     tsc_addCategory(root, rotators);
-    tsc_category *destroyers = tsc_newCellGroup("Destroyers", "Cells that destroy other cells", builtin.trash);
+    tsc_category *destroyers = tsc_newCellGroup("Destroyers", "Cells that destroy other cells", tsc_idToString(builtin.trash));
     tsc_addCell(destroyers, builtin.enemy);
     tsc_addCell(destroyers, builtin.trash);
     tsc_addCategory(root, destroyers);
-    tsc_category *backgrounds = tsc_newCellGroup("Backgrounds", "Cells sitting in the background", builtin.placeable);
+    tsc_category *backgrounds = tsc_newCellGroup("Backgrounds", "Cells sitting in the background", tsc_idToString(builtin.placeable));
     tsc_addCell(backgrounds, builtin.placeable);
     tsc_addCategory(root, backgrounds);
 }

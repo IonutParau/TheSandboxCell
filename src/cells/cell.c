@@ -41,111 +41,56 @@ void tsc_init_builtin_ids() {
     builtin.optimizations.gens[3] = tsc_allocOptimization("gen3");
 }
 
-tsc_cell __attribute__((hot)) tsc_cell_create(const char *id, char rot) {
+tsc_cell __attribute__((hot)) tsc_cell_create(tsc_id_t id, char rot) {
     tsc_cell cell;
     cell.id = id;
-    cell.texture = NULL;
-    cell.rot = rot % 4;
-    cell.data = NULL;
+    cell.texture = TSC_NULL_TEXTURE;
+    cell.rotData = rot & 0b11;
     cell.updated = false;
-    cell.celltable = NULL;
-    cell.flags = 0;
-    // -1 means no interpolation please
-    cell.lx = -1;
-    cell.ly = -1;
-    cell.addedRot = 0;
+    cell.effect = TSC_NULL_EFFECT;
+    cell.reg = TSC_NULL_REGISTRY;
+    cell.lx = TSC_NULL_LAST;
+    cell.ly = TSC_NULL_LAST;
     return cell;
 }
 
 tsc_cell __attribute__((hot)) tsc_cell_clone(tsc_cell *cell) {
     tsc_cell copy = *cell;
-    if(cell->data == NULL) return copy;
-
-    copy.data = malloc(sizeof(tsc_cellreg));
-    copy.data->len = cell->data->len;
-    copy.data->keys = malloc(sizeof(const char *) * copy.data->len);
-    memcpy(copy.data->keys, cell->data->keys, sizeof(const char *) * copy.data->len);
-    copy.data->values = malloc(sizeof(const char *) * copy.data->len);
-    for(size_t i = 0; i < cell->data->len; i++) {
-        copy.data->values[i] = tsc_strdup(cell->data->values[i]);
-    }
+    // TODO: handle reg edge-case
     return copy;
 }
 
 void __attribute__((hot)) tsc_cell_destroy(tsc_cell cell) {
-    if(cell.data != NULL) {
-        for(size_t i = 0; i < cell.data->len; i++) {
-            free(cell.data->values[i]);
-        }
-        free(cell.data->keys);
-        free(cell.data->values);
-        free(cell.data);
-    }
-}
-
-const char *tsc_cell_get(const tsc_cell *cell, const char *key) {
-    if(cell->data == NULL) return NULL;
-    for(size_t i = 0; i < cell->data->len; i++) {
-        if(tsc_streql(cell->data->keys[i], key)) {
-            return cell->data->values[i];
-        }
-    }
-    return NULL;
-}
-
-const char *tsc_cell_nthKey(const tsc_cell *cell, size_t idx) {
-    if(cell->data == NULL) return NULL;
-    if(idx >= cell->data->len) return NULL;
-    return cell->data->keys[idx];
-}
-
-void tsc_cell_set(tsc_cell *cell, const char *key, const char *value) {
-    if(value == NULL) {
-        if(cell->data == NULL) return;
-        // Remove
-        size_t j = 0;
-        for(size_t i = 0; i < cell->data->len; i++) {
-            if(tsc_streql(cell->data->keys[i], key)) {
-                free(cell->data->values[i]);
-                continue;
-            }
-            cell->data->keys[j] = cell->data->keys[i];
-            cell->data->values[j] = cell->data->values[i];
-            j++;
-        }
-        if(j != cell->data->len) {
-            // Something was removed
-            cell->data->len = j;
-            cell->data->keys = realloc(cell->data->keys, sizeof(const char *) * j);
-            cell->data->values = realloc(cell->data->values, sizeof(const char *) * j);
-        }
-        return;
-    }
-    if(cell->data == NULL) {
-        cell->data = malloc(sizeof(tsc_cellreg));
-        cell->data->len = 0;
-        cell->data->keys = NULL;
-        cell->data->values = NULL;
-    }
-    for(size_t i = 0; i < cell->data->len; i++) {
-        if(tsc_streql(cell->data->keys[i], key)) {
-            free(cell->data->values[i]);
-            cell->data->values[i] = tsc_strdup(value);
-            return;
-        }
-    }
-    size_t idx = cell->data->len++;
-    cell->data->keys = realloc(cell->data->keys, sizeof(const char *) * cell->data->len);
-    cell->data->keys[idx] = tsc_strintern(key);
-    cell->data->values = realloc(cell->data->values, sizeof(const char *) * cell->data->len);
-    cell->data->values[idx] = tsc_strdup(value);
+    // TODO: handle reg edge-case
 }
 
 void tsc_cell_rotate(tsc_cell *cell, signed char amount) {
-	cell->rot += amount;
-	cell->rot %= 4;
-	while(cell->rot < 0) cell->rot += 4;
-	cell->addedRot += amount;
+    char added = tsc_cell_getAddedRotation(cell);
+    char rot = tsc_cell_getRotation(cell);
+    rot += amount;
+    rot %= 4;
+    while(rot < 0) rot += 4;
+    added += amount;
+    tsc_cell_setRotationData(cell, rot, added);
+}
+
+char tsc_cell_getRotation(tsc_cell *cell) {
+    return cell->rotData & 0b11;
+}
+signed char tsc_cell_getAddedRotation(tsc_cell *cell) {
+    char added = cell->rotData & 0b11111100;
+    added >>= 2;
+    // force 2s-complement to work
+    if(added & 0b00100000) {
+        added |= 0b11000000;
+    }
+    return added;
+}
+
+void tsc_cell_setRotationData(tsc_cell *cell, signed char rot, signed char addedRot) {
+    rot %= 4;
+    while(rot < 0) rot += 4;
+    cell->rotData = (addedRot << 2) | rot;
 }
 
 void tsc_cell_swap(tsc_cell *a, tsc_cell *b) {
@@ -161,34 +106,25 @@ typedef struct tsc_cell_table_arr {
 } tsc_cell_table_arr;
 
 static tsc_cell_table_arr cell_table_arr = {NULL, NULL, 0};
+static tsc_celltable tsc_cellTables[TSC_ID_COUNT];
+static bool tsc_cellTablesDefined[TSC_ID_COUNT] = {false};
 
-tsc_celltable *tsc_cell_newTable(const char *id) {
-    tsc_celltable *table = malloc(sizeof(tsc_celltable));
-    tsc_celltable empty = {NULL, NULL, NULL};
-    *table = empty;
-    size_t idx = cell_table_arr.tablec++;
-    cell_table_arr.tables = realloc(cell_table_arr.tables, sizeof(tsc_celltable *) * cell_table_arr.tablec);
-    cell_table_arr.ids = realloc(cell_table_arr.ids, sizeof(const char *) * cell_table_arr.tablec);
-    cell_table_arr.tables[idx] = table;
-    cell_table_arr.ids[idx] = id;
-    return table;
+tsc_celltable *tsc_cell_newTable(tsc_id_t id) {
+    if(!tsc_cellTablesDefined[id]) {
+        tsc_celltable table = {NULL};
+        tsc_cellTables[id] = table;
+        tsc_cellTablesDefined[id] = true;
+    }
+    return tsc_cellTables + id;
 }
 
 // HIGH priority for optimization
 // While this is "technically" not thread-safe, you can use it as if it is.
 tsc_celltable *tsc_cell_getTable(tsc_cell *cell) {
-    // Locally cached VTable (id should never be assigned to so this is fine)
-    if(cell->celltable != NULL) return cell->celltable;
-
-    for(size_t i = 0; i < cell_table_arr.tablec; i++) {
-        if(cell_table_arr.ids[i] == cell->id) {
-            tsc_celltable *table = cell_table_arr.tables[i];
-            cell->celltable = table;
-            return table;
-        }
+    if(tsc_cellTablesDefined[cell->id]) {
+        return tsc_cellTables + cell->id;
     }
-
-    // Table not found.
+    // Table not found
     return NULL;
 }
 
@@ -199,8 +135,9 @@ size_t tsc_cell_getTableFlags(tsc_cell *cell) {
 }
 
 int tsc_cell_canMove(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force) {
+    char rot = tsc_cell_getRotation(cell);
     if(cell->id == builtin.wall) return 0;
-    if(cell->id == builtin.slide) return  dir % 2 == cell->rot % 2;
+    if(cell->id == builtin.slide) return  dir % 2 == rot % 2;
 
     tsc_celltable *celltable = tsc_cell_getTable(cell);
     if(celltable == NULL) return 1;
@@ -209,9 +146,10 @@ int tsc_cell_canMove(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, con
 }
 
 float tsc_cell_getBias(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force) {
+    char rot = tsc_cell_getRotation(cell);
     if(cell->id == builtin.mover && tsc_streql(forceType, "push")) {
-        if(cell->rot == dir) return 1;
-        if((cell->rot + 2) % 4 == dir) return -1;
+        if(rot == dir) return 1;
+        if((rot + 2) % 4 == dir) return -1;
 
         return 0;
     }

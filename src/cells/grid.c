@@ -208,8 +208,8 @@ void tsc_grid_set(tsc_grid *grid, int x, int y, tsc_cell *cell) {
     tsc_cell copy = tsc_cell_clone(cell);
     tsc_cell *old = tsc_grid_get(grid, x, y);
     tsc_cell_destroy(*old);
-    if(copy.lx == -1) copy.lx = x;
-    if(copy.ly == -1) copy.ly = y;
+    if(copy.lx == TSC_NULL_LAST) copy.lx = x;
+    if(copy.ly == TSC_NULL_LAST) copy.ly = y;
     *old = copy;
     if(copy.id != builtin.empty) {
         tsc_grid_enableChunk(grid, x, y);
@@ -226,8 +226,8 @@ void tsc_grid_setBackground(tsc_grid *grid, int x, int y, tsc_cell *cell) {
     tsc_cell copy = tsc_cell_clone(cell);
     tsc_cell *old = tsc_grid_background(grid, x, y);
     tsc_cell_destroy(*old);
-    if(copy.lx == -1) copy.lx = x;
-    if(copy.ly == -1) copy.ly = y;
+    if(copy.lx == TSC_NULL_LAST) copy.lx = x;
+    if(copy.ly == TSC_NULL_LAST) copy.ly = y;
     *old = copy;
     if(copy.id != builtin.empty) {
         tsc_grid_enableChunk(grid, x, y);
@@ -311,7 +311,7 @@ void tsc_grid_setOptimization(tsc_grid *grid, int x, int y, size_t optimization,
 
 int tsc_grid_push(tsc_grid *grid, int x, int y, char dir, double force, tsc_cell *replacement) {
     // Beautiful hack
-    tsc_cell empty = tsc_cell_create(NULL, 0);
+    tsc_cell empty = tsc_cell_create(builtin.empty, 0);
     if(replacement == NULL) {
         empty.id = builtin.empty;
         replacement = &empty;

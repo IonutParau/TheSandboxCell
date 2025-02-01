@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include "value.h"
+#include "../cells/grid.h"
 
 // hideapi
 
@@ -40,11 +41,13 @@ typedef struct tsc_cellprofile_t {
     const char *desc;
 } tsc_cellprofile_t;
 
-const char *tsc_registerCell(const char *id, const char *name, const char *description);
+tsc_id_t tsc_registerCell(const char *id, const char *name, const char *description);
 size_t tsc_countCells();
-void tsc_fillCells(const char **buf);
+void tsc_fillCells(tsc_id_t *buf);
+const char *tsc_idToString(tsc_id_t id);
+tsc_id_t tsc_findID(const char *id);
 
-tsc_cellprofile_t *tsc_getProfile(const char *id);
+tsc_cellprofile_t *tsc_getProfile(tsc_id_t id);
 
 typedef struct tsc_cellbutton {
     void *payload;
@@ -123,7 +126,7 @@ tsc_category *tsc_rootCategory();
 tsc_category *tsc_newCategory(const char *title, const char *description, const char *icon);
 tsc_category *tsc_newCellGroup(const char *title, const char *description, const char *mainCell);
 void tsc_addCategory(tsc_category *category, tsc_category *toAdd);
-void tsc_addCell(tsc_category *category, const char *cell);
+void tsc_addCell(tsc_category *category, tsc_id_t cell);
 void tsc_addButton(tsc_category *category, const char *icon, const char *name, const char *description, void (*click)(void *), void *payload);
 tsc_category *tsc_getCategory(tsc_category *category, const char *path);
 

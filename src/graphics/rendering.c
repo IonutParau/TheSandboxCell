@@ -126,7 +126,7 @@ void tsc_resetRendering() {
     renderingCamera.cellSize = 32;
     renderingCamera.speed = 200;
     tsc_centerCamera();
-    currentId = builtin.mover;
+    currentId = tsc_idToString(builtin.mover);
     currentRot = 0;
     isInitial = true;
     renderingCellBrushSize = 0;
@@ -180,7 +180,7 @@ static float tsc_updateInterp(float a, float b) {
     float time = tickTime;
     if(tickDelay == 0) return b;
     if(isGamePaused) return b;
-    if(a == -1) return b;
+    if(a == TSC_NULL_LAST) return b;
     if(time > tickDelay) return b;
     if(isGameTicking) return a;
     float t = time / tickDelay;
@@ -194,15 +194,18 @@ static float tsc_rotInterp(char rot, signed char added) {
 }
 
 static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat, bool forceRectangle) {
-    if(cell->id == builtin.empty && cell->texture == NULL) return;
-    Texture texture = textures_get(cell->texture == NULL ? cell->id : cell->texture);
+    if(cell->id == builtin.empty && cell->texture == TSC_NULL_TEXTURE) return;
+    tsc_id_t idToRender = cell->texture == TSC_NULL_TEXTURE ? cell->id : cell->texture;
+    Texture texture = textures_get(tsc_idToString(idToRender));
     double size = renderingCamera.cellSize * gridRepeat;
     Vector2 origin = {size / 2, size / 2};
     Rectangle src = {0, 0, texture.width, texture.height};
     bool isRect = renderingCamera.cellSize < trueApproximationSize || forceRectangle;
     float ix = isRect ? x : tsc_updateInterp(cell->lx, x);
     float iy = isRect ? y : tsc_updateInterp(cell->ly, y);
-    float irot = isRect ? cell->rot : tsc_rotInterp(cell->rot, cell->addedRot);
+    char rot = tsc_cell_getRotation(cell);
+    signed char addedRot = tsc_cell_getAddedRotation(cell);
+    float irot = isRect ? rot : tsc_rotInterp(rot, addedRot);
     Rectangle dest = {ix * renderingCamera.cellSize - renderingCamera.x + origin.x,
         iy * renderingCamera.cellSize - renderingCamera.y + origin.y,
         size,
@@ -210,7 +213,7 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
     Color color = WHITE;
     color.a = opacity * 255;
     if(isRect) {
-        Color approx = textures_getApproximation(cell->texture == NULL ? cell->id : cell->texture);
+        Color approx = textures_getApproximation(tsc_idToString(idToRender));
         //approx = ColorAlphaBlend(approx, approx, color);
         approx.a = color.a;
         Vector2 origin = {size / 2, size / 2};
@@ -290,7 +293,8 @@ static void tsc_buildCellbar(tsc_category *category, tsc_categorybutton *buttons
                     tsc_ui_translate(0, -10);
                 }
                 if(!hasOpen) {
-                    tsc_cellprofile_t *profile = tsc_getProfile(category->items[i].cellID);
+                    // TODO: make this WAAAAAY better
+                    tsc_cellprofile_t *profile = tsc_getProfile(tsc_findID(category->items[i].cellID));
                     if(profile != NULL) {
                         tsc_ui_tooltip(profile->name, 30, profile->desc, 20, 100);
                     }
@@ -353,13 +357,13 @@ void tsc_drawGrid() {
             trueApproximationSize /= 2;
             tsc_sizeOptimizedByApproximation = renderingCamera.cellSize;
         }
-        Color approx = textures_getApproximation(builtin.empty);
+        Color approx = textures_getApproximation(tsc_idToString(builtin.empty));
         DrawRectanglePro(emptyDest, emptyOrigin, 0, approx);
     } else {
         if(GetFPS() < 30) {
             trueApproximationSize *= 2;
         }
-        Texture empty = textures_get(builtin.empty);
+        Texture empty = textures_get(tsc_idToString(builtin.empty));
         float emptyScale[3] = {currentGrid->width, currentGrid->height, 1};
         SetShaderValue(renderingRepeatingShader, renderingRepeatingScaleLoc, emptyScale, SHADER_UNIFORM_VEC3);
         BeginShaderMode(renderingRepeatingShader);
@@ -471,10 +475,9 @@ void tsc_drawGrid() {
         int cmy = tsc_cellMouseY();
         cmx = cmx - brushSize;
         cmy = cmy - brushSize;
-        tsc_cell cell = tsc_cell_create(currentId, currentRot);
-        cell.lx = cmx;
-        cell.ly = cmy;
-        cell.addedRot = 0;
+        tsc_cell cell = tsc_cell_create(tsc_findID(currentId), currentRot);
+        cell.lx = TSC_NULL_LAST;
+        cell.ly = TSC_NULL_LAST;
         tsc_drawCell(&cell, cmx, cmy, 0.5, brushSize*2+1, false);
     }
 
@@ -631,7 +634,7 @@ static void tsc_handleCellPlace() {
     long x = tsc_cellMouseX();
     long y = tsc_cellMouseY();
 
-    tsc_cell current = tsc_cell_create(currentId, currentRot);
+    tsc_cell current = tsc_cell_create(tsc_findID(currentId), currentRot);
     tsc_cell nothing = tsc_cell_create(builtin.empty, 0);
 
     size_t currentFlags = tsc_cell_getTableFlags(&current);
@@ -808,8 +811,7 @@ void tsc_handleRenderInputs() {
                     int o = x * height + y;
                     int i = y * width + (width - x - 1);
                     copy[o] = renderingGridClipboard.cells[i];
-                    copy[o].rot += 3;
-                    copy[o].rot %= 4;
+                    tsc_cell_rotate(copy + o, 3);
                 }
             }
 
@@ -834,8 +836,7 @@ void tsc_handleRenderInputs() {
                     int o = x * height + y;
                     int i = (height - y - 1) * width + x;
                     copy[o] = renderingGridClipboard.cells[i];
-                    copy[o].rot += 1;
-                    copy[o].rot %= 4;
+                    tsc_cell_rotate(copy + o, 1);
                 }
             }
 
@@ -859,7 +860,7 @@ void tsc_handleRenderInputs() {
         }
     }
 
-#define CELL_KEY(key1, key2, cell) do {if(IsKeyPressed(key1) || (ch == key2)) currentId = cell;} while(0)
+#define CELL_KEY(key1, key2, cell) do {if(IsKeyPressed(key1) || (ch == key2)) currentId = tsc_idToString(cell);} while(0)
 
     while(true) {
         char ch = GetCharPressed();

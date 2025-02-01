@@ -38,7 +38,7 @@ tsc_mainMenuBtn_t tsc_mainMenuBtn;
 #define TSC_MAINMENU_PARTICLE_COUNT 8192
 
 typedef struct tsc_mainMenuParticle_t {
-    const char *id;
+    tsc_id_t id;
     float r;
     float g;
     float dist;
@@ -50,7 +50,7 @@ float tsc_randFloat() {
     return (float)rand() / (float)RAND_MAX;
 }
 
-const char **tsc_main_allCells = NULL;
+tsc_id_t *tsc_main_allCells = NULL;
 size_t tsc_main_cellCount = 0;
 
 tsc_mainMenuParticle_t tsc_randomMainMenuParticle(bool respawn) {
@@ -227,7 +227,7 @@ int main(int argc, char **argv) {
         size_t usefulLen = 0;
         for(size_t i = 0; i < tsc_main_cellCount; i++) {
             bool keep = true;
-            const char *id = tsc_main_allCells[i];
+            tsc_id_t id = tsc_main_allCells[i];
             if(id == builtin.empty) keep = false;
             tsc_cell tmp = tsc_cell_create(id, 0);
             size_t flags = tsc_cell_getTableFlags(&tmp);
@@ -279,7 +279,7 @@ int main(int argc, char **argv) {
             int by = height/2;
             for(size_t i = 0; i < mainMenuParticleCount; i++) {
                 tsc_mainMenuParticle_t particle = mainMenuParticles[i];
-                Texture t = textures_get(particle.id);
+                Texture t = textures_get(tsc_idToString(particle.id));
                 Vector2 pos = {
                     bx + cos(particle.angle) * particle.dist,
                     by + sin(particle.angle) * particle.dist,
@@ -611,7 +611,7 @@ int main(int argc, char **argv) {
                 particle.angle += y * delta;
                 particle.rot += y * 2 * PI * delta;
                 if(particle.dist < (float)r-particle.r) {
-                    const char *oldID = particle.id;
+                    tsc_id_t oldID = particle.id;
                     particle = tsc_randomMainMenuParticle(true);
                     particle.id = oldID; // phoenix told me something something GPU hates texture swapping
                 }

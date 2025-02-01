@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdbool.h>
+#include "../cells/grid.h"
 
 #define TSC_SUBMODE_TICKED 0
 #define TSC_SUBMODE_TRACKED 1
@@ -16,7 +17,7 @@ typedef struct tsc_subtick_custom_order {
 } tsc_subtick_custom_order;
 
 typedef struct tsc_subtick_t {
-    const char **ids;
+    tsc_id_t *ids;
     size_t idc;
     const char *name;
     union {
@@ -42,7 +43,7 @@ typedef struct tsc_subtick_manager_t {
 extern tsc_subtick_manager_t subticks;
 
 tsc_subtick_t *tsc_subtick_add(tsc_subtick_t subtick);
-void tsc_subtick_addCell(tsc_subtick_t *subtick, const char *id);
+void tsc_subtick_addCell(tsc_subtick_t *subtick, tsc_id_t id);
 tsc_subtick_t *tsc_subtick_find(const char *name);
 tsc_subtick_t *tsc_subtick_addTicked(const char *name, double priority, char spacing, bool parallel);
 tsc_subtick_t *tsc_subtick_addTracked(const char *name, double priority, char spacing, bool parallel);

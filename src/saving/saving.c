@@ -152,20 +152,20 @@ static char tsc_saving_decodeChar74(char c) {
 // Caller owns memory
 // NULL if conversion fails (V3 does not support the cell)
 static char tsc_v3_celltochar(tsc_cell *cell, bool hasBg) {
-    if(cell->data != NULL) return '\0'; // Can not be stored accurately
-    if(cell->texture != NULL) return '\0'; // Can not be stored accurately
-    if(cell->flags != 0) return '\0'; // Can not be stored accurately
+    if(cell->texture != TSC_NULL_TEXTURE) return '\0'; // Can not be stored accurately
+    if(cell->effect != TSC_NULL_EFFECT) return '\0'; // Can not be stored accurately
+    if(cell->reg != TSC_NULL_REGISTRY) return '\0'; // Can not be stored accurately
     if(cell->id == builtin.empty) {
         return tsc_saving_encodeChar74(72 + (hasBg ? 1 : 0));
     }
-    const char *ids[] = {
+    tsc_id_t ids[] = {
         builtin.generator, builtin.rotator_cw,
         builtin.rotator_ccw, builtin.mover,
         builtin.slide, builtin.push,
         builtin.wall, builtin.enemy,
         builtin.trash,
     };
-    int idc = sizeof(ids) / sizeof(char *);
+    int idc = sizeof(ids) / sizeof(ids[0]);
     int id = 0;
     for(int i = 0; i < idc; i++) {
         if(ids[i] == cell->id) {
@@ -175,7 +175,7 @@ static char tsc_v3_celltochar(tsc_cell *cell, bool hasBg) {
     }
     return '\0'; // Can not be stored accurately
 success:
-    return tsc_saving_encodeChar74(id * 2 + (hasBg ? 1 : 0) + ((int)cell->rot) * 9 * 2);
+    return tsc_saving_encodeChar74(id * 2 + (hasBg ? 1 : 0) + ((int)cell->rotData & 0b11) * 9 * 2);
 }
 
 static tsc_cell tsc_v3_chartocell(char input, bool *hasBg) {
@@ -186,7 +186,7 @@ static tsc_cell tsc_v3_chartocell(char input, bool *hasBg) {
         return tsc_cell_create(builtin.empty, 0);
     }
 
-    const char *ids[] = {
+    tsc_id_t ids[] = {
         builtin.generator, builtin.rotator_cw,
         builtin.rotator_ccw, builtin.mover,
         builtin.slide, builtin.push,
@@ -197,7 +197,7 @@ static tsc_cell tsc_v3_chartocell(char input, bool *hasBg) {
     int val = n % (9 * 2);
     char rot = n / (9 * 2);
 
-    const char *id = ids[val / 2];
+    tsc_id_t id = ids[val / 2];
 
     return tsc_cell_create(id, rot);
 }
@@ -533,12 +533,12 @@ void tsc_v1_decode(const char *code, tsc_grid *grid) {
     // TODO: placeables
     free(placeables);
 
-    const char *ids[] = {
+    tsc_id_t ids[] = {
         builtin.generator, builtin.rotator_cw, builtin.rotator_ccw,
         builtin.mover, builtin.slide, builtin.push, builtin.wall,
         builtin.enemy, builtin.trash,
     };
-    size_t idc = sizeof(ids) / sizeof(const char *);
+    size_t idc = sizeof(ids) / sizeof(ids[0]);
 
     char *cells = tsc_v3_nextPart(code, &index);
     size_t celli = 0;
@@ -555,7 +555,7 @@ void tsc_v1_decode(const char *code, tsc_grid *grid) {
         int ididx = atoi(strid);
         free(strid);
 
-        const char *id = ididx < idc ? ids[ididx] : builtin.empty;
+        tsc_id_t id = ididx < idc ? ids[ididx] : builtin.empty;
 
         char *strrot = tsc_v3_nextPartUntil(celldata, &celldatai, '.');
         int rot = atoi(strrot);

@@ -70,9 +70,9 @@ tsc_subtick_t *tsc_subtick_add(tsc_subtick_t subtick) {
     return tsc_subtick_find(subtick.name);
 }
 
-void tsc_subtick_addCell(tsc_subtick_t *subtick, const char *cell) {
+void tsc_subtick_addCell(tsc_subtick_t *subtick, tsc_id_t cell) {
     size_t idx = subtick->idc++;
-    subtick->ids = realloc(subtick->ids, subtick->idc * sizeof(const char *));
+    subtick->ids = realloc(subtick->ids, subtick->idc * sizeof(tsc_id_t));
     subtick->ids[idx] = cell;
 }
 
@@ -145,7 +145,7 @@ static void tsc_subtick_worker(void *data) {
                 int y = info->x;
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                 if(cell == NULL) continue;
-                if(cell->rot != 0) continue;
+                if(tsc_cell_getRotation(cell) != 0) continue;
                 #ifndef TSC_TURBO
                 if(cell->updated) continue;
                 #endif
@@ -166,7 +166,7 @@ static void tsc_subtick_worker(void *data) {
                 int y = info->x;
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                 if(cell == NULL) continue;
-                if(cell->rot != 2) continue;
+                if(tsc_cell_getRotation(cell) != 2) continue;
                 #ifndef TSC_TURBO
                 if(cell->updated) continue;
                 #endif
@@ -188,7 +188,7 @@ static void tsc_subtick_worker(void *data) {
             for(int y = 0; y < currentGrid->height; y++) {
                 int x = info->x;
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
-                if(cell->rot != 3) continue;
+                if(tsc_cell_getRotation(cell) != 3) continue;
                 #ifndef TSC_TURBO
                 if(cell->updated) continue;
                 #endif
@@ -208,7 +208,7 @@ static void tsc_subtick_worker(void *data) {
             for(int y = currentGrid->height-1; y >= 0; y--) {
                 int x = info->x;
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
-                if(cell->rot != 1) continue;
+                if(tsc_cell_getRotation(cell) != 1) continue;
                 #ifndef TSC_TURBO
                 if(cell->updated) continue;
                 #endif
@@ -279,25 +279,26 @@ static void tsc_subtick_worker(void *data) {
 }
 
 static void tsc_subtick_doMover(struct tsc_cell *cell, int x, int y, int _ux, int _uy, void *_) {
-    tsc_grid_push(currentGrid, x, y, cell->rot, 0, NULL);
+    tsc_grid_push(currentGrid, x, y, tsc_cell_getRotation(cell), 0, NULL);
 }
 
 static void tsc_subtick_doGen(struct tsc_cell *cell, int x, int y, int _ux, int _uy, void *_) {
-    int fx = tsc_grid_frontX(x, cell->rot);
-    int fy = tsc_grid_frontY(y, cell->rot);
+    char rot = tsc_cell_getRotation(cell);
+    int fx = tsc_grid_frontX(x, rot);
+    int fy = tsc_grid_frontY(y, rot);
     tsc_cell *front = tsc_grid_get(currentGrid, fx, fy);
     if(front == NULL) return;
-    if(tsc_grid_checkOptimization(currentGrid, fx, fy, builtin.optimizations.gens[(size_t)cell->rot])) {
-        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[(size_t)cell->rot], true);
+    if(tsc_grid_checkOptimization(currentGrid, fx, fy, builtin.optimizations.gens[(size_t)rot])) {
+        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[(size_t)rot], true);
         return;
     }
-    int bx = tsc_grid_shiftX(x, cell->rot, -1);
-    int by = tsc_grid_shiftY(y, cell->rot, -1);
+    int bx = tsc_grid_shiftX(x, rot, -1);
+    int by = tsc_grid_shiftY(y, rot, -1);
     tsc_cell *back = tsc_grid_get(currentGrid, bx, by);
     if(back == NULL) return;
-    if(!tsc_cell_canGenerate(currentGrid, back, bx, by, cell, x, y, cell->rot)) return;
-    if(tsc_grid_push(currentGrid, fx, fy, cell->rot, 1, back) == 0) {
-        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[(size_t)cell->rot], true);
+    if(!tsc_cell_canGenerate(currentGrid, back, bx, by, cell, x, y, rot)) return;
+    if(tsc_grid_push(currentGrid, fx, fy, rot, 1, back) == 0) {
+        tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[(size_t)rot], true);
     }
 }
 
@@ -305,18 +306,14 @@ static void tsc_subtick_doClockwiseRotator(struct tsc_cell *cell, int x, int y, 
     tsc_cell *toRot = tsc_grid_get(currentGrid, ux, uy);
     if(toRot == NULL) return;
     if(toRot->id == builtin.empty) return;
-    toRot->rot++;
-    toRot->rot %= 4;
-    toRot->addedRot += 1;
+    tsc_cell_rotate(toRot, 1);
 }
 
 static void tsc_subtick_doCounterClockwiseRotator(struct tsc_cell *cell, int x, int y, int ux, int uy, void *_) {
     tsc_cell *toRot = tsc_grid_get(currentGrid, ux, uy);
     if(toRot == NULL) return;
     if(toRot->id == builtin.empty) return;
-    toRot->rot += 3;
-    toRot->rot %= 4;
-    toRot->addedRot -= 1;
+    tsc_cell_rotate(toRot, -1);
 }
 
 static void tsc_subtick_do(tsc_subtick_t *subtick) {
@@ -380,7 +377,7 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                         #ifndef TSC_TURBO
                         if(cell->updated) continue;
                         #endif
-                        if(cell->rot != rot) continue;
+                        if(tsc_cell_getRotation(cell) != rot) continue;
                         for(size_t i = 0; i < subtick->idc; i++) {
                             if(subtick->ids[i] == cell->id) {
                                 #ifndef TSC_TURBO
@@ -402,7 +399,7 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                         #ifndef TSC_TURBO
                         if(cell->updated) continue;
                         #endif
-                        if(cell->rot != rot) continue;
+                        if(tsc_cell_getRotation(cell) != rot) continue;
                         for(size_t i = 0; i < subtick->idc; i++) {
                             if(subtick->ids[i] == cell->id) {
                                 #ifndef TSC_TURBO
@@ -424,7 +421,7 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                         #ifndef TSC_TURBO
                         if(cell->updated) continue;
                         #endif
-                        if(cell->rot != rot) continue;
+                        if(tsc_cell_getRotation(cell) != rot) continue;
                         for(size_t i = 0; i < subtick->idc; i++) {
                             if(subtick->ids[i] == cell->id) {
                                 #ifndef TSC_TURBO
@@ -446,7 +443,7 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
                         #ifndef TSC_TURBO
                         if(cell->updated) continue;
                         #endif
-                        if(cell->rot != rot) continue;
+                        if(tsc_cell_getRotation(cell) != rot) continue;
                         for(size_t i = 0; i < subtick->idc; i++) {
                             if(subtick->ids[i] == cell->id) {
                                 #ifndef TSC_TURBO
@@ -560,7 +557,8 @@ static void tsc_subtick_reset(void *data) {
         cell->updated = false;
         cell->lx = x;
         cell->ly = y;
-        cell->addedRot = 0;
+        char rot = tsc_cell_getRotation(cell);
+        tsc_cell_setRotationData(cell, rot, 0);
         size_t i = x + y * currentGrid->width;
         memset(currentGrid->optData + i * optSize, 0, optSize);
         // TODO: cell reset method
