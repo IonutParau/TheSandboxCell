@@ -2,9 +2,25 @@
 #include "../utils.h"
 #include "../graphics/resources.h"
 #include "../api/api.h"
+#include "ticking.h"
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+
+tsc_cell tsc_trashedCellBuffer[TSC_MAX_TRASHED] = {0};
+atomic_size_t tsc_trashedCellCount = 0;
+
+void tsc_trashCell(tsc_cell *cell, int x, int y) {
+    if(!storeExtraGraphicInfo) return;
+    tsc_cell trashed = *cell;
+    trashed.reg = 0;
+    trashed.reg |= (x << 16) | (y & 0xFFFF); // encode x,y in this
+    size_t idx = atomic_fetch_add(&tsc_trashedCellCount, 1);
+    if(idx < TSC_MAX_TRASHED) {
+        tsc_trashedCellBuffer[idx] = trashed;
+    }
+}
 
 tsc_cell_id_pool_t builtin;
 
@@ -180,11 +196,14 @@ int tsc_cell_isTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, con
 
 void tsc_cell_onTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, const char *forceType, double force, tsc_cell *eating) {
     if(cell->id == builtin.enemy) {
+        tsc_trashCell(cell, x, y);
+        tsc_trashCell(eating, x, y);
         tsc_cell empty = tsc_cell_create(builtin.empty, 0);
         tsc_grid_set(grid, x, y, &empty);
         tsc_sound_play(builtin.audio.explosion);
     }
     if(cell->id == builtin.trash) {
+        tsc_trashCell(eating, x, y);
         tsc_sound_play(builtin.audio.destroy);
     }
     tsc_celltable *celltable = tsc_cell_getTable(cell);

@@ -1,6 +1,7 @@
 #ifndef TSC_GRID_H
 #define TSC_GRID_H
 
+#include <stdatomic.h>
 #include <stddef.h>
 #include <stdbool.h>
 
@@ -86,6 +87,7 @@ typedef struct tsc_setting_id_pool_t {
     const char *updateDelay;
     const char *mtpf;
     const char *v3speed;
+    const char *fancyRendering;
 } tsc_setting_id_pool_t;
 
 typedef struct tsc_id_pool_t {
@@ -143,6 +145,13 @@ typedef struct tsc_gridStorage {
 
 extern tsc_grid *currentGrid;
 extern int tsc_maxSliceSize;
+
+#define TSC_MAX_TRASHED 131072
+extern tsc_cell tsc_trashedCellBuffer[TSC_MAX_TRASHED];
+extern atomic_size_t tsc_trashedCellCount;
+
+void tsc_trashCell(tsc_cell *cell, int x, int y);
+
 // hideapi
 extern tsc_gridStorage *gridStorage;
 extern size_t gridChunkSize;

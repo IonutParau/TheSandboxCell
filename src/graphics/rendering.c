@@ -375,15 +375,30 @@ void tsc_drawGrid() {
     }
 
     int sx = tsc_cellScreenX(0);
-    if(sx < 0) sx = 0;
     int sy = tsc_cellScreenY(0);
-    if(sy < 0) sy = 0;
     int ex = tsc_cellScreenX(GetScreenWidth());
-    if(ex >= currentGrid->width) ex = currentGrid->width-1;
     int ey = tsc_cellScreenY(GetScreenHeight());
+
+    if(storeExtraGraphicInfo) {
+        int w = ex - sx + 1;
+        int h = ey - sy + 1;
+        if(w < 20) w = 20;
+        if(h < 20) h = 20;
+        sx -= w/4;
+        ex += w/4;
+        sy -= h/4;
+        ey += h/4;
+    }
+
+    // ensure in grid
+    if(sx < 0) sx = 0;
+    if(sy < 0) sy = 0;
+    if(ex >= currentGrid->width) ex = currentGrid->width-1;
+    if(ey >= currentGrid->height) ey = currentGrid->height-1;
+
+    // chunk align
     sx -= sx % tsc_gridChunkSize;
     sy -= sy % tsc_gridChunkSize;
-    if(ey >= currentGrid->height) ey = currentGrid->height-1;
     if(ex < sx) ex = sx;
     if(ey < sy) ey = sy;
 
@@ -409,6 +424,19 @@ void tsc_drawGrid() {
             tsc_cell *bg = tsc_grid_background(currentGrid, x, y);
             if(bg == NULL) break;
             tsc_drawCell(bg, x, y, 1, repeat, repeat > 1);
+        }
+    }
+
+    if(storeExtraGraphicInfo) {
+        size_t len = tsc_trashedCellCount;
+        if(len > TSC_MAX_TRASHED) len = TSC_MAX_TRASHED;
+        for(size_t i = 0; i < len; i++) {
+            tsc_cell trashed = tsc_trashedCellBuffer[i];
+            int x = (trashed.reg >> 16) & 0xFFFF;
+            int y = (trashed.reg >> 0) & 0xFFFF;
+            trashed.reg = 0; // optional
+            float opacity = tsc_updateInterp(1, 0);
+            tsc_drawCell(&trashed, x, y, opacity, 1, false);
         }
     }
 

@@ -401,6 +401,8 @@ void tsc_settingHandler(const char *title) {
         const char *threadCountStr = tsc_toString(tsc_getSetting(builtin.settings.threadCount));
         int threadCount = atoi(threadCountStr);
         workers_setAmount(threadCount);
+    } else if(title == builtin.settings.fancyRendering) {
+        storeExtraGraphicInfo = tsc_toBoolean(tsc_getSetting(builtin.settings.fancyRendering));
     }
 }
 
@@ -457,6 +459,7 @@ void tsc_loadSettings() {
 
     builtin.settings.vsync = tsc_addSetting("vsync", "V-Sync", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
     builtin.settings.fullscreen = tsc_addSetting("fullscreen", "Fullscreen (currently broken)", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
+    builtin.settings.fancyRendering = tsc_addSetting("fancyRendering", "Fancy Graphics", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
 
     float volumes[2] = {0, 1};
     builtin.settings.sfxVolume = tsc_addSetting("sfxVolume", "SFX Volume", audio, TSC_SETTING_SLIDER, &volumes, tsc_settingHandler);
@@ -468,12 +471,14 @@ void tsc_loadSettings() {
     if(isDefault) { // just a hack, mods can use tsc_hasSetting()
         tsc_setSetting(builtin.settings.updateDelay, tsc_number(tickDelay));
         tsc_setSetting(builtin.settings.mtpf, tsc_boolean(multiTickPerFrame));
+        tsc_setSetting(builtin.settings.fancyRendering, tsc_boolean(storeExtraGraphicInfo));
         
         tsc_setSetting(builtin.settings.sfxVolume, tsc_number(1));
         tsc_setSetting(builtin.settings.musicVolume, tsc_boolean(0));
     } else {
         tickDelay = tsc_toNumber(tsc_getSetting(builtin.settings.updateDelay));
         multiTickPerFrame = tsc_toBoolean(tsc_getSetting(builtin.settings.mtpf));
+        storeExtraGraphicInfo = tsc_toBoolean(tsc_getSetting(builtin.settings.fancyRendering));
         tsc_settingHandler(builtin.settings.vsync);
     }
 }

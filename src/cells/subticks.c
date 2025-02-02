@@ -1,5 +1,6 @@
 #include "subticks.h"
 #include "grid.h"
+#include "ticking.h"
 #include "../utils.h"
 #include "../threads/workers.h"
 #include <stdlib.h>
@@ -596,6 +597,9 @@ static void tsc_subtick_reset(void *data) {
 
 void tsc_subtick_run() {
 #ifndef TSC_TURBO
+    if(storeExtraGraphicInfo) {
+        tsc_trashedCellCount = 0; // yup, yup, yup
+    }
     char shouldBeParallel = 1;
     #ifdef TSC_SINGLE_THREAD
         shouldBeParallel = 0;
