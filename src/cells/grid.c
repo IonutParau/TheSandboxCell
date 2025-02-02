@@ -325,7 +325,6 @@ int __attribute__((optnone)) tsc_grid_chunkOff(int x, int off) {
 }
 
 bool tsc_grid_checkOptimization(tsc_grid *grid, int x, int y, size_t optimization) {
-    return false;
     if(tsc_grid_get(grid, x, y) == NULL) return false;
     if(optimization >= tsc_optLen) return false;
     size_t size = tsc_optSize();

@@ -278,10 +278,10 @@ static void tsc_subtick_worker(void *data) {
         };
         int offc = 4;
         for(int i = 0; i < offc; i++) {
-            for(int y = 0; y < currentGrid->height; y++) {
-                int x = info->x;
+            for(int x = 0; x < currentGrid->width; x++) {
+                int y = info->x;
                 if(!tsc_grid_checkChunk(currentGrid, x, y)) {
-                    y = tsc_grid_chunkOff(y, +1) - 1;
+                    x = tsc_grid_chunkOff(x, +1) - 1;
                     continue;
                 }
                 int cx = x + off[i*2];
@@ -490,10 +490,11 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
         if(parallel) {
             tsc_updateinfo_t *buffer = subticks_getBuffer(currentGrid->width);
             for(char space = 0; space <= spacing; space++) {
+                // per-row for cache friendliness
                 int j = 0;
-                for(size_t x = space; x < currentGrid->width; x += 1 + spacing) {
-                    if(!tsc_grid_checkColumn(currentGrid, x)) continue;
-                    buffer[j].x = x;
+                for(size_t y = space; y < currentGrid->height; y += 1 + spacing) {
+                    if(!tsc_grid_checkRow(currentGrid, y)) continue;
+                    buffer[j].x = y;
                     buffer[j].subtick = subtick;
                     j++;
                 }
@@ -503,8 +504,8 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
             return;
         }
         // Single-threaded
-        for(int x = 0; x < currentGrid->width; x++) {
-            for(int y = 0; y < currentGrid->height; y++) {
+        for(int y = 0; y < currentGrid->height; y++) {
+            for(int x = 0; x < currentGrid->width; x++) {
                 int off[] = {
                     -1, 0,
                     1, 0,
