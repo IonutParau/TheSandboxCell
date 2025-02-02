@@ -30,11 +30,10 @@ typedef struct tsc_grid_init_task_t {
 
 static void tsc_initPartOfGrid(tsc_grid_init_task_t *task) {
     size_t off = task->grid->height * task->y;
-    for(size_t i = 0; i < task->grid->width; i++) {
-        task->grid->cells[off + i] = tsc_cell_create(builtin.empty, 0);
-        task->grid->bgs[off + i] = tsc_cell_create(builtin.empty, 0);
-        memset(task->grid->optData + (off + i) * tsc_optSize(), 0, tsc_optSize());
-    }
+    // literally just 3 memsets lmao
+    memset(task->grid->cells + off, 0, sizeof(tsc_cell) * task->grid->width);
+    memset(task->grid->bgs + off, 0, sizeof(tsc_cell) * task->grid->width);
+    memset(task->grid->optData + (off) * tsc_optSize(), 0, tsc_optSize() * task->grid->width);
 }
 
 tsc_grid *tsc_createGrid(const char *id, int width, int height, const char *title, const char *description) {

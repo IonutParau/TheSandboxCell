@@ -502,7 +502,7 @@ start:;
         if(texture != NULL) return texture->texture;
     }
 
-    if(tsc_streql(key, "fallback")) {
+    if(key != NULL && tsc_streql(key, "fallback")) {
         // Fallback texture is not found, panic.
         fprintf(stderr, "fallback.png missing. Please ensure at least one enabled resource pack contains it\n");
         exit(1);
