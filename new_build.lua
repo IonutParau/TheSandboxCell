@@ -129,6 +129,10 @@ end
 
 Config.lflags = opts.lflags or ""
 
+if opts.staticDir then
+    Config.lflags = Config.lflags .. " -L" .. opts.staticDir
+end
+
 ---@type LibConfig
 Config.tscLibs = {system = {}, custom = {}}
 ---@type LibConfig

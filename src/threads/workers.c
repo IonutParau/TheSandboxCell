@@ -73,6 +73,7 @@ static void workers_waitForGroup(volatile worker_waitgroup_t *wg) {
     while(true) {
         size_t amount = atomic_load_explicit(&wg->count, memory_order_relaxed);
         if(amount == 0) break;
+        thrd_yield();
     }
 }
 

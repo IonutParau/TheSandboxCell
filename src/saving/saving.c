@@ -87,7 +87,7 @@ static int tsc_saving_count74(int num) {
     int n = 0;
     while(num > 0) {
         n++;
-        num = num / strlen(saving_base74);
+        num = num / 74;
     }
     return n;
 }
@@ -99,8 +99,8 @@ static char *tsc_saving_encode74(int num) {
     char *result = tsc_strdup("");
     size_t resc = 0;
     while(num > 0) {
-        int n = num % strlen(saving_base74);
-        num = num / strlen(saving_base74);
+        int n = num % 74;
+        num = num / 74;
         char *old = result;
         result = malloc(sizeof(char) * (resc + 2));
         result[0] = saving_base74[n];
@@ -119,18 +119,16 @@ static char tsc_saving_encodeChar74(char n) {
 static int tsc_saving_decode74(const char *num) {
     int n = 0;
 
-    int numc = strlen(num);
-
-    for(int i = 0; i < numc; i++) {
+    for(int i = 0; num[i] != '\0'; i++) {
         char c = num[i];
         int val = 0;
-        for(int j = 0; saving_base74[j] != '\0'; j++) {
+        for(int j = 0; j < 74; j++) {
             if(saving_base74[j] == c) {
                 val = j;
                 break;
             }
         }
-        n *= strlen(saving_base74);
+        n *= 74;
         n += val;
     }
 
@@ -415,7 +413,7 @@ static int tsc_v3_encode(tsc_buffer *buffer, tsc_grid *grid) {
         for(int b = 1; b <= i && b <= maxWork; b++) {
             if(cells[i] == cells[i-b]) {
                 int len = 1;
-                while(i + len < cell_len && len < maxWork) {
+                while(i + len < cell_len) {
                     if(cells[i+len] == cells[i-b+len]) {
                         len++;
                     } else {
