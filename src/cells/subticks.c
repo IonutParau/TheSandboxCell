@@ -143,6 +143,10 @@ static void tsc_subtick_worker(void *data) {
         if(rot == 0) {
             for(int x = currentGrid->width-1; x >= 0; x--) {
                 int y = info->x;
+                if(!tsc_grid_checkChunk(currentGrid, x, y)) {
+                    x -= tsc_gridChunkSize - 1;
+                    continue;
+                }
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                 if(cell == NULL) continue;
                 if(tsc_cell_getRotation(cell) != 0) continue;
@@ -164,6 +168,10 @@ static void tsc_subtick_worker(void *data) {
             }
             for(int x = 0; x < currentGrid->width; x++) {
                 int y = info->x;
+                if(!tsc_grid_checkChunk(currentGrid, x, y)) {
+                    x += tsc_gridChunkSize - 1;
+                    continue;
+                }
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                 if(cell == NULL) continue;
                 if(tsc_cell_getRotation(cell) != 2) continue;
@@ -187,6 +195,10 @@ static void tsc_subtick_worker(void *data) {
         if(rot == 1) {
             for(int y = 0; y < currentGrid->height; y++) {
                 int x = info->x;
+                if(!tsc_grid_checkChunk(currentGrid, x, y)) {
+                    y += tsc_gridChunkSize - 1;
+                    continue;
+                }
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                 if(tsc_cell_getRotation(cell) != 3) continue;
                 #ifndef TSC_TURBO
@@ -207,6 +219,10 @@ static void tsc_subtick_worker(void *data) {
             }
             for(int y = currentGrid->height-1; y >= 0; y--) {
                 int x = info->x;
+                if(!tsc_grid_checkChunk(currentGrid, x, y)) {
+                    y -= tsc_gridChunkSize - 1;
+                    continue;
+                }
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
                 if(tsc_cell_getRotation(cell) != 1) continue;
                 #ifndef TSC_TURBO
@@ -231,6 +247,10 @@ static void tsc_subtick_worker(void *data) {
 
     if(mode == TSC_SUBMODE_TICKED) {
         for(int y = 0; y < currentGrid->height; y++) {
+            if(!tsc_grid_checkChunk(currentGrid, info->x, y)) {
+                y += tsc_gridChunkSize - 1;
+                continue;
+            }
             tsc_cell *cell = tsc_grid_get(currentGrid, info->x, y);
             for(size_t i = 0; i < info->subtick->idc; i++) {
                 if(info->subtick->ids[i] == cell->id) {
@@ -259,6 +279,10 @@ static void tsc_subtick_worker(void *data) {
         for(int i = 0; i < offc; i++) {
             for(int y = 0; y < currentGrid->height; y++) {
                 int x = info->x;
+                if(!tsc_grid_checkChunk(currentGrid, x, y)) {
+                    y += tsc_gridChunkSize - 1;
+                    continue;
+                }
                 int cx = x + off[i*2];
                 int cy = y + off[i*2+1];
                 tsc_cell *cell = tsc_grid_get(currentGrid, cx, cy);
