@@ -14,7 +14,7 @@ volatile bool onlyOneTick = false;
 volatile size_t gameTPS = 0;
 volatile bool isInitial = true;
 // fancy rendering's full name
-volatile bool storeExtraGraphicInfo = false;
+volatile bool storeExtraGraphicInfo = true;
 
 static mtx_t renderingUselessMutex;
 static cnd_t renderingTickUpdateSignal;

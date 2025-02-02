@@ -777,6 +777,8 @@ static void tsc_moveStuffInSelection(int x, int y) {
         for(int y = 0; y < height; y++) {
             int i = y * width + x;
             tsc_cell *cell = tmpBuffer + i;
+            cell->lx = fixed.sx + x;
+            cell->ly = fixed.sy + y;
             if(cell->id != builtin.empty) tsc_grid_set(currentGrid, fixed.sx + x, fixed.sy + y, cell);
         }
     }
@@ -1025,6 +1027,8 @@ void tsc_handleRenderInputs() {
             for(int y = 0; y < renderingGridClipboard.height; y++) {
                 int i = y * renderingGridClipboard.width + x;
                 if(renderingGridClipboard.cells[i].id == builtin.empty) continue;
+                renderingGridClipboard.cells[i].lx = mx + x;
+                renderingGridClipboard.cells[i].ly = my + y;
                 tsc_grid_set(currentGrid, mx + x, my + y, &renderingGridClipboard.cells[i]);
             }
         }
@@ -1093,6 +1097,7 @@ void tsc_handleRenderInputs() {
             tsc_copyGrid(currentGrid, tsc_getGrid("initial"));
             isInitial = true;
             tickCount = 0;
+            tsc_trashedCellCount = 0;
         }
     }
 
