@@ -3,7 +3,7 @@ fenikkuusu (Phoenix / Create Mod dude man bro guy) for helping
 with optimizations and his OST (made by Trash Cell) was used
 to test music (his lawyers got me to write this)
 blendigoose for emotional support, helping with musl compatibility,
-writing ui_widthof() and ui_heightof() for a few widgets and making rotators
-work
+writing ui_widthof() and ui_heightof() for a few widgets and making
+rotators work
 uku1928 for improving some textures
 Sam Hogan for making the original Cell Machine
