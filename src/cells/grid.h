@@ -187,6 +187,7 @@ void tsc_grid_disableChunk(tsc_grid *grid, int x, int y);
 bool tsc_grid_checkChunk(tsc_grid *grid, int x, int y);
 bool tsc_grid_checkRow(tsc_grid *grid, int y);
 bool tsc_grid_checkColumn(tsc_grid *grid, int x);
+int tsc_grid_chunkOff(int x, int off);
 bool tsc_grid_checkOptimization(tsc_grid *grid, int x, int y, size_t optimization);
 void tsc_grid_setOptimization(tsc_grid *grid, int x, int y, size_t optimization, bool enabled);
 

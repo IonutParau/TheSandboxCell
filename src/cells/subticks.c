@@ -145,7 +145,7 @@ static void tsc_subtick_worker(void *data) {
             for(int x = currentGrid->width-1; x >= 0; x--) {
                 int y = info->x;
                 if(!tsc_grid_checkChunk(currentGrid, x, y)) {
-                    x -= tsc_gridChunkSize - 1;
+                    x = tsc_grid_chunkOff(x, 0);
                     continue;
                 }
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
@@ -170,7 +170,7 @@ static void tsc_subtick_worker(void *data) {
             for(int x = 0; x < currentGrid->width; x++) {
                 int y = info->x;
                 if(!tsc_grid_checkChunk(currentGrid, x, y)) {
-                    x += tsc_gridChunkSize - 1;
+                    x = tsc_grid_chunkOff(x, +1) - 1;
                     continue;
                 }
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
@@ -197,7 +197,7 @@ static void tsc_subtick_worker(void *data) {
             for(int y = 0; y < currentGrid->height; y++) {
                 int x = info->x;
                 if(!tsc_grid_checkChunk(currentGrid, x, y)) {
-                    y += tsc_gridChunkSize - 1;
+                    y = tsc_grid_chunkOff(y, +1) - 1;
                     continue;
                 }
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
@@ -221,7 +221,7 @@ static void tsc_subtick_worker(void *data) {
             for(int y = currentGrid->height-1; y >= 0; y--) {
                 int x = info->x;
                 if(!tsc_grid_checkChunk(currentGrid, x, y)) {
-                    y -= tsc_gridChunkSize - 1;
+                    y = tsc_grid_chunkOff(y, 0);
                     continue;
                 }
                 tsc_cell *cell = tsc_grid_get(currentGrid, x, y);
@@ -249,7 +249,7 @@ static void tsc_subtick_worker(void *data) {
     if(mode == TSC_SUBMODE_TICKED) {
         for(int y = 0; y < currentGrid->height; y++) {
             if(!tsc_grid_checkChunk(currentGrid, info->x, y)) {
-                y += tsc_gridChunkSize - 1;
+                y = tsc_grid_chunkOff(y, +1) - 1;
                 continue;
             }
             tsc_cell *cell = tsc_grid_get(currentGrid, info->x, y);
@@ -281,7 +281,7 @@ static void tsc_subtick_worker(void *data) {
             for(int y = 0; y < currentGrid->height; y++) {
                 int x = info->x;
                 if(!tsc_grid_checkChunk(currentGrid, x, y)) {
-                    y += tsc_gridChunkSize - 1;
+                    y = tsc_grid_chunkOff(y, +1) - 1;
                     continue;
                 }
                 int cx = x + off[i*2];

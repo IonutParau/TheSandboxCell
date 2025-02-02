@@ -59,8 +59,8 @@ tsc_grid *tsc_createGrid(const char *id, int width, int height, const char *titl
     grid->desc = tsc_strintern(description);
 
     // that + is to fight integer division rounding
-    int chunkWidth = width / tsc_gridChunkSize + (width % tsc_gridChunkSize == 0 ? 0 : 1);
-    int chunkHeight = height / tsc_gridChunkSize + (height % tsc_gridChunkSize == 0 ? 0 : 1);
+    int chunkWidth = width / tsc_gridChunkSize + 1;
+    int chunkHeight = height / tsc_gridChunkSize + 1;
 
     grid->chunkwidth = chunkWidth;
     grid->chunkheight = chunkHeight;
@@ -142,8 +142,8 @@ void tsc_clearGrid(tsc_grid *grid, int width, int height) {
     size_t len = width * height;
     grid->cells = realloc(grid->cells, sizeof(tsc_cell) * len);
     grid->bgs = realloc(grid->bgs, sizeof(tsc_cell) * len);
-    int chunkWidth = width / tsc_gridChunkSize + (width % tsc_gridChunkSize == 0 ? 0 : 1);
-    int chunkHeight = height / tsc_gridChunkSize + (height % tsc_gridChunkSize == 0 ? 0 : 1);
+    int chunkWidth = width / tsc_gridChunkSize + 1;
+    int chunkHeight = height / tsc_gridChunkSize + 1;
     grid->chunkdata = realloc(grid->chunkdata, sizeof(bool) * chunkWidth * chunkHeight);
     grid->chunkwidth = chunkWidth;
     grid->chunkheight = chunkHeight;
@@ -316,7 +316,16 @@ bool tsc_grid_checkColumn(tsc_grid *grid, int x) {
     return false;
 }
 
+int __attribute__((optnone)) tsc_grid_chunkOff(int x, int off) {
+    // int div handles it
+    x -= x % tsc_gridChunkSize;
+    int cx = x / tsc_gridChunkSize;
+    cx += off;
+    return cx * tsc_gridChunkSize;
+}
+
 bool tsc_grid_checkOptimization(tsc_grid *grid, int x, int y, size_t optimization) {
+    return false;
     if(tsc_grid_get(grid, x, y) == NULL) return false;
     if(optimization >= tsc_optLen) return false;
     size_t size = tsc_optSize();

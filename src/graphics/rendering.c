@@ -402,6 +402,20 @@ void tsc_drawGrid() {
     if(ex < sx) ex = sx;
     if(ey < sy) ey = sy;
 
+    // Debug chunk rendering
+    // TODO: debug mode setting
+    if(false) {
+        for(int cx = sx; cx < ex; cx += tsc_gridChunkSize) {
+            for(int cy = sy; cy < ey; cy += tsc_gridChunkSize) {
+                float x = -renderingCamera.x + cx * renderingCamera.cellSize;
+                float y = -renderingCamera.y + cy * renderingCamera.cellSize;
+                Color c = tsc_grid_checkChunk(currentGrid, cx+24, cy+24) ? GREEN : RED;
+                float chunkSize = tsc_gridChunkSize * renderingCamera.cellSize;
+                DrawRectangleLines(x, y, chunkSize, chunkSize, c);
+            }
+        }
+    }
+
     int maxRenderCount = 32768;
     int skipLevel = 1;
     int renderCount = (ex - sx + 1) * (ey - sy + 1);
