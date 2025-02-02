@@ -564,7 +564,15 @@ int main(int argc, char **argv) {
                 tsc_grid *grid = tsc_createGrid("main", w, h, NULL, NULL);
                 tsc_switchGrid(grid);
                 if(level != NULL) {
-                    tsc_saving_decodeWithAny(level, grid);
+                    // For Windows users, where command prompt getting a 60kb command would explode
+                    char *contents = tsc_allocfile(level, NULL);
+                    if(contents != NULL) {
+                        tsc_saving_decodeWithAny(contents, grid);
+                        free(contents);
+                    } else {
+                        tsc_saving_decodeWithAny(level, grid);
+                    }
+                    level = NULL;
                 }
                 tsc_grid *initial = tsc_createGrid("initial", grid->width, grid->height, NULL, NULL);
                 tsc_copyGrid(initial, grid);

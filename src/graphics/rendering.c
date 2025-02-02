@@ -717,6 +717,44 @@ static void tsc_deleteSelection() {
     }
 }
 
+static void tsc_moveSelection(int x, int y) {
+    renderingSelection.sx += x;
+    renderingSelection.ex += x;
+    renderingSelection.sy += y;
+    renderingSelection.ey += y;
+
+    if(renderingSelection.sx < 0) renderingSelection.sx = 0;
+    if(renderingSelection.sy < 0) renderingSelection.sy = 0;
+    if(renderingSelection.ex >= currentGrid->width) renderingSelection.ex = currentGrid->width-1;
+    if(renderingSelection.ey >= currentGrid->height) renderingSelection.ey = currentGrid->height-1;
+}
+
+static void tsc_moveStuffInSelection(int x, int y) {
+    // technically works
+    selection_t fixed = tsc_fixSelection(renderingSelection);
+    int width = fixed.ex - fixed.sx + 1;
+    int height = fixed.ey - fixed.sy + 1;
+    tsc_cell *tmpBuffer = malloc(sizeof(tsc_cell) * width * height);
+    tsc_cell empty = tsc_cell_create(builtin.empty, 0);
+    for(int x = 0; x < width; x++) {
+        for(int y = 0; y < height; y++) {
+            int i = y * width + x;
+            tmpBuffer[i] = tsc_cell_clone(tsc_grid_get(currentGrid, fixed.sx + x, fixed.sy + y));
+            tsc_grid_set(currentGrid, fixed.sx + x, fixed.sy + y, &empty);
+        }
+    }
+    tsc_moveSelection(x, y);
+    fixed = tsc_fixSelection(renderingSelection);
+    for(int x = 0; x < width; x++) {
+        for(int y = 0; y < height; y++) {
+            int i = y * width + x;
+            tsc_cell *cell = tmpBuffer + i;
+            if(cell->id != builtin.empty) tsc_grid_set(currentGrid, fixed.sx + x, fixed.sy + y, cell);
+        }
+    }
+    free(tmpBuffer);
+}
+
 void tsc_pasteGridClipboard() {
     if(renderingGridClipboard.width == 0) return;
     renderingIsSelecting = false;
@@ -756,6 +794,24 @@ void tsc_handleRenderInputs() {
             renderingIsSelecting = false;
             renderingIsPasting = true;
         }
+        if(renderingIsSelecting) {
+            if(IsKeyPressed(KEY_LEFT_SHIFT)) {
+                // resizing not yet implemented
+            } else {
+                if(IsKeyPressed(KEY_LEFT)) {
+                    tsc_moveSelection(-1, 0);
+                }
+                if(IsKeyPressed(KEY_RIGHT)) {
+                    tsc_moveSelection(1, 0);
+                }
+                if(IsKeyPressed(KEY_UP)) {
+                    tsc_moveSelection(0, -1);
+                }
+                if(IsKeyPressed(KEY_DOWN)) {
+                    tsc_moveSelection(0, 1);
+                }
+            }
+        }
     } else {
         if(IsKeyDown(KEY_W)) {
             renderingCamera.y -= speed * delta;
@@ -768,6 +824,20 @@ void tsc_handleRenderInputs() {
         }
         if(IsKeyDown(KEY_D)) {
             renderingCamera.x += speed * delta;
+        }
+        if(renderingIsSelecting) {
+            if(IsKeyPressed(KEY_LEFT)) {
+                tsc_moveStuffInSelection(-1, 0);
+            }
+            if(IsKeyPressed(KEY_RIGHT)) {
+                tsc_moveStuffInSelection(1, 0);
+            }
+            if(IsKeyPressed(KEY_UP)) {
+                tsc_moveStuffInSelection(0, -1);
+            }
+            if(IsKeyPressed(KEY_DOWN)) {
+                tsc_moveStuffInSelection(0, 1);
+            }
         }
     }
 
@@ -902,6 +972,7 @@ void tsc_handleRenderInputs() {
 
     if(IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE)) {
         renderingIsDragging = false;
+        renderingSelection = tsc_fixSelection(renderingSelection);
     }
 
     if(!absorbed && ((!renderingIsSelecting && !renderingIsPasting) || tsc_guidelineMode != 0) && !renderingBlockPlacing && !tsc_isResizingGrid)
