@@ -53,7 +53,14 @@ tsc_ui_node *tsc_ui_retain(tsc_ui_node *node) {
 void tsc_ui_destroy(tsc_ui_node *node) {
     node->refc--;
     if(node->refc > 0) return;
+
     // TODO: all the destructors
+
+    for(int i = 0; i < node->childCount; i++) {
+        tsc_ui_destroy(node->subnodes[i]);
+    }
+    free(node->subnodes);
+    free(node);
 }
 
 tsc_ui_context tsc_ui_rootContext(int width, int height) {
@@ -84,15 +91,29 @@ int tsc_ui_heightOf(tsc_ui_node *node, tsc_ui_context ctx) {
 }
 
 void tsc_ui_draw(tsc_ui_node *node, tsc_ui_context ctx) {
+    float scale = tsc_ui_scale();
     if(node->nodeType == TSC_UI_TEXT) {
         tsc_ui_text *text = (void *)node;
         Font font = font_get();
         if(text->font != NULL) font = *text->font;
-        float scale = tsc_ui_scale();
-        Vector2 pos = (Vector2) {ctx.x, ctx.y};
+        Vector2 pos = (Vector2) {ctx.x * scale, ctx.y * scale};
         DrawTextEx(font, text->text, pos, text->fontSize * scale, text->fontSize * scale / 10, text->color);
-    }
-    if(node->nodeType == TSC_UI_TRANSFORM) {
+    } else if(node->nodeType == TSC_UI_CONDITIONAL) {
+        tsc_ui_conditional *condition = (void *)node;
+        int x = condition->check(condition->udata);
+        return tsc_ui_draw(node->subnodes[x], ctx);
+    } else if(node->nodeType == TSC_UI_SLIDER) {
+        tsc_ui_slider *slider = (void *)node;
+        Vector2 pos = (Vector2) {ctx.x * scale, ctx.y * scale};
+        float width = slider->width == 0 ? ctx.width : slider->width;
+        float height = slider->height == 0 ? ctx.height : slider->height;
+        int r = height/2;
+        float lineThickness = height/5;
+        Color color = WHITE;
+        DrawRectangle(pos.x, pos.y + r - lineThickness/2, width, lineThickness, color);
+        float circleX = tsc_mapNumber(slider->value, slider->min, slider->max, r, width-r);
+        DrawCircle(pos.x + circleX, pos.y + r, r, color);
+    } else if(node->nodeType == TSC_UI_TRANSFORM) {
         tsc_ui_transform *trans = (void *)node;
         ctx.x += trans->shiftx;
         ctx.y += trans->shifty;
@@ -127,7 +148,7 @@ tsc_ui_text *tsc_ui_newText(const char *text, int fontSize, Color color, Font *f
     return ntext;
 }
 
-tsc_ui_conditional *tsc_ui_newConditional(bool (*check)(void *udata), void *udata) {
+tsc_ui_conditional *tsc_ui_newConditional(int (*check)(void *udata), void *udata) {
     tsc_ui_conditional *ncond = malloc(sizeof(tsc_ui_conditional));
     ncond->_node = tsc_ui_baseNode(TSC_UI_CONDITIONAL);
     ncond->check = check;

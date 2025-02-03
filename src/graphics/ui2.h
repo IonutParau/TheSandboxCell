@@ -60,10 +60,10 @@ tsc_ui_text *tsc_ui_newText(const char *text, int fontSize, Color color, Font *f
 typedef struct tsc_ui_conditional {
     tsc_ui_node _node;
     void *udata;
-    bool (*check)(void *udata);
+    int (*check)(void *udata);
 } tsc_ui_conditional;
 
-tsc_ui_conditional *tsc_ui_newConditional(bool (*check)(void *udata), void *udata);
+tsc_ui_conditional *tsc_ui_newConditional(int (*check)(void *udata), void *udata);
 
 #define TSC_UI_BUTTON 3
 typedef struct tsc_ui_button {
@@ -86,9 +86,11 @@ typedef struct tsc_ui_slider {
     double min;
     double max;
     size_t segments;
+    int width;
+    int height;
 } tsc_ui_slider;
 
-tsc_ui_slider *tsc_ui_newSlider(double min, double max, size_t segments);
+tsc_ui_slider *tsc_ui_newSlider(double min, double max, size_t segments, int width, int height);
 
 #define TSC_UI_TRANSFORM 5
 typedef struct tsc_ui_transform {
@@ -140,5 +142,41 @@ typedef struct tsc_ui_input {
 } tsc_ui_input;
 
 tsc_ui_input *tsc_ui_newInput(int width, int height, int bufsize, char mode, char *charset);
+
+#define TSC_UI_IMAGE 9
+typedef struct tsc_ui_image {
+    tsc_ui_node _node;
+    Texture texture;
+    int width;
+    int height;
+} tsc_ui_image;
+
+tsc_ui_image *tsc_ui_newImage(Texture texture, int width, int height);
+
+#define TSC_UI_ROW 10
+typedef struct tsc_ui_row {
+    tsc_ui_node _node;
+    int spacing;
+} tsc_ui_row;
+
+tsc_ui_row *tsc_ui_newRow(int spacing);
+
+#define TSC_UI_COLUMN 11
+typedef struct tsc_ui_column {
+    tsc_ui_node _node;
+    int spacing;
+} tsc_ui_column;
+
+tsc_ui_column *tsc_ui_newColumn(int spacing);
+
+#define TSC_UI_BOX 12
+typedef struct tsc_ui_box {
+    tsc_ui_node _node;
+    Color color;
+    int width;
+    int height;
+} tsc_ui_box;
+
+tsc_ui_box *tsc_ui_newBox(Color color, int width, int height);
 
 #endif
