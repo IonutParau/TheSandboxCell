@@ -88,6 +88,7 @@ typedef struct tsc_ui_slider {
     size_t segments;
     int width;
     int height;
+    bool clicked;
 } tsc_ui_slider;
 
 tsc_ui_slider *tsc_ui_newSlider(double min, double max, size_t segments, int width, int height);

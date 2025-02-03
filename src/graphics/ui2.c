@@ -75,6 +75,13 @@ int tsc_ui_widthOf(tsc_ui_node *node, tsc_ui_context ctx) {
         if(text->font != NULL) font = *text->font;
         float scale = tsc_ui_scale();
         return MeasureTextEx(font, text->text, text->fontSize * scale, text->fontSize * scale / 10).x;
+    } else if(node->nodeType == TSC_UI_CONDITIONAL) {
+        tsc_ui_conditional *condition = (void *)node;
+        int x = condition->check(condition->udata);
+        return tsc_ui_widthOf(node->subnodes[x], ctx);
+    } else if(node->nodeType == TSC_UI_SLIDER) {
+        tsc_ui_slider *slider = (void *)node;
+        return slider->width == 0 ? ctx.width : slider->width;
     }
     return 0;
 }
@@ -86,6 +93,13 @@ int tsc_ui_heightOf(tsc_ui_node *node, tsc_ui_context ctx) {
         if(text->font != NULL) font = *text->font;
         float scale = tsc_ui_scale();
         return MeasureTextEx(font, text->text, text->fontSize * scale, text->fontSize * scale / 10).y;
+    } else if(node->nodeType == TSC_UI_CONDITIONAL) {
+        tsc_ui_conditional *condition = (void *)node;
+        int x = condition->check(condition->udata);
+        return tsc_ui_heightOf(node->subnodes[x], ctx);
+    } else if(node->nodeType == TSC_UI_SLIDER) {
+        tsc_ui_slider *slider = (void *)node;
+        return slider->height == 0 ? ctx.height : slider->height;
     }
     return 0;
 }
@@ -105,8 +119,8 @@ void tsc_ui_draw(tsc_ui_node *node, tsc_ui_context ctx) {
     } else if(node->nodeType == TSC_UI_SLIDER) {
         tsc_ui_slider *slider = (void *)node;
         Vector2 pos = (Vector2) {ctx.x * scale, ctx.y * scale};
-        float width = slider->width == 0 ? ctx.width : slider->width;
-        float height = slider->height == 0 ? ctx.height : slider->height;
+        float width = tsc_ui_widthOf(node, ctx);
+        float height = tsc_ui_heightOf(node, ctx);
         int r = height/2;
         float lineThickness = height/5;
         Color color = WHITE;
@@ -117,6 +131,8 @@ void tsc_ui_draw(tsc_ui_node *node, tsc_ui_context ctx) {
         tsc_ui_transform *trans = (void *)node;
         ctx.x += trans->shiftx;
         ctx.y += trans->shifty;
+    } else if(node->nodeType == TSC_UI_ALIGN) {
+
     }
     for(int i = 0; i < node->childCount; i++) {
         tsc_ui_draw(node->subnodes[i], ctx);
