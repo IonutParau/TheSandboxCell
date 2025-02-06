@@ -34,6 +34,9 @@ static void tsc_initPartOfGrid(tsc_grid_init_task_t *task) {
     memset(task->grid->cells + off, 0, sizeof(tsc_cell) * task->grid->width);
     memset(task->grid->bgs + off, 0, sizeof(tsc_cell) * task->grid->width);
     memset(task->grid->optData + (off) * tsc_optSize(), 0, tsc_optSize() * task->grid->width);
+    for(size_t x = 0; x < task->grid->width; x += tsc_gridChunkSize) {
+        tsc_grid_disableChunk(task->grid, x, task->y);
+    }
 }
 
 tsc_grid *tsc_createGrid(const char *id, int width, int height, const char *title, const char *description) {
@@ -66,9 +69,6 @@ tsc_grid *tsc_createGrid(const char *id, int width, int height, const char *titl
     grid->chunkheight = chunkHeight;
 
     grid->chunkdata = malloc(sizeof(bool) * chunkWidth * chunkHeight);
-    for(int i = 0; i < chunkWidth * chunkHeight; i++) {
-        grid->chunkdata[i] = false;
-    }
 
     grid->refc = 1;
     size_t len = width * height;
@@ -81,6 +81,7 @@ tsc_grid *tsc_createGrid(const char *id, int width, int height, const char *titl
             grid->cells[i] = tsc_cell_create(builtin.empty, 0);
             grid->bgs[i] = tsc_cell_create(builtin.empty, 0);
             memset(grid->optData + i * tsc_optSize(), 0, tsc_optSize());
+            tsc_grid_disableChunk(grid, i % grid->width, i / grid->width);
         }
     } else {
         tsc_grid_init_task_t *bullshitTaskBuffer = malloc(sizeof(tsc_grid_init_task_t) * grid->height);
@@ -99,14 +100,28 @@ void tsc_retainGrid(tsc_grid *grid) {
     grid->refc++;
 }
 
+static void tsc_clearPartOfGrid(tsc_grid_init_task_t *task) {
+    int y = task->y;
+    for(int x = 0; x < task->grid->width; x++) {
+        tsc_cell_destroy(*tsc_grid_get(task->grid, x, y));
+        tsc_cell_destroy(*tsc_grid_background(task->grid, x, y));
+    }
+}
+
 void tsc_deleteGrid(tsc_grid *grid) {
     grid->refc--;
     if(grid->refc > 0) return;
     // Title and description is interned
-    for(size_t i = 0; i < grid->width*grid->height; i++) {
-        tsc_cell_destroy(grid->cells[i]);
-        tsc_cell_destroy(grid->bgs[i]);
+    tsc_grid_init_task_t *buffer = malloc(grid->height * sizeof(tsc_grid_init_task_t));
+    for(int y = 0; y < grid->height; y++) {
+        buffer[y].y = y;
+        buffer[y].grid = grid;
     }
+
+    workers_waitForTasksFlat((worker_task_t *)tsc_clearPartOfGrid, buffer, sizeof(tsc_grid_init_task_t), grid->height);
+
+    free(buffer);
+
     free(grid->cells);
     free(grid->bgs);
     free(grid->chunkdata);
@@ -121,23 +136,55 @@ void tsc_switchGrid(tsc_grid *grid) {
     tsc_retainGrid(currentGrid);
 }
 
-void tsc_copyGrid(tsc_grid *dest, tsc_grid *src) {
-    tsc_clearGrid(dest, src->width, src->height);
-    for(size_t i = 0; i < dest->width * dest->height; i++) {
-        dest->cells[i] = tsc_cell_clone(src->cells + i);
-        dest->bgs[i] = tsc_cell_clone(src->bgs + i);
-    }
-    for(int i = 0; i < dest->chunkwidth * dest->chunkheight; i++) {
-        dest->chunkdata[i] = src->chunkdata[i];
+typedef struct tsc_grid_copy_task_t {
+    tsc_grid *src;
+    tsc_grid *dest;
+    int y;
+} tsc_grid_copy_task_t;
+
+static void tsc_copyPartOfGrid(tsc_grid_copy_task_t *task) {
+    int y = task->y;
+    tsc_grid *src = task->src;
+    tsc_grid *dest = task->dest;
+
+    for(int x = 0; x < dest->width; x++) {
+        dest->cells[x+y*dest->width] = tsc_cell_clone(tsc_grid_get(src, x, y));
+        dest->bgs[x+y*dest->width] = tsc_cell_clone(tsc_grid_background(src, x, y));
+
+        if(tsc_grid_checkChunk(src, x, y)) {
+            tsc_grid_enableChunk(dest, x, y);
+        }
     }
 }
 
+void tsc_copyGrid(tsc_grid *dest, tsc_grid *src) {
+    tsc_clearGrid(dest, src->width, src->height);
+
+    int height = dest->height;
+    tsc_grid_copy_task_t *buffer = malloc(sizeof(tsc_grid_copy_task_t) * height);
+    for(int y = 0; y < height; y++) {
+        buffer[y].src = src;
+        buffer[y].dest = dest;
+        buffer[y].y = y;
+    }
+
+    workers_waitForTasksFlat((worker_task_t *)tsc_copyPartOfGrid, buffer, sizeof(tsc_grid_copy_task_t), height);
+
+    free(buffer);
+}
+
 void tsc_clearGrid(tsc_grid *grid, int width, int height) {
-    for(int x = 0; x < grid->width; x++) {
+    {
+        // Delete old shit now
+        tsc_grid_init_task_t *buffer = malloc(grid->height * sizeof(tsc_grid_init_task_t));
         for(int y = 0; y < grid->height; y++) {
-            tsc_cell_destroy(*tsc_grid_get(grid, x, y));
-            tsc_cell_destroy(*tsc_grid_background(grid, x, y));
+            buffer[y].y = y;
+            buffer[y].grid = grid;
         }
+
+        workers_waitForTasksFlat((worker_task_t *)tsc_clearPartOfGrid, buffer, sizeof(tsc_grid_init_task_t), grid->height);
+
+        free(buffer);
     }
     size_t len = width * height;
     grid->cells = realloc(grid->cells, sizeof(tsc_cell) * len);
@@ -147,16 +194,24 @@ void tsc_clearGrid(tsc_grid *grid, int width, int height) {
     grid->chunkdata = realloc(grid->chunkdata, sizeof(bool) * chunkWidth * chunkHeight);
     grid->chunkwidth = chunkWidth;
     grid->chunkheight = chunkHeight;
-    for(int i = 0; i < chunkWidth * chunkHeight; i++) {
-        grid->chunkdata[i] = false;
-    }
     grid->width = width;
     grid->height = height;
     grid->optData = realloc(grid->optData, sizeof(char) * width * height * tsc_optSize());
-    for(size_t i = 0; i < len; i++) {
-        grid->cells[i] = tsc_cell_create(builtin.empty, 0);
-        grid->bgs[i] = tsc_cell_create(builtin.empty, 0);
-        memset(grid->optData + i * tsc_optSize(), 0, tsc_optSize());
+    if(len < 100000) {
+        for(size_t i = 0; i < len; i++) {
+            grid->cells[i] = tsc_cell_create(builtin.empty, 0);
+            grid->bgs[i] = tsc_cell_create(builtin.empty, 0);
+            memset(grid->optData + i * tsc_optSize(), 0, tsc_optSize());
+            tsc_grid_disableChunk(grid, i % grid->width, i / grid->width);
+        }
+    } else {
+        tsc_grid_init_task_t *bullshitTaskBuffer = malloc(sizeof(tsc_grid_init_task_t) * grid->height);
+        for(size_t i = 0; i < grid->height; i++) {
+            bullshitTaskBuffer[i].grid = grid;
+            bullshitTaskBuffer[i].y = i;
+        }
+        workers_waitForTasksFlat((worker_task_t *)tsc_initPartOfGrid, bullshitTaskBuffer, sizeof(tsc_grid_init_task_t), grid->width);
+        free(bullshitTaskBuffer);
     }
 }
 
