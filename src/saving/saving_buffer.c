@@ -37,7 +37,7 @@ void tsc_saving_deleteBuffer(tsc_buffer buffer) {
     free(buffer.mem);
 }
 
-static char *tsc_saving_reserveFor(tsc_buffer *buffer, size_t amount) {
+char *tsc_saving_reserveFor(tsc_buffer *buffer, size_t amount) {
     while(buffer->len + amount > buffer->cap) {
         if(buffer->cap != 0) {
             buffer->cap *= 2;
@@ -77,5 +77,10 @@ void __attribute__((format (printf, 2, 3))) tsc_saving_writeFormat(tsc_buffer *b
 }
 
 void tsc_saving_writeBytes(tsc_buffer *buffer, const char *mem, size_t count) {
+    if(count == 0) return;
     memcpy(tsc_saving_reserveFor(buffer, count), mem, sizeof(char) * count);
+}
+
+void tsc_saving_clearBuffer(tsc_buffer *buffer) {
+    buffer->len = 0;
 }

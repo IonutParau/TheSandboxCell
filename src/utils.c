@@ -310,7 +310,15 @@ double tsc_mapNumber(double x, double min1, double max1, double min2, double max
     return min2 + t * (max2 - min2);
 }
 
+bool tsc_isLittleEndian() {
+    int x = 1;
+    char *fuckTheCStandard = (void *)&x;
+    return (*fuckTheCStandard) == 1;
+}
+
 #ifndef TSC_POSIX
+
+// PESKY WINDOWS
 
 int asprintf(char **s, const char *fmt, ...) {
     va_list args;

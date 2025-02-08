@@ -8,6 +8,8 @@
 #include "../utils.h"
 #include "../api/value.h"
 #include "../api/api.h"
+#include "../threads/workers.h"
+#include <raylib.h>
 #include <assert.h>
 
 static tsc_saving_format *saving_arr = NULL;
@@ -31,6 +33,7 @@ void tsc_saving_encodeWithSmallest(tsc_buffer *buffer, tsc_grid *grid) {
 
     for(size_t i = 0; i < savingc; i++) {
         if(saving_arr[i].encode == NULL) continue;
+        if(saving_arr[i].flags & TSC_SAVING_COMPATIBILITY) continue; // encoder considered not ideal for standard usage
         tsc_buffer tmp = tsc_saving_newBufferCapacity(NULL, 4096);
         if(saving_arr[i].encode(&tmp, grid) == 0) {
             // Encoding failed.
@@ -584,6 +587,291 @@ void tsc_v1_decode(const char *code, tsc_grid *grid) {
     free(desc);
 }
 
+typedef struct tsc_tsc_state {
+    char headerByte;
+    // returns 0 on failure
+    unsigned int (*encoder)(tsc_buffer *buffer, tsc_grid *grid, int idx, int len);
+} tsc_tsc_state;
+
+static unsigned int tsc_tsc_encodeEmpties(tsc_buffer *buffer, tsc_grid *grid, int idx, int len, int numSize) {
+    size_t maximum = 1;
+    maximum <<= numSize*8;
+
+    // technically int wouldn't overflow but eh its nice to use protection
+    size_t counted = 0;
+
+    while(counted < len) {
+        if(grid->bgs[idx+counted].id != builtin.empty) break; // not representable
+        if(grid->cells[idx+counted].id != builtin.empty) break; // not an empty
+        counted++;
+    }
+
+    if(counted > maximum) return 0;
+
+    size_t toEncode = counted - 1;
+    char *toEncodeIn = tsc_saving_reserveFor(buffer, numSize);
+    // Little Endian Encoding, optimized on little endian
+    if(tsc_isLittleEndian() && (numSize == 1 || numSize == 2 || numSize == 4)) {
+        if(numSize == 1) {
+            *toEncodeIn = toEncode;
+        } else if(numSize == 2) {
+            *(unsigned short *)toEncodeIn = toEncode;
+        } else if(numSize == 4) {
+            *(unsigned int *)toEncodeIn = toEncode;
+        }
+    } else {
+        for(int i = 0; i < numSize; i++) {
+            size_t val = (toEncode >> (i*8)) & 0xFF;
+            toEncodeIn[i] = val;
+        }
+    }
+
+    return counted;
+}
+
+static unsigned int tsc_tsc_encodeEmpties1(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 1);
+}
+
+static unsigned int tsc_tsc_encodeEmpties2(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 2);
+}
+
+static unsigned int tsc_tsc_encodeEmpties3(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 3);
+}
+
+static unsigned int tsc_tsc_encodeEmpties4(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 4);
+}
+
+typedef struct tsc_tsc_vanillaTableEntry {
+    char binary;
+    tsc_id_t id;
+    unsigned char rot;
+} tsc_tsc_vanillaTableEntry;
+
+static unsigned int tsc_tsc_encodeVanillaBigBrainOpt(tsc_buffer *buffer, tsc_grid *grid, int idx, int len, tsc_id_t bg) {
+    unsigned int cellCount = 0;
+
+    tsc_tsc_vanillaTableEntry table[16] = {
+        // Super optimized 4-bit encoding
+        // This simplifies cells, which technically makes the TSC format not lossless,
+        // but this *SHOULD NEVER* cause issues. If it does, your mods are dogshit
+        {0b0000, builtin.generator, 0},
+        {0b0001, builtin.generator, 1},
+        {0b0010, builtin.generator, 2},
+        {0b0011, builtin.generator, 3},
+        {0b0100, builtin.mover, 0},
+        {0b0101, builtin.mover, 1},
+        {0b0110, builtin.mover, 2},
+        {0b0111, builtin.mover, 3},
+        {0b1000, builtin.slide, 0},
+        {0b1001, builtin.slide, 1},
+        {0b1010, builtin.push, 0},
+        {0b1011, builtin.wall, 1},
+        {0b1100, builtin.enemy, 0},
+        {0b1101, builtin.trash, 0},
+        {0b1110, builtin.rotator_cw, 0},
+        {0b1111, builtin.rotator_ccw, 0},
+    };
+
+    while(cellCount < len) {
+        int cellIdx = idx + cellCount;
+
+        if(grid->bgs[cellIdx].id != bg) break;
+
+        int bin = 16;
+        tsc_cell toEncode = grid->cells[cellIdx];
+        toEncode.rotData &= 0b11;
+        if(toEncode.id == builtin.push) toEncode.rotData = 0;
+        if(toEncode.id == builtin.wall) toEncode.rotData = 0;
+        if(toEncode.id == builtin.enemy) toEncode.rotData = 0;
+        if(toEncode.id == builtin.trash) toEncode.rotData = 0;
+        if(toEncode.id == builtin.rotator_cw) toEncode.rotData = 0;
+        if(toEncode.id == builtin.rotator_ccw) toEncode.rotData = 0;
+        if(toEncode.id == builtin.slide) toEncode.rotData = toEncode.rotData & 1;
+
+        for(int i = 0; i < 16; i++) {
+            if(table[i].id == toEncode.id && table[i].rot == toEncode.rotData) {
+                cellCount++;
+            }
+        }
+
+        if(bin == 16) break;
+    }
+
+    int byteLen = cellCount / 2;
+    if(cellCount % 2 != 0) byteLen++;
+
+    char *rawBytes = malloc(byteLen);
+
+    for(int j = 0; j < cellCount; j++) {
+        int cellIdx = idx + j;
+
+        if(grid->bgs[cellIdx].id != bg) break;
+
+        int bin = 16;
+        tsc_cell toEncode = grid->cells[cellIdx];
+        toEncode.rotData &= 0b11;
+        if(toEncode.id == builtin.push) toEncode.rotData = 0;
+        if(toEncode.id == builtin.wall) toEncode.rotData = 0;
+        if(toEncode.id == builtin.enemy) toEncode.rotData = 0;
+        if(toEncode.id == builtin.trash) toEncode.rotData = 0;
+        if(toEncode.id == builtin.rotator_cw) toEncode.rotData = 0;
+        if(toEncode.id == builtin.rotator_ccw) toEncode.rotData = 0;
+        if(toEncode.id == builtin.slide) toEncode.rotData = toEncode.rotData & 1;
+
+        for(int i = 0; i < 16; i++) {
+            if(table[i].id == toEncode.id && table[i].rot == toEncode.rotData) {
+                bin = table[i].binary;
+                break;
+            }
+        }
+
+        rawBytes[j / 2] |= (bin << ((j % 2) * 8));
+    }
+
+    tsc_saving_writeBytes(buffer, rawBytes, byteLen);
+
+    return cellCount;
+}
+
+static unsigned int tsc_tsc_encodeVanillaNoPlace(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeVanillaBigBrainOpt(buffer, grid, idx, len, builtin.empty);
+}
+
+static unsigned int tsc_tsc_encodeVanillaWithPlace(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeVanillaBigBrainOpt(buffer, grid, idx, len, builtin.placeable);
+}
+
+#define TSC_TSC_STATECOUNT 6
+static tsc_tsc_state tsc_tsc_states[TSC_TSC_STATECOUNT] = {
+    {'A', tsc_tsc_encodeEmpties1},
+    {'B', tsc_tsc_encodeEmpties2},
+    {'C', tsc_tsc_encodeEmpties3},
+    {'D', tsc_tsc_encodeEmpties4},
+    {'E', tsc_tsc_encodeVanillaNoPlace},
+    {'F', tsc_tsc_encodeVanillaWithPlace},
+};
+
+typedef struct tsc_tsc_chunk {
+    tsc_grid *grid;
+    tsc_buffer buffer;
+    int start;
+    int len;
+} tsc_tsc_chunk;
+
+void tsc_tsc_encodeChunk(tsc_tsc_chunk *chunk) {
+    tsc_buffer buffers[TSC_TSC_STATECOUNT];
+    for(int i = 0; i < TSC_TSC_STATECOUNT; i++) {
+        buffers[i] = tsc_saving_newBuffer(NULL);
+    }
+
+    int off = 0;
+    while(off < chunk->len) {
+        bool worked = false;
+        for(int i = 0; i < TSC_TSC_STATECOUNT; i++) {
+            tsc_tsc_state state = tsc_tsc_states[i];
+            tsc_buffer *stateBuffer = buffers + i;
+            tsc_saving_clearBuffer(stateBuffer);
+
+            unsigned int encoded = state.encoder(stateBuffer, chunk->grid, chunk->start + off, chunk->len - off);
+            if(encoded == 0) continue; // we failed, L
+            tsc_saving_write(&chunk->buffer, state.headerByte);
+            tsc_saving_writeBytes(&chunk->buffer, stateBuffer->mem, stateBuffer->len);
+            off += encoded;
+            worked = true;
+            break; // we got a working state
+        }
+        if(!worked) {
+            tsc_saving_clearBuffer(&chunk->buffer); // all states failed
+            break;
+        }
+    }
+    
+    for(int i = 0; i < TSC_TSC_STATECOUNT; i++) {
+        tsc_saving_deleteBuffer(buffers[i]);
+    }
+}
+
+// best name in all of coding
+int tsc_tsc_encode(tsc_buffer *buffer, tsc_grid *grid) {
+    tsc_saving_writeStr(buffer, "TSC;");
+    
+    char *ewidth = tsc_saving_encode74(grid->width);
+    char *eheight = tsc_saving_encode74(grid->height);
+    tsc_saving_writeFormat(buffer, "%s;%s;", ewidth, eheight);
+    free(ewidth);
+    free(eheight);
+
+    int minThreadWork = 10000;
+    int threadCount = workers_amount();
+
+    int whatTheFuckDidYouDo = minThreadWork * threadCount;
+    int area = grid->width * grid->height;
+
+    int perChunk;
+
+    if(area >= whatTheFuckDidYouDo) {
+        perChunk = area / threadCount;
+    } else {
+        perChunk = minThreadWork;
+    }
+        
+    // We do it like this to help compression
+    int maxChunkC = 1 + area / perChunk;
+    int chunkc = 0;
+    tsc_tsc_chunk *chunks = malloc(sizeof(chunks[0]) * maxChunkC);
+
+    int consumed = 0;
+    while(consumed < area) {
+        int remaining = area - consumed;
+
+        int len = remaining;
+        if(len > perChunk) len = perChunk;
+
+        tsc_tsc_chunk chunk = {grid, tsc_saving_newBufferCapacity(NULL, 8192), consumed, len};
+        chunks[chunkc] = chunk;
+        chunkc++;
+        consumed += len;
+    }
+
+    workers_waitForTasksFlat((worker_task_t *)&tsc_tsc_encodeChunk, chunks, sizeof(tsc_tsc_chunk), chunkc);
+
+    tsc_saving_buffer finalData = tsc_saving_newBuffer(NULL);
+
+    bool failed = 0;
+
+    for(int i = 0; i < chunkc; i++) {
+        tsc_saving_writeBytes(&finalData, chunks[i].buffer.mem, chunks[i].buffer.len);
+        if(chunks[i].buffer.len == 0) failed = 1;
+        tsc_saving_deleteBuffer(chunks[i].buffer);
+    }
+    
+    free(chunks);
+
+    if(failed) {
+        fprintf(stderr, "TSC format somehow failed. Bad mod?\n");
+        return 0; // we failed.... somehow
+    }
+
+    int deflatedLen;
+    unsigned char *deflated = CompressData((unsigned char *)finalData.mem, finalData.len, &deflatedLen); // get deflated
+
+    int base64Len;
+    char *based64 = EncodeDataBase64(deflated, deflatedLen, &base64Len);
+    RL_FREE(deflated);
+
+    tsc_saving_writeBytes(buffer, based64, base64Len);
+
+    RL_FREE(based64);
+    
+    tsc_saving_write(buffer, ';');
+
+    return 1;
+}
+
 void tsc_saving_register(tsc_saving_format format) {
     size_t idx = savingc++;
     saving_arr = realloc(saving_arr, sizeof(tsc_saving_format) * savingc);
@@ -596,6 +884,7 @@ void tsc_saving_registerCore() {
     v3.header = "V3;";
     v3.decode = tsc_v3_decode;
     v3.encode = tsc_v3_encode;
+    v3.flags = TSC_SAVING_COMPATIBILITY;
     tsc_saving_register(v3);
 
     tsc_saving_format v2 = {};
@@ -603,6 +892,7 @@ void tsc_saving_registerCore() {
     v2.header = "V2;";
     v2.decode = tsc_v2_decode;
     v2.encode = NULL;
+    v2.flags = TSC_SAVING_COMPATIBILITY;
     tsc_saving_register(v2);
 
     tsc_saving_format v1 = {};
@@ -610,5 +900,14 @@ void tsc_saving_registerCore() {
     v1.header = "V1;";
     v1.decode = tsc_v1_decode;
     v1.encode = NULL;
+    v1.flags = TSC_SAVING_COMPATIBILITY;
     tsc_saving_register(v1);
+    
+    tsc_saving_format tsc = {};
+    tsc.name = "TSC";
+    tsc.header = "TSC;";
+    tsc.decode = NULL; // risky
+    tsc.encode = tsc_tsc_encode;
+    tsc.flags = 0;
+    tsc_saving_register(tsc);
 }
