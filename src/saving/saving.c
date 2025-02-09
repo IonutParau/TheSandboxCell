@@ -701,6 +701,12 @@ static unsigned int tsc_tsc_encodeVanillaBigBrainOpt(tsc_buffer *buffer, tsc_gri
         if(bin == 16) break;
     }
 
+    // write len (little endian int)
+    // TODO: count size argument like for empties for maximum bullshit
+    for(int i = 0; i < sizeof(char); i++) {
+        tsc_saving_write(buffer, (cellCount >> (i * 8)) & 0xFF);
+    }
+
     int byteLen = cellCount / 2;
     if(cellCount % 2 != 0) byteLen++;
 
