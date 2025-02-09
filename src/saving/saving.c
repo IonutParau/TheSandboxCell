@@ -669,7 +669,7 @@ static unsigned int tsc_tsc_encodeVanillaBigBrainOpt(tsc_buffer *buffer, tsc_gri
         {0b1000, builtin.slide, 0},
         {0b1001, builtin.slide, 1},
         {0b1010, builtin.push, 0},
-        {0b1011, builtin.wall, 1},
+        {0b1011, builtin.wall, 0},
         {0b1100, builtin.enemy, 0},
         {0b1101, builtin.trash, 0},
         {0b1110, builtin.rotator_cw, 0},
