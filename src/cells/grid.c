@@ -210,7 +210,7 @@ void tsc_clearGrid(tsc_grid *grid, int width, int height) {
             bullshitTaskBuffer[i].grid = grid;
             bullshitTaskBuffer[i].y = i;
         }
-        workers_waitForTasksFlat((worker_task_t *)tsc_initPartOfGrid, bullshitTaskBuffer, sizeof(tsc_grid_init_task_t), grid->width);
+        workers_waitForTasksFlat((worker_task_t *)tsc_initPartOfGrid, bullshitTaskBuffer, sizeof(tsc_grid_init_task_t), grid->height);
         free(bullshitTaskBuffer);
     }
 }
