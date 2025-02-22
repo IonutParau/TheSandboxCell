@@ -29,7 +29,7 @@ typedef struct tsc_grid_init_task_t {
 } tsc_grid_init_task_t;
 
 static void tsc_initPartOfGrid(tsc_grid_init_task_t *task) {
-    size_t off = task->grid->height * task->y;
+    size_t off = task->grid->width * task->y;
     // literally just 3 memsets lmao
     memset(task->grid->cells + off, 0, sizeof(tsc_cell) * task->grid->width);
     memset(task->grid->bgs + off, 0, sizeof(tsc_cell) * task->grid->width);
