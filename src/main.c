@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "api/tscjson.h"
+#include "api/value.h"
 #include "cells/grid.h"
 #include "cells/subticks.h"
 #include "saving/saving.h"
@@ -84,6 +86,61 @@ void tsc_magicStreamProcessorDoNotUseEver(void *buffer, unsigned int sampleCount
         }
         tsc_magicMusicSampleDoNotTouchEver /= sampleCount;
     }
+}
+
+void tsc_saveEnabledPacks() {
+    size_t len = 0;
+    while(tsc_indexEnabledResourcePack(len) != NULL) len++;
+    tsc_value theList = tsc_array(len);
+    for(size_t i = 0; i < len; i++) {
+        tsc_resourcepack *pack = tsc_indexEnabledResourcePack(i);
+        tsc_value s = tsc_string(pack->id);
+        tsc_setIndex(theList, i, s);
+        tsc_destroy(s);
+    }
+
+    char enabledPath[] = "data/enabled.json";
+    tsc_pathfix(enabledPath);
+    FILE *f = fopen(enabledPath, "w");
+    tsc_buffer buffer = tsc_json_encode(theList, NULL);
+
+    fwrite(buffer.mem, sizeof(char), buffer.len, f);
+
+    tsc_saving_deleteBuffer(buffer);
+    tsc_destroy(theList);
+    fclose(f);
+}
+
+void tsc_loadEnabledPacks() {
+    char enabledPath[] = "data/enabled.json";
+    tsc_pathfix(enabledPath);
+    if(!tsc_hasfile(enabledPath)) return;
+    char *data = tsc_allocfile(enabledPath, NULL);
+    tsc_buffer err = tsc_saving_newBuffer("");
+    tsc_value l = tsc_json_decode(data, &err); // if this fails u are an idiot
+    if(err.len != 0) {
+        fprintf(stderr, "ERROR: %s\n", err.mem);
+        exit(1);
+    }
+
+    for(size_t i = 0; i < tsc_getLength(l); i++) {
+        const char *s = tsc_toString(tsc_index(l, i));
+
+        tsc_resourcepack *pack = tsc_getResourcePack(s);
+        for(size_t j = 0; tsc_indexEnabledResourcePack(j) != NULL; j++) {
+            if(tsc_indexEnabledResourcePack(j) == pack) {
+                pack = NULL;
+                break;
+            }
+        }
+        // if NULL, then the user deleted the enabled pack or we got duplicates
+        if(pack != NULL) {
+            fprintf(stdout, "enabled %s\n", s);
+            tsc_enableResourcePack(pack);
+        }
+    }
+
+    free(data);
 }
 
 #define TSC_GRID_SIZE_BUFSIZE 16
@@ -171,6 +228,7 @@ int main(int argc, char **argv) {
     tsc_loadAllMods();
     
     tsc_enableResourcePack(defaultResourcePack);
+    tsc_loadEnabledPacks();
     tsc_setupRendering();
 
     tsc_mainMenuBtn.play = tsc_ui_newButtonState();
@@ -661,6 +719,7 @@ int main(int argc, char **argv) {
         tsc_music_playOrKeep();
     }
 
+    tsc_saveEnabledPacks();
     tsc_storeSettings();
     CloseWindow();
     CloseAudioDevice();

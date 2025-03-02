@@ -14,5 +14,6 @@ ILLEGAL_*.*
 /data/resources/*/
 !/data/resources/default
 /data/settings.json
+/data/enabled.json
 build/
 site/
