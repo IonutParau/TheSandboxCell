@@ -1,7 +1,8 @@
 #include "saving.h"
 #include "../utils.h"
-#include <stdint.h>
 #include <stdlib.h>
+#include <time.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -591,9 +592,11 @@ typedef struct tsc_tsc_state {
     char headerByte;
     // returns 0 on failure
     unsigned int (*encoder)(tsc_buffer *buffer, tsc_grid *grid, int idx, int len);
+    // never fail
+    size_t (*decoder)(tsc_grid *grid, char *data, size_t *idx);
 } tsc_tsc_state;
 
-static unsigned int tsc_tsc_encodeEmpties(tsc_buffer *buffer, tsc_grid *grid, int idx, int len, int numSize) {
+static unsigned int tsc_tsc_encodeEmpties(tsc_buffer *buffer, tsc_grid *grid, int idx, int len, int numSize, tsc_id_t bg) {
     size_t maximum = 1;
     maximum <<= numSize*8;
 
@@ -601,48 +604,103 @@ static unsigned int tsc_tsc_encodeEmpties(tsc_buffer *buffer, tsc_grid *grid, in
     size_t counted = 0;
 
     while(counted < len) {
-        if(grid->bgs[idx+counted].id != builtin.empty) break; // not representable
+        if(grid->bgs[idx+counted].id != bg) break; // not representable
         if(grid->cells[idx+counted].id != builtin.empty) break; // not an empty
         counted++;
     }
 
     if(counted > maximum) return 0;
+    if(counted == 0) return 0;
 
     size_t toEncode = counted - 1;
     char *toEncodeIn = tsc_saving_reserveFor(buffer, numSize);
-    // Little Endian Encoding, optimized on little endian
-    if(tsc_isLittleEndian() && (numSize == 1 || numSize == 2 || numSize == 4)) {
-        if(numSize == 1) {
-            *toEncodeIn = toEncode;
-        } else if(numSize == 2) {
-            *(unsigned short *)toEncodeIn = toEncode;
-        } else if(numSize == 4) {
-            *(unsigned int *)toEncodeIn = toEncode;
-        }
-    } else {
-        for(int i = 0; i < numSize; i++) {
-            size_t val = (toEncode >> (i*8)) & 0xFF;
-            toEncodeIn[i] = val;
-        }
+    for(int i = 0; i < numSize; i++) {
+        size_t val = (toEncode >> (i*8)) & 0xFF;
+        toEncodeIn[i] = val;
     }
 
     return counted;
 }
 
+size_t tsc_tsc_decodeEmpties(tsc_grid *grid, volatile char *data, size_t *cellIdx, int numSize, tsc_id_t bg) {
+    size_t counted = 0;
+    for(int i = 0; i < numSize; i++) {
+        size_t dataByte = (unsigned char)data[i];
+        counted |= (dataByte << (i*8));
+    }
+    counted++;
+    for(size_t i = 0; i < counted; i++) {
+        size_t j = (*cellIdx) + i;
+        grid->bgs[j] = tsc_cell_create(bg, 0);
+        grid->cells[j] = tsc_cell_create(builtin.empty, 0);
+        if(bg != builtin.empty) tsc_grid_enableChunk(grid, j % grid->width, j / grid->width);
+    }
+    (*cellIdx) += counted;
+    return numSize;
+}
+
 static unsigned int tsc_tsc_encodeEmpties1(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
-    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 1);
+    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 1, builtin.empty);
+}
+
+static size_t tsc_tsc_decodeEmpties1(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeEmpties(grid, data, cellIdx, 1, builtin.empty);
 }
 
 static unsigned int tsc_tsc_encodeEmpties2(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
-    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 2);
+    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 2, builtin.empty);
+}
+
+static size_t tsc_tsc_decodeEmpties2(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeEmpties(grid, data, cellIdx, 2, builtin.empty);
 }
 
 static unsigned int tsc_tsc_encodeEmpties3(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
-    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 3);
+    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 3, builtin.empty);
+}
+
+static size_t tsc_tsc_decodeEmpties3(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeEmpties(grid, data, cellIdx, 3, builtin.empty);
 }
 
 static unsigned int tsc_tsc_encodeEmpties4(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
-    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 4);
+    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 4, builtin.empty);
+}
+
+static size_t tsc_tsc_decodeEmpties4(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeEmpties(grid, data, cellIdx, 4, builtin.empty);
+}
+
+static unsigned int tsc_tsc_encodePlaces1(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 1, builtin.placeable);
+}
+
+static size_t tsc_tsc_decodePlaces1(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeEmpties(grid, data, cellIdx, 1, builtin.placeable);
+}
+
+static unsigned int tsc_tsc_encodePlaces2(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 2, builtin.placeable);
+}
+
+static size_t tsc_tsc_decodePlaces2(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeEmpties(grid, data, cellIdx, 2, builtin.placeable);
+}
+
+static unsigned int tsc_tsc_encodePlaces3(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 3, builtin.placeable);
+}
+
+static size_t tsc_tsc_decodePlaces3(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeEmpties(grid, data, cellIdx, 3, builtin.placeable);
+}
+
+static unsigned int tsc_tsc_encodePlaces4(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeEmpties(buffer, grid, idx, len, 4, builtin.placeable);
+}
+
+static size_t tsc_tsc_decodePlaces4(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeEmpties(grid, data, cellIdx, 4, builtin.placeable);
 }
 
 typedef struct tsc_tsc_vanillaTableEntry {
@@ -651,8 +709,10 @@ typedef struct tsc_tsc_vanillaTableEntry {
     unsigned char rot;
 } tsc_tsc_vanillaTableEntry;
 
-static unsigned int tsc_tsc_encodeVanillaBigBrainOpt(tsc_buffer *buffer, tsc_grid *grid, int idx, int len, tsc_id_t bg) {
+static unsigned int tsc_tsc_encodeVanillaBigBrainOpt(tsc_buffer *buffer, tsc_grid *grid, int idx, int len, tsc_id_t bg, int numSize) {
     unsigned int cellCount = 0;
+    size_t maximum = 1;
+    maximum <<= numSize*8;
 
     tsc_tsc_vanillaTableEntry table[16] = {
         // Super optimized 4-bit encoding
@@ -701,9 +761,10 @@ static unsigned int tsc_tsc_encodeVanillaBigBrainOpt(tsc_buffer *buffer, tsc_gri
         if(bin == 16) break;
     }
 
+    if(cellCount > maximum) return 0;
+
     // write len (little endian int)
-    // TODO: count size argument like for empties for maximum bullshit
-    for(int i = 0; i < sizeof(char); i++) {
+    for(int i = 0; i < numSize; i++) {
         tsc_saving_write(buffer, (cellCount >> (i * 8)) & 0xFF);
     }
 
@@ -711,6 +772,7 @@ static unsigned int tsc_tsc_encodeVanillaBigBrainOpt(tsc_buffer *buffer, tsc_gri
     if(cellCount % 2 != 0) byteLen++;
 
     char *rawBytes = malloc(byteLen);
+    memset(rawBytes, 0, byteLen);
 
     for(int j = 0; j < cellCount; j++) {
         int cellIdx = idx + j;
@@ -726,39 +788,152 @@ static unsigned int tsc_tsc_encodeVanillaBigBrainOpt(tsc_buffer *buffer, tsc_gri
         if(toEncode.id == builtin.trash) toEncode.rotData = 0;
         if(toEncode.id == builtin.rotator_cw) toEncode.rotData = 0;
         if(toEncode.id == builtin.rotator_ccw) toEncode.rotData = 0;
-        if(toEncode.id == builtin.slide) toEncode.rotData = toEncode.rotData & 1;
+        if(toEncode.id == builtin.slide) toEncode.rotData &= 1;
 
         for(int i = 0; i < 16; i++) {
             if(table[i].id == toEncode.id && table[i].rot == toEncode.rotData) {
-                bin = table[i].binary;
+                bin = i;
                 break;
             }
         }
 
-        rawBytes[j / 2] |= (bin << ((j % 2) * 8));
+        rawBytes[j / 2] |= (bin << ((j % 2) * 4));
     }
 
     tsc_saving_writeBytes(buffer, rawBytes, byteLen);
 
+    free(rawBytes);
+
     return cellCount;
 }
 
-static unsigned int tsc_tsc_encodeVanillaNoPlace(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
-    return tsc_tsc_encodeVanillaBigBrainOpt(buffer, grid, idx, len, builtin.empty);
+static size_t tsc_tsc_decodeVanillaBigBrainOpt(tsc_grid *grid, char *data, size_t *cellIdx, tsc_id_t bg, int numSize) {
+    size_t cellCount = 0;
+    for(int i = 0; i < numSize; i++) {
+        size_t dataByte = (unsigned char)data[i];
+        cellCount |= (dataByte << (i * 8));
+    }
+    
+    tsc_tsc_vanillaTableEntry table[16] = {
+        // Super optimized 4-bit encoding
+        // This simplifies cells, which technically makes the TSC format not lossless,
+        // but this *SHOULD NEVER* cause issues. If it does, your mods are dogshit
+        {0b0000, builtin.generator, 0},
+        {0b0001, builtin.generator, 1},
+        {0b0010, builtin.generator, 2},
+        {0b0011, builtin.generator, 3},
+        {0b0100, builtin.mover, 0},
+        {0b0101, builtin.mover, 1},
+        {0b0110, builtin.mover, 2},
+        {0b0111, builtin.mover, 3},
+        {0b1000, builtin.slide, 0},
+        {0b1001, builtin.slide, 1},
+        {0b1010, builtin.push, 0},
+        {0b1011, builtin.wall, 0},
+        {0b1100, builtin.enemy, 0},
+        {0b1101, builtin.trash, 0},
+        {0b1110, builtin.rotator_cw, 0},
+        {0b1111, builtin.rotator_ccw, 0},
+    };
+
+    data += numSize;
+
+    size_t byteLen = cellCount / 2 + (cellCount & 1);
+    for(size_t i = 0; i < cellCount; i++) {
+        char cellBits = (data[i / 2] >> ((i % 2) * 4)) & 0xF;
+        size_t j = (*cellIdx) + i;
+        grid->bgs[j] = tsc_cell_create(bg, 0);
+        tsc_tsc_vanillaTableEntry entry = table[cellBits];
+        grid->cells[j] = tsc_cell_create(entry.id, entry.rot);
+        tsc_grid_enableChunk(grid, j % grid->width, j / grid->width);
+    }
+
+    (*cellIdx) += cellCount;
+    return numSize + byteLen;
 }
 
-static unsigned int tsc_tsc_encodeVanillaWithPlace(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
-    return tsc_tsc_encodeVanillaBigBrainOpt(buffer, grid, idx, len, builtin.placeable);
+static unsigned int tsc_tsc_encodeVanillaNoPlace1(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeVanillaBigBrainOpt(buffer, grid, idx, len, builtin.empty, 1);
 }
 
-#define TSC_TSC_STATECOUNT 6
+static unsigned int tsc_tsc_encodeVanillaWithPlace1(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeVanillaBigBrainOpt(buffer, grid, idx, len, builtin.placeable, 1);
+}
+
+static size_t tsc_tsc_decodeVanillaNoPlace1(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeVanillaBigBrainOpt(grid, data, cellIdx, builtin.empty, 1);
+}
+
+static size_t tsc_tsc_decodeVanillaWithPlace1(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeVanillaBigBrainOpt(grid, data, cellIdx, builtin.placeable, 1);
+}
+
+static unsigned int tsc_tsc_encodeVanillaNoPlace2(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeVanillaBigBrainOpt(buffer, grid, idx, len, builtin.empty, 2);
+}
+
+static unsigned int tsc_tsc_encodeVanillaWithPlace2(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeVanillaBigBrainOpt(buffer, grid, idx, len, builtin.placeable, 2);
+}
+
+static size_t tsc_tsc_decodeVanillaNoPlace2(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeVanillaBigBrainOpt(grid, data, cellIdx, builtin.empty, 2);
+}
+
+static size_t tsc_tsc_decodeVanillaWithPlace2(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeVanillaBigBrainOpt(grid, data, cellIdx, builtin.placeable, 2);
+}
+
+static unsigned int tsc_tsc_encodeVanillaNoPlace3(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeVanillaBigBrainOpt(buffer, grid, idx, len, builtin.empty, 3);
+}
+
+static unsigned int tsc_tsc_encodeVanillaWithPlace3(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeVanillaBigBrainOpt(buffer, grid, idx, len, builtin.placeable, 3);
+}
+
+static size_t tsc_tsc_decodeVanillaNoPlace3(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeVanillaBigBrainOpt(grid, data, cellIdx, builtin.empty, 3);
+}
+
+static size_t tsc_tsc_decodeVanillaWithPlace3(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeVanillaBigBrainOpt(grid, data, cellIdx, builtin.placeable, 3);
+}
+
+static unsigned int tsc_tsc_encodeVanillaNoPlace4(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeVanillaBigBrainOpt(buffer, grid, idx, len, builtin.empty, 4);
+}
+
+static unsigned int tsc_tsc_encodeVanillaWithPlace4(tsc_buffer *buffer, tsc_grid *grid, int idx, int len) {
+    return tsc_tsc_encodeVanillaBigBrainOpt(buffer, grid, idx, len, builtin.placeable, 4);
+}
+
+static size_t tsc_tsc_decodeVanillaNoPlace4(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeVanillaBigBrainOpt(grid, data, cellIdx, builtin.empty, 4);
+}
+
+static size_t tsc_tsc_decodeVanillaWithPlace4(tsc_grid *grid, char *data, size_t *cellIdx) {
+    return tsc_tsc_decodeVanillaBigBrainOpt(grid, data, cellIdx, builtin.placeable, 4);
+}
+
+#define TSC_TSC_STATECOUNT 16
 static tsc_tsc_state tsc_tsc_states[TSC_TSC_STATECOUNT] = {
-    {'A', tsc_tsc_encodeEmpties1},
-    {'B', tsc_tsc_encodeEmpties2},
-    {'C', tsc_tsc_encodeEmpties3},
-    {'D', tsc_tsc_encodeEmpties4},
-    {'E', tsc_tsc_encodeVanillaNoPlace},
-    {'F', tsc_tsc_encodeVanillaWithPlace},
+    {'A', tsc_tsc_encodeEmpties1, tsc_tsc_decodeEmpties1},
+    {'B', tsc_tsc_encodeEmpties2, tsc_tsc_decodeEmpties2},
+    {'C', tsc_tsc_encodeEmpties3, tsc_tsc_decodeEmpties3},
+    {'D', tsc_tsc_encodeEmpties4, tsc_tsc_decodeEmpties4},
+    {'1', tsc_tsc_encodePlaces1, tsc_tsc_decodePlaces1},
+    {'2', tsc_tsc_encodePlaces2, tsc_tsc_decodePlaces2},
+    {'3', tsc_tsc_encodePlaces3, tsc_tsc_decodePlaces3},
+    {'4', tsc_tsc_encodePlaces4, tsc_tsc_decodePlaces4},
+    {'E', tsc_tsc_encodeVanillaNoPlace1, tsc_tsc_decodeVanillaNoPlace1},
+    {'F', tsc_tsc_encodeVanillaWithPlace1, tsc_tsc_decodeVanillaWithPlace1},
+    {'G', tsc_tsc_encodeVanillaNoPlace2, tsc_tsc_decodeVanillaNoPlace2},
+    {'H', tsc_tsc_encodeVanillaWithPlace2, tsc_tsc_decodeVanillaWithPlace2},
+    {'I', tsc_tsc_encodeVanillaNoPlace3, tsc_tsc_decodeVanillaNoPlace3},
+    {'J', tsc_tsc_encodeVanillaWithPlace3, tsc_tsc_decodeVanillaWithPlace3},
+    {'K', tsc_tsc_encodeVanillaNoPlace4, tsc_tsc_decodeVanillaNoPlace4},
+    {'L', tsc_tsc_encodeVanillaWithPlace4, tsc_tsc_decodeVanillaWithPlace4},
 };
 
 typedef struct tsc_tsc_chunk {
@@ -804,7 +979,7 @@ void tsc_tsc_encodeChunk(tsc_tsc_chunk *chunk) {
 // best name in all of coding
 int tsc_tsc_encode(tsc_buffer *buffer, tsc_grid *grid) {
     tsc_saving_writeStr(buffer, "TSC;");
-    
+
     char *ewidth = tsc_saving_encode74(grid->width);
     char *eheight = tsc_saving_encode74(grid->height);
     tsc_saving_writeFormat(buffer, "%s;%s;", ewidth, eheight);
@@ -878,6 +1053,61 @@ int tsc_tsc_encode(tsc_buffer *buffer, tsc_grid *grid) {
     return 1;
 }
 
+size_t tsc_tsc_decodeChunk(tsc_grid *grid, size_t *cellIdx, char *data, char format) {
+    for(size_t i = 0; i < TSC_TSC_STATECOUNT; i++) {
+        tsc_tsc_state state = tsc_tsc_states[i];
+        if(state.headerByte == format) {
+            return state.decoder(grid, data, cellIdx);
+        }
+    }
+    return 0; // unsupported, REALLY BAD
+}
+
+void tsc_tsc_decode(const char *code, tsc_grid *grid) {
+    size_t index = 4; // 4 is after the first ;, and thus after the header
+
+    char *ewidth = tsc_v3_nextPart(code, &index);
+    char *eheight = tsc_v3_nextPart(code, &index);
+
+    int width = tsc_saving_decode74(ewidth);
+    int height = tsc_saving_decode74(eheight);
+
+    free(ewidth);
+    free(eheight);
+    
+    tsc_clearGrid(grid, width, height);
+
+    size_t cellIdx = 0;
+    size_t area = width * height;
+
+    clock_t start = clock();
+    unsigned char *eBase64 = (void *)tsc_v3_nextPart(code, &index);
+    int deflatedLen;
+    unsigned char *deflated = DecodeDataBase64(eBase64, &deflatedLen);
+
+    int encodedLen;
+    char *encodedData = (void *)DecompressData(deflated, deflatedLen, &encodedLen);
+    char *startOfData = encodedData;
+    clock_t decompressed = clock();
+
+    while(cellIdx < area) {
+        char header = *encodedData;
+        encodedData++;
+        size_t readData = tsc_tsc_decodeChunk(grid, &cellIdx, encodedData, header);
+        encodedData += readData;
+    }
+
+    clock_t decoded = clock();
+
+    printf("Timings\n");
+    printf("Decompress: %f\n", (float)(decompressed - start) / CLOCKS_PER_SEC);
+    printf("Decode: %f\n", (float)(decoded - decompressed) / CLOCKS_PER_SEC);
+
+    free(eBase64);
+    RL_FREE(deflated);
+    RL_FREE(startOfData);
+}
+
 void tsc_saving_register(tsc_saving_format format) {
     size_t idx = savingc++;
     saving_arr = realloc(saving_arr, sizeof(tsc_saving_format) * savingc);
@@ -912,7 +1142,7 @@ void tsc_saving_registerCore() {
     tsc_saving_format tsc = {};
     tsc.name = "TSC";
     tsc.header = "TSC;";
-    tsc.decode = NULL; // risky
+    tsc.decode = tsc_tsc_decode;
     tsc.encode = tsc_tsc_encode;
     tsc.flags = 0;
     tsc_saving_register(tsc);

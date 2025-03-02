@@ -180,6 +180,9 @@ elseif Config.mode == "turbo" then
         Config.lflags = Config.lflags .. " -flto=full"
     end
     Config.lflags = Config.lflags .. " -Ofast"
+elseif Config.mode == "panic" then
+    Config.cflags = Config.cflags .. " -O0"
+    Config.lflags = Config.lflags .. " -O0"
 else
     error("bad mode")
 end
