@@ -196,16 +196,11 @@ static float tsc_rotInterp(char rot, signed char added) {
 static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat, bool forceRectangle) {
     if(cell->id == builtin.empty && cell->texture == TSC_NULL_TEXTURE) return;
     tsc_id_t idToRender = cell->texture == TSC_NULL_TEXTURE ? cell->id : cell->texture;
-    Texture texture = textures_get(tsc_idToString(idToRender));
+    tsc_atlas_part atlas = textures_getAtlasPart(idToRender);
+    Texture texture = atlas.texture;
     double size = renderingCamera.cellSize * gridRepeat;
     Vector2 origin = {size / 2, size / 2};
-    Rectangle src = {0, 0, texture.width, texture.height};
-
-    if(true) {
-        tsc_atlas_part atlas = textures_getAtlasPart(idToRender);
-        src = atlas.part;
-        texture = atlas.texture;
-    }
+    Rectangle src = atlas.part;
 
     bool isRect = renderingCamera.cellSize < trueApproximationSize || forceRectangle;
     float ix = isRect ? x : tsc_updateInterp(cell->lx, x);
