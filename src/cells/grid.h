@@ -88,6 +88,7 @@ typedef struct tsc_setting_id_pool_t {
     const char *mtpf;
     const char *v3speed;
     const char *fancyRendering;
+    const char *debugMode;
 } tsc_setting_id_pool_t;
 
 typedef struct tsc_id_pool_t {

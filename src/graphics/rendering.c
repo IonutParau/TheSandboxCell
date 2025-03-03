@@ -580,24 +580,6 @@ void tsc_drawGrid() {
 
     static char buffer[256];
 
-    // Debug stuff
-    // +0.01 because 10ms is less time than it takes for the brain to render a frame, let alone notice anything.
-    if(tickTime > (tickDelay + 0.01) && isGameTicking && tickDelay > 0) {
-        snprintf(buffer, 256, "Tick is taking %.3fs longer than normal. Please wait.", tickTime - tickDelay);
-        DrawText(buffer, 10, 40, 20, RED);
-    }
-    if(tickDelay == 0) {
-        snprintf(buffer, 256, "TPS: %lu", gameTPS);
-        Color color = GREEN;
-        if(gameTPS < 10) {
-            color = YELLOW; // still good but nothing to flex about
-        }
-        if(gameTPS < 4) {
-            color = RED; // substandard
-        }
-        DrawText(buffer, 10, 40, 20, color);
-    }
-
     if(tickCount > 0) {
         snprintf(buffer, 256, "Tick Count: %lu", tickCount);
         int tickCountSize = 20;
@@ -605,7 +587,7 @@ void tsc_drawGrid() {
         DrawText(buffer, GetScreenWidth() - tickCountWidth - 10, 10, tickCountSize, WHITE);
     }
 
-    DrawFPS(10, 10);
+    //DrawFPS(10, 10); // handled by debug mode now
 
     tsc_ui_pushFrame(renderingGameUI);
     if(renderingIsSelecting && !renderingIsDragging) {

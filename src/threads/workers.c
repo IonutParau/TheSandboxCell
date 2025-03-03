@@ -210,6 +210,10 @@ void workers_addTask(worker_task_t *task, void *data) {
 }
 
 void workers_waitForTasks(worker_task_t *task, void **dataArr, size_t len) {
+    if(workers_isDisabled()) {
+        for(int i = 0; i < len; i++) task(dataArr[i]);
+        return;
+    }
     worker_waitgroup_t wg = workers_createWaitGroup();
     workers_addToWaitGroup(&wg, len);
     mtx_lock(&workers_channel.lock);
@@ -222,6 +226,13 @@ void workers_waitForTasks(worker_task_t *task, void **dataArr, size_t len) {
 }
 
 void workers_waitForTasksFlat(worker_task_t *task, void *dataArr, size_t dataSize, size_t len) {
+    if(workers_isDisabled()) {
+        for(int i = 0; i < len; i++) {
+            task(dataArr);
+            dataArr += dataSize;
+        }
+        return;
+    }
     worker_waitgroup_t wg = workers_createWaitGroup();
     workers_addToWaitGroup(&wg, len);
     mtx_lock(&workers_channel.lock);

@@ -186,6 +186,7 @@ int main(int argc, char **argv) {
 
     tsc_mainMenu = tsc_ui_newFrame();
     tsc_creditsMenu = tsc_ui_newFrame();
+    ui_frame *debugFrame = tsc_ui_newFrame();
 
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
@@ -451,6 +452,9 @@ int main(int argc, char **argv) {
                         GuiSlider(
                             (Rectangle) {settingDeadSpace + settingWidth, curY - off, settingWidth + sliderWidth, settingSize},
                             setting.name, theValue, &v, setting.slider.min, setting.slider.max);
+                        v *= 100;
+                        v = (int)v;
+                        v /= 100;
                         if(old != v) {
                             tsc_setSetting(setting.id, tsc_number(v));
                             if(setting.callback != NULL) {
@@ -643,6 +647,40 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "Invalid dimensions: %s x %s\n", gridWidth, gridHeight);
                 valid:;
             }
+        }
+
+        if(tsc_toBoolean(tsc_getSetting(builtin.settings.debugMode))) {
+            tsc_ui_pushFrame(debugFrame);
+            tsc_ui_pushColumn();
+            {
+                int textSize = 20;
+                int fps = GetFPS();
+                tsc_ui_text(TextFormat("FPS: %d", fps), textSize, fps <= 30 ? RED : GREEN);
+                tsc_ui_text(TextFormat("Thread Count: %d", workers_amount()), textSize, WHITE);
+                tsc_ui_text(TextFormat("Loaded Cells: %lu", tsc_countCells()), textSize, WHITE);
+                if(tsc_streql(tsc_currentMenu, "game")) {
+                    tsc_ui_text(TextFormat("Tick Time: %.3fs / %.2fs", tickTime, tickDelay), textSize, tickTime > tickDelay && tickDelay > 0 ? RED : WHITE);
+                    Color tpsColor = GREEN;
+                    if(gameTPS < 10) tpsColor = YELLOW;
+                    if(gameTPS < 5) tpsColor = RED;
+                    tsc_ui_text(TextFormat("TPS: %lu", gameTPS), textSize, tpsColor);
+                    const char *units[] = {"B", "KB", "MB", "GB", "TB"};
+                    int unitc = sizeof(units) / sizeof(units[0]);
+                    int unit = 0;
+                    double amount = currentGrid->width * currentGrid->height * sizeof(tsc_cell);
+                    while(amount >= 1000 && unit < unitc) {
+                        unit++;
+                        amount /= 1000;
+                    }
+                    tsc_ui_text(TextFormat("Grid Memory: %.2lf %s", amount, units[unit]), textSize, WHITE);
+                }
+            };
+            tsc_ui_finishColumn();
+            tsc_ui_pad(30, 30);
+            tsc_ui_box(GetColor(tsc_queryOptionalColor("cellbarColor", 0x00000055)));
+            tsc_ui_translate(10, 10);
+            tsc_ui_render();
+            tsc_ui_popFrame();
         }
 
         EndDrawing();

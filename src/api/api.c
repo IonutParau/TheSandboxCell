@@ -457,6 +457,8 @@ void tsc_loadSettings() {
     builtin.settings.updateDelay = tsc_addSetting("updateDelay", "Update Delay", performance, TSC_SETTING_SLIDER, updateDelayStuff, tsc_settingHandler);
     builtin.settings.mtpf = tsc_addSetting("mtpf", "Multi-Tick Per Frame", performance, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
 
+    builtin.settings.debugMode = tsc_addSetting("debugMode", "Debug Mode", performance, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
+
     builtin.settings.vsync = tsc_addSetting("vsync", "V-Sync", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
     builtin.settings.fullscreen = tsc_addSetting("fullscreen", "Fullscreen (currently broken)", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
     builtin.settings.fancyRendering = tsc_addSetting("fancyRendering", "Fancy Graphics", graphics, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
