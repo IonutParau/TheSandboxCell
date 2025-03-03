@@ -416,6 +416,7 @@ tsc_resourcepack *tsc_createResourcePack(const char *id) {
 
     pack->readme = NULL;
     pack->license = NULL;
+    pack->cellAtlas = NULL;
 
     pack->textures = rp_createResourceTable(sizeof(tsc_texture_resource));
     pack->audio = rp_createResourceTable(sizeof(Sound));
@@ -529,6 +530,68 @@ start:;
 
     key = tsc_strintern("fallback");
     goto start;
+}
+
+static tsc_atlas *tsc_textures_getAtlas(tsc_resourcepack *pack) {
+    if(pack->cellAtlas != NULL) return pack->cellAtlas;
+    tsc_atlas *atlas = malloc(sizeof(tsc_atlas));
+
+    size_t cellCount = tsc_countCells();
+    volatile Texture **textures = malloc(sizeof(volatile Texture *) * cellCount);
+    bool *supported = malloc(sizeof(bool) * cellCount);
+
+    int w = 0, h = 0;
+
+    // yup this works
+    for(size_t id = 0; id < cellCount; id++) {
+        textures[id] = NULL;
+        supported[id] = false;
+
+        const char *strId = tsc_idToString(id);
+        tsc_texture_resource *resource = rp_resourceTableGet(pack->textures, strId);
+        if(resource == NULL) continue;
+        supported[id] = true;
+
+        textures[id] = &resource->texture;
+        if(resource->texture.width > w) w = resource->texture.width;
+        if(resource->texture.height > h) h = resource->texture.height;
+    }
+
+    RenderTexture texture = LoadRenderTexture(w * cellCount, h);
+
+    BeginTextureMode(texture);
+    for(size_t i = 0; i < cellCount; i++) {
+        volatile Texture *texture = textures[i];
+        Rectangle src = {0, 0, texture->width, texture->height};
+        Rectangle dest = {i * w, 0, w, h};
+        Vector2 origin = {0, 0};
+        DrawTexturePro(*texture, src, dest, origin, 0, WHITE);
+    }
+    EndTextureMode();
+
+    atlas->atlas = texture;
+    atlas->cellWidth = w;
+    atlas->height = h;
+    atlas->supported = supported;
+
+    free(textures);
+    pack->cellAtlas = atlas;
+    return pack->cellAtlas;
+}
+
+tsc_atlas_part textures_getAtlasPart(tsc_id_t id) {
+    for(size_t i = 0; i < rp_enabledc; i++) {
+        tsc_resourcepack *pack = tsc_indexEnabledResourcePack(rp_enabledc - i - 1);
+        if(pack == NULL) continue;
+        tsc_atlas *atlas = tsc_textures_getAtlas(pack);
+        if(!atlas->supported[id]) continue;
+        Rectangle rect = {id * atlas->cellWidth, 0, atlas->cellWidth, atlas->height};
+        return (tsc_atlas_part) {atlas->atlas.texture, rect};
+    }
+
+    Texture texture = textures_get(tsc_strintern("fallback"));
+    Rectangle theRect = {0, 0, texture.width, texture.height};
+    return (tsc_atlas_part) {texture, theRect};
 }
 
 Sound audio_get(const char *key) {

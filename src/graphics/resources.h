@@ -32,6 +32,18 @@ typedef struct tsc_resourcetable {
     size_t itemsize;
 } tsc_resourcetable;
 
+typedef struct tsc_atlas {
+    RenderTexture atlas;
+    int cellWidth;
+    int height;
+    bool *supported;
+} tsc_atlas;
+
+typedef struct tsc_atlas_part {
+    Texture texture;
+    Rectangle part;
+} tsc_atlas_part;
+
 // Actual API
 
 // hideapi
@@ -51,6 +63,7 @@ typedef struct tsc_resourcepack
     tsc_music_t *musictrack;
     size_t trackcount;
     tsc_value value;
+    tsc_atlas *cellAtlas;
 }
 // hideapi
 tsc_resourcepack;
@@ -74,6 +87,7 @@ tsc_resourcepack *tsc_indexEnabledResourcePack(size_t idx);
 
 Texture textures_get(const char *key);
 Color textures_getApproximation(const char *key);
+tsc_atlas_part textures_getAtlasPart(tsc_id_t id);
 
 Sound audio_get(const char *key);
 

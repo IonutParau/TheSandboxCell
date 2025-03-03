@@ -200,6 +200,13 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
     double size = renderingCamera.cellSize * gridRepeat;
     Vector2 origin = {size / 2, size / 2};
     Rectangle src = {0, 0, texture.width, texture.height};
+
+    if(true) {
+        tsc_atlas_part atlas = textures_getAtlasPart(idToRender);
+        src = atlas.part;
+        texture = atlas.texture;
+    }
+
     bool isRect = renderingCamera.cellSize < trueApproximationSize || forceRectangle;
     float ix = isRect ? x : tsc_updateInterp(cell->lx, x);
     float iy = isRect ? y : tsc_updateInterp(cell->ly, y);
@@ -353,14 +360,14 @@ void tsc_drawGrid() {
     Vector2 emptyOrigin = {0, 0};
     Rectangle emptyDest = {-renderingCamera.x, -renderingCamera.y, renderingCamera.cellSize * currentGrid->width, renderingCamera.cellSize * currentGrid->height};
     if(renderingCamera.cellSize < trueApproximationSize) {
-        if(GetFPS() > 60 && renderingCamera.cellSize > tsc_sizeOptimizedByApproximation) {
+        if(GetFPS() > 30 && renderingCamera.cellSize > tsc_sizeOptimizedByApproximation) {
             trueApproximationSize /= 2;
             tsc_sizeOptimizedByApproximation = renderingCamera.cellSize;
         }
         Color approx = textures_getApproximation(tsc_idToString(builtin.empty));
         DrawRectanglePro(emptyDest, emptyOrigin, 0, approx);
     } else {
-        if(GetFPS() < 30) {
+        if(GetFPS() < 24) {
             trueApproximationSize *= 2;
         }
         Texture empty = textures_get(tsc_idToString(builtin.empty));
@@ -797,6 +804,11 @@ void tsc_handleRenderInputs() {
     tsc_updateCellbar(tsc_rootCategory(), renderingCellButtons);
     int absorbed = tsc_ui_absorbedPointer(GetMouseX(), GetMouseY());
     tsc_ui_popFrame();
+
+    if(IsKeyDown(KEY_F5)) {
+        trueApproximationSize = renderingApproximationSize;
+        tsc_sizeOptimizedByApproximation = 0;
+    }
 
     double speed = renderingCamera.speed;
     if(IsKeyDown(KEY_LEFT_SHIFT)) {
