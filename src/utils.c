@@ -341,3 +341,135 @@ int asprintf(char **s, const char *fmt, ...) {
 }
 
 #endif
+
+tsc_arena_t tsc_tmp = {NULL};
+
+static tsc_arena_chunk_t *tsc_aallocChunk(size_t len) {
+    tsc_arena_chunk_t *chunk = malloc(sizeof(tsc_arena_chunk_t));
+    if(chunk == NULL) return NULL;
+    chunk->len = 0;
+    chunk->capacity = len;
+    chunk->buffer = malloc(len);
+    if(chunk->buffer == NULL) {
+        free(chunk);
+        return NULL;
+    }
+    return chunk;
+}
+
+tsc_arena_t tsc_aempty() {
+    return (tsc_arena_t) {NULL};
+}
+
+void *tsc_aallocAligned(tsc_arena_t *arena, size_t size, size_t align) {
+    if(arena->chunk == NULL) {
+        arena->chunk = tsc_aallocChunk(65536); // 64KiB by default cuz why not
+    }
+    tsc_arena_chunk_t *chunk = arena->chunk;
+
+    while(chunk != NULL) {
+        // align must be power of 2
+        ptrdiff_t off = -(size_t)(chunk->buffer + chunk->len) & (align - 1);
+        size_t idx = chunk->len + off;
+        if(idx + size > chunk->capacity) {
+            if(chunk->next == NULL) {
+                // try to add another chunk.
+                size_t needed = chunk->capacity;
+                while(needed < size) {
+                    needed *= 2;
+                }
+                tsc_arena_chunk_t *newChunk = tsc_aallocChunk(needed);
+                chunk->next = newChunk;
+                chunk = newChunk;
+                continue;
+            }
+        }
+        void *buffer = chunk->buffer + idx;
+        chunk->len = idx + size;
+        return buffer;
+    }
+    return NULL; // though should be unreachable
+}
+
+void *tsc_aalloc(tsc_arena_t *arena, size_t size) {
+    // align of 2 pointers because... slices
+    return tsc_aallocAligned(arena, size, sizeof(void *) * 2);
+}
+
+static const char *tsc_vasprintf(tsc_arena_t *arena, const char *fmt, va_list list1, va_list list2) {
+    int len = vsnprintf(NULL, 0, fmt, list1);
+    if(len < 0) return NULL; // format error
+    char *buffer = tsc_aallocAligned(arena, len, sizeof(char));
+    if(buffer == NULL) return NULL;
+    vsprintf(buffer, fmt, list2);
+    return buffer;
+}
+
+const char *tsc_asprintf(tsc_arena_t *arena, const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    va_list args2;
+    va_start(args2, fmt);
+    const char *s = tsc_vasprintf(arena, fmt, args, args2);
+    va_end(args);
+    va_end(args2);
+    return s;
+}
+
+const char *tsc_tsprintf(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    va_list args2;
+    va_start(args2, fmt);
+    const char *s = tsc_vasprintf(&tsc_tmp, fmt, args, args2);
+    va_end(args);
+    va_end(args2);
+    return s;
+}
+
+void tsc_areset(tsc_arena_t *arena) {
+    tsc_arena_chunk_t *chunk = arena->chunk;
+    while(chunk != NULL) {
+        chunk->len = 0;
+        chunk = chunk->next;
+    }
+}
+
+void tsc_aclear(tsc_arena_t *arena) {
+    tsc_arena_chunk_t *current = arena->chunk;
+    while(current != NULL) {
+        tsc_arena_chunk_t *chunk = current;
+        current = chunk->next;
+
+        free(chunk->buffer);
+        free(chunk);
+    }
+}
+
+size_t tsc_acount(tsc_arena_t *arena) {
+    size_t s = 0;
+    tsc_arena_chunk_t *chunk = arena->chunk;
+    while(chunk != NULL) {
+        s += chunk->capacity + sizeof(tsc_arena_chunk_t);
+        chunk = chunk->next;
+    }
+    return s;
+}
+
+size_t tsc_aused(tsc_arena_t *arena) {
+    size_t s = 0;
+    tsc_arena_chunk_t *chunk = arena->chunk;
+    while(chunk != NULL) {
+        s += chunk->len;
+        chunk = chunk->next;
+    }
+    return s;
+}
+
+void *tsc_tallocAligned(size_t size, size_t align) {
+    return tsc_aallocAligned(&tsc_tmp, size, align);
+}
+
+void *tsc_talloc(size_t size) {
+    return tsc_aalloc(&tsc_tmp, size);
+}

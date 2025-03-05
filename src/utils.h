@@ -84,15 +84,6 @@ void tsc_free(void *buffer);
 bool tsc_getBit(char *num, size_t bit);
 void tsc_setBit(char *num, size_t bit, bool value);
 
-unsigned char tsc_getUnusedPointerByte(void *pointer);
-void *tsc_getPointerWithoutByte(void *pointer);
-void *tsc_setUnusedPointerByte(void *pointer, unsigned char byte);
-// x64 only
-unsigned short tsc_getUnusedPointerShort(void *pointer);
-void *tsc_getPointerWithoutShort(void *pointer);
-// x64 only
-void *tsc_setUnusedPointerShort(void *pointer, unsigned short byte);
-
 double tsc_mapNumber(double x, double min1, double max1, double min2, double max2);
 
 bool tsc_isLittleEndian();
@@ -102,5 +93,38 @@ bool tsc_isLittleEndian();
 int asprintf(char **s, const char *fmt, ...);
 
 #endif
+
+// hideapi
+
+typedef struct tsc_arena_chunk_t {
+    unsigned char *buffer;
+    size_t len;
+    size_t capacity;
+    struct tsc_arena_chunk_t *next;
+} tsc_arena_chunk_t;
+
+// hideapi
+
+typedef struct tsc_arena_t
+// hideapi
+{
+    tsc_arena_chunk_t *chunk;
+}
+// hideapi
+tsc_arena_t;
+
+extern tsc_arena_t tsc_tmp;
+
+tsc_arena_t tsc_aempty();
+void *tsc_aallocAligned(tsc_arena_t *arena, size_t size, size_t align);
+void *tsc_aalloc(tsc_arena_t *arena, size_t size);
+const char *tsc_asprintf(tsc_arena_t *arena, const char *fmt, ...);
+const char *tsc_tsprintf(const char *fmt, ...);
+void tsc_areset(tsc_arena_t *arena);
+void tsc_aclear(tsc_arena_t *arena);
+size_t tsc_acount(tsc_arena_t *arena);
+size_t tsc_aused(tsc_arena_t *arena);
+void *tsc_tallocAligned(size_t size, size_t align);
+void *tsc_talloc(size_t size);
 
 #endif

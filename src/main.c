@@ -299,7 +299,11 @@ int main(int argc, char **argv) {
         tsc_main_cellCount = usefulLen;
     }
 
+    tsc_aalloc(&tsc_tmp, 0);
+
     while(!WindowShouldClose()) {
+        tsc_areset(&tsc_tmp);
+        
         BeginDrawing();
         ClearBackground(GetColor(tsc_queryOptionalColor("bgColor", 0x171c1fFF)));
 
@@ -658,6 +662,7 @@ int main(int argc, char **argv) {
                 tsc_ui_text(TextFormat("FPS: %d", fps), textSize, fps <= 30 ? RED : GREEN);
                 tsc_ui_text(TextFormat("Thread Count: %d", workers_amount()), textSize, WHITE);
                 tsc_ui_text(TextFormat("Loaded Cells: %lu", tsc_countCells()), textSize, WHITE);
+                tsc_ui_text(TextFormat("Temporary Arena Usage: %lu / %lu", tsc_aused(&tsc_tmp), tsc_acount(&tsc_tmp)), textSize, WHITE);
                 if(tsc_streql(tsc_currentMenu, "game")) {
                     tsc_ui_text(TextFormat("Tick Time: %.3fs / %.2fs", tickTime, tickDelay), textSize, tickTime > tickDelay && tickDelay > 0 ? RED : WHITE);
                     Color tpsColor = GREEN;
@@ -756,6 +761,8 @@ int main(int argc, char **argv) {
         // This handles all music stuff.
         tsc_music_playOrKeep();
     }
+        
+    tsc_aclear(&tsc_tmp);
 
     tsc_saveEnabledPacks();
     tsc_storeSettings();

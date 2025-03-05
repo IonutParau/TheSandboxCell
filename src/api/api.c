@@ -449,8 +449,7 @@ void tsc_loadSettings() {
     const char *audio = tsc_addSettingCategory("audio", "Audio");
     const char *saving = tsc_addSettingCategory("saving", "Saving");
 
-    char *tc = NULL;
-    asprintf(&tc, "%d", workers_amount());
+    const char *tc = tsc_tsprintf("%d", workers_amount());
     const char *threadCountStuff[2] = {"-0123456789", tc};
     builtin.settings.threadCount = tsc_addSetting("threadCount", "Thread Count", performance, TSC_SETTING_INPUT, threadCountStuff, tsc_settingHandler);
     float updateDelayStuff[2] = {0, 1};
