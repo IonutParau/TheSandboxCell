@@ -64,7 +64,7 @@ static int tsc_gridUpdateThread(void *_) {
             gameTPS = ticksInSecond / delta;
             ticksInSecond = 0;
         }
-        if(tickDuration > tickDelay) tickTime = tickDelay; // fixes annoying stuff
+        if(tickDuration > tickDelay) tickTime = 0; // fixes annoying stuff
         onlyOneTick = false;
         isGameTicking = false;
     }

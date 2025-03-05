@@ -1105,26 +1105,17 @@ void tsc_handleRenderInputs() {
     }
 
     float tickTimeScale = 1;
+    if(IsKeyDown(KEY_COMMA)) {
+        tickTimeScale *= 2;
+    }
+    if(IsKeyDown(KEY_PERIOD)) {
+        tickTimeScale *= 4;
+    }
+    if(IsKeyDown(KEY_SLASH)) {
+        tickTimeScale *= 16;
+    }
     if(IsKeyDown(KEY_LEFT_SHIFT)) {
-        if(IsKeyDown(KEY_COMMA)) {
-            tickTimeScale /= 2;
-        }
-        if(IsKeyDown(KEY_PERIOD)) {
-            tickTimeScale /= 4;
-        }
-        if(IsKeyDown(KEY_SLASH)) {
-            tickTimeScale /= 16;
-        }
-    } else {
-        if(IsKeyDown(KEY_COMMA)) {
-            tickTimeScale *= 2;
-        }
-        if(IsKeyDown(KEY_PERIOD)) {
-            tickTimeScale *= 4;
-        }
-        if(IsKeyDown(KEY_SLASH)) {
-            tickTimeScale *= 16;
-        }
+        tickTimeScale = 1/tickTimeScale;
     }
 
     if(!isGamePaused || isGameTicking) tickTime += delta * tickTimeScale;
@@ -1132,12 +1123,14 @@ void tsc_handleRenderInputs() {
     if((IsKeyPressed(KEY_F) || IsKeyPressedRepeat(KEY_F)) && !isGameTicking) {
         onlyOneTick = true;
         if(!multiTickPerFrame) {
+            tickTime = 0;
             tsc_signalUpdateShouldHappen();
         }
     }
 
     if(!isGamePaused && !multiTickPerFrame) {
         if(tickTime >= tickDelay && !isGameTicking) {
+            tickTime = 0;
             tsc_signalUpdateShouldHappen();
         }
     }
