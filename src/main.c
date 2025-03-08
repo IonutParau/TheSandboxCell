@@ -301,6 +301,36 @@ int main(int argc, char **argv) {
 
     tsc_aalloc(&tsc_tmp, 0);
 
+    float benchTime = 5;
+    float benchNum = 0;
+    size_t *benchSamples = NULL;
+    size_t benchSampleCount = 0;
+
+    typedef struct tsc_benchmark {
+        const char *name;
+        const char *level;
+    } tsc_benchmark;
+
+    size_t benchmarkCount;
+    char benchpath[] = "data/benches.txt";
+    tsc_pathfix(benchpath);
+    char *benchmarkText = tsc_allocfile(benchpath, NULL);
+    char **benchmarkLines = tsc_alloclines(benchmarkText, &benchmarkCount);
+
+    tsc_benchmark *benchmarks = calloc(benchmarkCount, sizeof(tsc_benchmark));
+    for(size_t i = 0; i < benchmarkCount; i++) {
+        const char *line = benchmarkLines[i];
+        size_t nameLen = memchr(line, ';', strlen(line)) - (void *)line;
+        char *name = malloc(nameLen + 1);
+        memcpy(name, line, nameLen);
+        name[nameLen] = 0;
+        benchmarks[i].name = name;
+        benchmarks[i].level = tsc_strdup(line + nameLen + 1);
+    }
+
+    tsc_freefile(benchmarkText);
+    tsc_freelines(benchmarkLines);
+
     while(!WindowShouldClose()) {
         tsc_areset(&tsc_tmp);
         
@@ -627,6 +657,7 @@ int main(int argc, char **argv) {
                 int h = atoi(gridHeight);
                 if(w == 0) goto invalid;
                 if(h == 0) goto invalid;
+                tsc_nukeGrids();
                 tsc_grid *grid = tsc_createGrid("main", w, h, NULL, NULL);
                 tsc_switchGrid(grid);
                 if(level != NULL) {
@@ -650,6 +681,111 @@ int main(int argc, char **argv) {
                 invalid:
                 fprintf(stderr, "Invalid dimensions: %s x %s\n", gridWidth, gridHeight);
                 valid:;
+            }
+        }
+        if(tsc_streql(tsc_currentMenu, "benchmark")) {
+            GuiEnable();
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
+            if(GuiButton((Rectangle) { 20, 20, 100, 50 }, "Back")) {
+                tsc_currentMenu = "main";
+                particleHalvingTimer = 2;
+                free(benchSamples);
+                benchSamples = NULL;
+            }
+            int textSize = 50;
+            GuiSetStyle(DEFAULT, TEXT_SIZE, textSize);
+
+            float minTime = 2;
+            float maxTime = 60;
+
+            int t = MeasureText("Duration: ", textSize);
+            GuiSlider((Rectangle){20 + t, 80, 300, 50}, "Duration: ", tsc_tsprintf("%d", (int)benchTime), &benchTime, minTime, maxTime);
+            benchTime = (int)benchTime;
+
+            t = MeasureText("Benchmark: ", textSize);
+            GuiSlider((Rectangle){20 + t, 100 + textSize, 300, 50}, "Benchmark: ", benchmarks[(int)benchNum].name, &benchNum, 0, benchmarkCount-1);
+            benchNum = (int)benchNum;
+
+            if(GuiLabelButton((Rectangle) {50, 120 + textSize * 2, 100, 50}, "Run")) {
+                double startTime = tsc_clock();
+                double lastSample = startTime;
+                size_t sampleIdx = 0;
+                float sampleInterval = 0.1;
+                benchSampleCount = 0;
+                benchSamples = realloc(benchSamples, sizeof(size_t) * benchSampleCount);
+
+                tsc_nukeGrids();
+                tsc_grid *grid = tsc_createGrid("main", 100, 100, NULL, NULL);
+                tsc_saving_decodeWithAny(benchmarks[(int)benchNum].level, grid);
+                tsc_switchGrid(grid);
+
+                size_t tickCount = 0;
+                while(true) {
+                    double now = tsc_clock();
+                    tsc_subtick_run();
+                    tickCount++;
+                    if((now - lastSample) >= sampleInterval) {
+                        benchSampleCount++;
+                        benchSamples = realloc(benchSamples, sizeof(size_t) * benchSampleCount);
+                        benchSamples[sampleIdx] = tickCount/(now - lastSample); // this is because samples are meant to be in TPS
+                        sampleIdx++;
+                        tickCount = 0;
+                        lastSample = tsc_clock();
+                    }
+                    if(now - startTime >= benchTime) break;
+                }
+                particleHalvingTimer = benchTime + 2;
+                printf("Collected %lu samples\n", benchSampleCount);
+            }
+
+            if(benchSamples != NULL) {
+                float graphWidth = width*0.7;
+                float graphHeight = (float)height/2;
+                size_t maxTPS = 0;
+                for(size_t i = 0; i < benchSampleCount; i++) {
+                    size_t tps = benchSamples[i];
+                    if(maxTPS < tps) maxTPS = tps;
+                }
+                float pointSize = 2;
+                int yAxisNumberCount = 10;
+                float graphX = 200;
+                float graphY = 140 + textSize * 3;
+
+                DrawRectangleLines(graphX, graphY, graphWidth, graphHeight, GRAY);
+
+                for(int i = 0; i < yAxisNumberCount; i++) {
+                    int num = tsc_mapNumber(i, 0, yAxisNumberCount - 1, maxTPS, 0);
+                    int y = tsc_mapNumber(i, 0, yAxisNumberCount - 1, 0, graphHeight);
+                    const char *s = tsc_tsprintf("%d", num);
+                    int x = -MeasureText(s, textSize) - 10;
+                    DrawText(s, graphX + x, graphY + y, textSize, WHITE);
+                    DrawLine(graphX, graphY + y, graphX + graphWidth, graphY + y, GRAY);
+                }
+
+                int lx, ly;
+                for(size_t i = 0; i < benchSampleCount; i++) {
+                    size_t tps = benchSamples[i];
+                    int x = tsc_mapNumber(i, 0, benchSampleCount - 1, pointSize, graphWidth - pointSize);
+                    int y = tsc_mapNumber(tps, 0, maxTPS, graphHeight, 0);
+
+                    if(i > 0) {
+                        size_t oldTPS = benchSamples[i-1];
+                        Color color = YELLOW;
+                        if(tps > oldTPS) color = GREEN;
+                        if(tps < oldTPS) color = RED;
+                        DrawLine(graphX + lx, graphY + ly, graphX + x, graphY + y, color);
+                    }
+                    lx = x;
+                    ly = y;
+                }
+
+                for(size_t i = 0; i < benchSampleCount; i++) {
+                    size_t tps = benchSamples[i];
+                    int x = tsc_mapNumber(i, 0, benchSampleCount - 1, pointSize, graphWidth - pointSize);
+                    int y = tsc_mapNumber(tps, 0, maxTPS, graphHeight, 0);
+
+                    DrawCircle(graphX + x, graphY + y, pointSize, BLUE);
+                }
             }
         }
 
@@ -750,6 +886,9 @@ int main(int argc, char **argv) {
                 tsc_ui_checkbutton(NULL); // segfault hehe
             }
             tsc_ui_popFrame();
+            if(IsKeyPressed(KEY_B)) {
+                tsc_currentMenu = "benchmark";
+            }
         }
 
         if(IsWindowFocused()) {

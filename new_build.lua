@@ -155,7 +155,7 @@ if Config.mode == "debug" then
         ourFuckingDebugger = "" -- just pass -g and hope
     end
     Config.cflags = Config.cflags .. " -g" .. ourFuckingDebugger
-    Config.cflags = Config.cflags .. " -Og" -- debug-focused optimizations
+    Config.cflags = Config.cflags .. " -O0"
 elseif Config.mode == "release" then
     Config.cflags = Config.cflags .. " -O3"
     if Config.compiler:match"gcc" and not Config.compiler:match"mingw" then -- mingw just sucks

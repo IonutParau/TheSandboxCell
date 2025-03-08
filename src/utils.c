@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <time.h>
 
 #ifdef linux
 #include <dirent.h>
@@ -315,6 +316,48 @@ bool tsc_isLittleEndian() {
     char *fuckTheCStandard = (void *)&x;
     return (*fuckTheCStandard) == 1;
 }
+
+char **tsc_alloclines(const char *text, size_t *len) {
+    size_t lineCount = 0;
+
+    for(size_t i = 0; text[i] != '\0'; i++) {
+        if(text[i] == '\n') lineCount++;
+    }
+
+    if(len != NULL) *len = lineCount;
+
+    char **lines = malloc(sizeof(char *) * (lineCount + 1));
+
+    size_t j = 0;
+    char *textcpy = tsc_strdup(text);
+    char delim[2] = "\n";
+    char *token = strtok(textcpy, delim);
+    while(token != NULL) {
+        lines[j] = tsc_strdup(token);
+        j++;
+        token = strtok(NULL, delim);
+    }
+    lines[j] = NULL;
+    free(textcpy);
+
+    return lines;
+}
+
+void tsc_freelines(char **lines) {
+    size_t i = 0;
+    while(lines[i] != NULL) free(lines[i++]);
+    free(lines);
+}
+
+#ifdef TSC_POSIX
+
+double tsc_clock() {
+    struct timespec time;
+    if(clock_gettime(CLOCK_MONOTONIC, &time) < 0) return 0; // oh no
+    return time.tv_sec + ((double)time.tv_nsec) / 1e9;
+}
+
+#endif
 
 #ifndef TSC_POSIX
 

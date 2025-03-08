@@ -87,6 +87,12 @@ double tsc_mapNumber(double x, double min1, double max1, double min2, double max
 
 bool tsc_isLittleEndian();
 
+char **tsc_alloclines(const char *text, size_t *len);
+void tsc_freelines(char **lines);
+
+// Returns in seconds
+double tsc_clock();
+
 #ifndef TSC_POSIX
 
 int asprintf(char **s, const char *fmt, ...);
