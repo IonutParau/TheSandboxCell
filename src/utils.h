@@ -41,13 +41,12 @@
     #define TSC_POSIX
 #endif
 
-// x64 gives us 64 bit pointers, but in virtual memory, they become 48-bit pointers.
-// 12 bits for a 4kb index within a page, 4 indexes 9 bits each which tell the CPU how to traverse the page table.
-// The remaining 16 bits must be empty in case the 5th index is ever implemented, but it can be used to store extra info.
-#if defined(__x86_64) || defined(_M_X64)
-    #define TSC_PTR_HAS_SHORT 1
+#if defined(__clang__) || defined(__GNUC__)
+    #define TSC_LIKELY(x) __builtin_expect(!!(x), 1)
+    #define TSC_UNLIKELY(x) __builtin_expect(!!(x), 0)
 #else
-    #define TSC_PTR_HAS_SHORT 0
+    #define TSC_LIKELY(x) (x)
+    #define TSC_UNLIKELY(x) (x)
 #endif
 
 const char *tsc_strintern(const char *str);
