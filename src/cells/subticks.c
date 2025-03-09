@@ -601,6 +601,7 @@ void tsc_subtick_run() {
     if(storeExtraGraphicInfo) {
         tsc_trashedCellCount = 0; // yup, yup, yup
     }
+#endif
     char shouldBeParallel = 1;
     #ifdef TSC_SINGLE_THREAD
         shouldBeParallel = 0;
@@ -623,7 +624,6 @@ void tsc_subtick_run() {
             tsc_subtick_reset(bullshit);
         }
     }
-#endif
 
     for(size_t i = 0; i < subticks.subc; i++) {
         tsc_subtick_do(subticks.subs + i);
