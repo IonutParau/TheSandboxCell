@@ -497,6 +497,7 @@ void tsc_aclear(tsc_arena_t *arena) {
         free(chunk->buffer);
         free(chunk);
     }
+    arena->chunk = NULL;
 }
 
 size_t tsc_acount(tsc_arena_t *arena) {
