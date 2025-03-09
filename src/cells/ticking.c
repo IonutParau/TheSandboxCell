@@ -1,5 +1,5 @@
 #include "ticking.h"
-#include "../threads/tinycthread.h"
+#include "../threads/threads.h"
 #include "subticks.h"
 #include "grid.h"
 #include <stdio.h>

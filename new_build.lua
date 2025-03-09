@@ -279,7 +279,6 @@ end
 -- Who needs automatic source graphs when we have manual C file lists
 local libtsc = {
     "src/threads/workers.c",
-    "src/threads/tinycthread.c",
     "src/utils.c",
     "src/cells/cell.c",
     "src/cells/grid.c",
@@ -295,6 +294,10 @@ local libtsc = {
     "src/api/value.c",
     "src/api/modloader.c",
 }
+
+if Config.target == "windows" then
+    table.insert(libtsc, "src/threads/tinycthread.c")
+end
 
 local game = {
     "src/main.c", -- wink wink

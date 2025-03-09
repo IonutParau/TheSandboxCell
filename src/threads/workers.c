@@ -37,7 +37,7 @@ int workers_amount() {
     return num_threads;
 }
 #else
-#include "tinycthread.h"
+#include "threads.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
