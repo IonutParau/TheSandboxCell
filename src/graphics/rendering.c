@@ -583,10 +583,12 @@ void tsc_drawGrid() {
     static char buffer[256];
 
     if(tickCount > 0) {
+        Color tickColor = WHITE;
+        if(isGamePaused && isGameTicking) tickColor = RED;
         snprintf(buffer, 256, "Tick Count: %lu", tickCount);
         int tickCountSize = 20;
         int tickCountWidth = MeasureText(buffer, tickCountSize);
-        DrawText(buffer, GetScreenWidth() - tickCountWidth - 10, 10, tickCountSize, WHITE);
+        DrawText(buffer, GetScreenWidth() - tickCountWidth - 10, 10, tickCountSize, tickColor);
     }
 
     //DrawFPS(10, 10); // handled by debug mode now
