@@ -383,6 +383,16 @@ int asprintf(char **s, const char *fmt, ...) {
     return len;
 }
 
+double tsc_clock() {
+    LARGE_INTEGER frequency = {0};
+    if(!QueryPerformanceFrequency(&frequency)) return 0;
+
+    LARGE_INTEGER now = {0};
+    if(!QueryPerformanceCounter(&now)) return 0;
+
+    return (double)now.QuadPart / frequency.QuadPart;
+}
+
 #endif
 
 tsc_arena_t tsc_tmp = {NULL};
