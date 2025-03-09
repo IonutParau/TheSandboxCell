@@ -403,6 +403,7 @@ static tsc_arena_chunk_t *tsc_aallocChunk(size_t len) {
     chunk->len = 0;
     chunk->capacity = len;
     chunk->buffer = malloc(len);
+    chunk->next = NULL;
     if(chunk->buffer == NULL) {
         free(chunk);
         return NULL;
