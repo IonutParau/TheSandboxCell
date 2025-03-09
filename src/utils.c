@@ -504,7 +504,7 @@ size_t tsc_acount(tsc_arena_t *arena) {
     size_t s = 0;
     tsc_arena_chunk_t *chunk = arena->chunk;
     while(chunk != NULL) {
-        s += chunk->capacity + sizeof(tsc_arena_chunk_t);
+        s += chunk->capacity;
         chunk = chunk->next;
     }
     return s;

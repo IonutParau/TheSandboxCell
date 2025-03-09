@@ -299,8 +299,6 @@ int main(int argc, char **argv) {
         tsc_main_cellCount = usefulLen;
     }
 
-    tsc_aalloc(&tsc_tmp, 0);
-
     float benchTime = 5;
     float benchNum = 0;
     size_t *benchSamples = NULL;
@@ -333,6 +331,10 @@ int main(int argc, char **argv) {
 
     while(!WindowShouldClose()) {
         tsc_areset(&tsc_tmp);
+        // mustn't prealloc more than 4MB
+        if(tsc_acount(&tsc_tmp) >= 4*1024*1024) {
+            tsc_aclear(&tsc_tmp); // TODO: keep some of the older chunks
+        }
         
         BeginDrawing();
         ClearBackground(GetColor(tsc_queryOptionalColor("bgColor", 0x171c1fFF)));
