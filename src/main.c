@@ -810,7 +810,8 @@ int main(int argc, char **argv) {
                     const char *units[] = {"B", "KB", "MB", "GB", "TB"};
                     int unitc = sizeof(units) / sizeof(units[0]);
                     int unit = 0;
-                    double amount = currentGrid->width * currentGrid->height * sizeof(tsc_cell);
+                    size_t area = currentGrid->width * currentGrid->height;
+                    double amount = area * sizeof(tsc_cell) + area * tsc_optSize() + currentGrid->chunkwidth * currentGrid->chunkheight;
                     while(amount >= 1000 && unit < unitc) {
                         unit++;
                         amount /= 1000;

@@ -311,12 +311,14 @@ static void tsc_subtick_doGen(struct tsc_cell *cell, int x, int y, int _ux, int 
     char rot = tsc_cell_getRotation(cell);
     int fx = tsc_grid_frontX(x, rot);
     int fy = tsc_grid_frontY(y, rot);
+#ifndef TSC_TURBO
     tsc_cell *front = tsc_grid_get(currentGrid, fx, fy);
     if(front == NULL) return;
     if(front->id != builtin.empty && tsc_grid_checkOptimization(currentGrid, fx, fy, builtin.optimizations.gens[(size_t)rot])) {
         tsc_grid_setOptimization(currentGrid, x, y, builtin.optimizations.gens[(size_t)rot], true);
         return;
     }
+#endif
     int bx = tsc_grid_shiftX(x, rot, -1);
     int by = tsc_grid_shiftY(y, rot, -1);
     tsc_cell *back = tsc_grid_get(currentGrid, bx, by);
@@ -601,7 +603,6 @@ void tsc_subtick_run() {
     if(storeExtraGraphicInfo) {
         tsc_trashedCellCount = 0; // yup, yup, yup
     }
-#endif
     char shouldBeParallel = 1;
     #ifdef TSC_SINGLE_THREAD
         shouldBeParallel = 0;
@@ -624,6 +625,7 @@ void tsc_subtick_run() {
             tsc_subtick_reset(bullshit);
         }
     }
+#endif
 
     for(size_t i = 0; i < subticks.subc; i++) {
         tsc_subtick_do(subticks.subs + i);
