@@ -490,6 +490,7 @@ void tsc_loadSettings() {
         multiTickPerFrame = tsc_toBoolean(tsc_getSetting(builtin.settings.mtpf));
         storeExtraGraphicInfo = tsc_toBoolean(tsc_getSetting(builtin.settings.fancyRendering));
         tsc_settingHandler(builtin.settings.vsync);
+        tsc_settingHandler(builtin.settings.threadCount);
     }
 }
 

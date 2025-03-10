@@ -990,6 +990,7 @@ int tsc_tsc_encode(tsc_buffer *buffer, tsc_grid *grid) {
 
     int minThreadWork = 10000;
     int threadCount = workers_amount();
+    if(threadCount < 1) threadCount = 1;
 
     int whatTheFuckDidYouDo = minThreadWork * threadCount;
     int area = grid->width * grid->height;
