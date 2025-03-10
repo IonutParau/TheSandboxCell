@@ -1242,7 +1242,7 @@ void tsc_handleRenderInputs() {
     }
 
     if(IsKeyPressed(KEY_R)) {
-        if(isGamePaused && !isGameTicking) {
+        if(isGamePaused && !isGameTicking && !isInitial) {
             tsc_saving_decodeWithAny((const char *)initialCode, currentGrid);
             isInitial = true;
             tickCount = 0;
