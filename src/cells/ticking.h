@@ -12,6 +12,7 @@ extern volatile bool onlyOneTick;
 extern volatile size_t gameTPS;
 extern volatile bool isInitial;
 extern volatile bool storeExtraGraphicInfo;
+extern char *volatile initialCode;
 
 void tsc_setupUpdateThread();
 void tsc_signalUpdateShouldHappen();

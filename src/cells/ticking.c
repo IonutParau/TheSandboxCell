@@ -1,8 +1,11 @@
 #include "ticking.h"
 #include "../threads/threads.h"
+#include "../saving/saving.h"
 #include "subticks.h"
 #include "grid.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
 
 volatile bool isGamePaused = true;
 volatile bool isGameTicking = false;
@@ -15,6 +18,7 @@ volatile size_t gameTPS = 0;
 volatile bool isInitial = true;
 // fancy rendering's full name
 volatile bool storeExtraGraphicInfo = true;
+char *volatile initialCode = NULL;
 
 static mtx_t renderingUselessMutex;
 static cnd_t renderingTickUpdateSignal;
@@ -47,7 +51,9 @@ static int tsc_gridUpdateThread(void *_) {
         if(isInitial) {
             isInitial = false;
             tickTime = 0;
-            tsc_copyGrid(tsc_getGrid("initial"), currentGrid);
+            free((void *)initialCode);
+            initialCode = tsc_saving_safeFast(currentGrid);
+            assert(initialCode != NULL);
         }
         tickTime -= tickDelay;
         if(tickTime < 0) tickTime = 0; // yeah no more super negative time

@@ -1149,3 +1149,12 @@ void tsc_saving_registerCore() {
     tsc.flags = 0;
     tsc_saving_register(tsc);
 }
+
+char *tsc_saving_safeFast(tsc_grid *grid) {
+    tsc_buffer buffer = tsc_saving_newBufferCapacity(NULL, grid->width * grid->height);
+    if(!tsc_tsc_encode(&buffer, grid)) {
+        tsc_saving_deleteBuffer(buffer);
+        return NULL;
+    }
+    return buffer.mem;
+}

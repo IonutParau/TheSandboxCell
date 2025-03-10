@@ -45,4 +45,6 @@ void tsc_saving_decodeWithAny(const char *code, tsc_grid *grid);
 void tsc_saving_register(tsc_saving_format format);
 void tsc_saving_registerCore();
 
+char *tsc_saving_safeFast(tsc_grid *grid);
+
 #endif

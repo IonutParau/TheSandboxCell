@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "api.h"
 #include "../threads/workers.h"
 #include "../cells/grid.h"
@@ -288,6 +289,7 @@ void tsc_closeCategory(tsc_category *category) {
 }
 
 static void tsc_loadButton(void *_) {
+    if(isGameTicking) return;
     const char *clipboard = GetClipboardText();
     if(clipboard == NULL || strlen(clipboard) == 0) {
         tsc_sound_play(builtin.audio.explosion);
@@ -295,11 +297,12 @@ static void tsc_loadButton(void *_) {
         tsc_saving_decodeWithAny(clipboard, currentGrid);
         isInitial = true;
         tickCount = 0;
-        tsc_copyGrid(tsc_getGrid("initial"), tsc_getGrid("main"));
+        tsc_copyGrid(tsc_getGrid("initial"), currentGrid);
     }
 }
 
 static void tsc_saveButton(void *_) {
+    if(isGameTicking) return;
     tsc_buffer buffer = tsc_saving_newBuffer("");
     tsc_saving_encodeWithSmallest(&buffer, currentGrid);
     if(buffer.len == 0) {
@@ -310,6 +313,7 @@ static void tsc_saveButton(void *_) {
 }
 
 static void tsc_saveV3Button(void *_) {
+    if(isGameTicking) return;
     tsc_buffer buffer = tsc_saving_newBuffer("");
     int success = tsc_saving_encodeWith(&buffer, currentGrid, "V3");
     if(success) {
@@ -322,9 +326,11 @@ static void tsc_saveV3Button(void *_) {
 
 static void tsc_restoreInitial(void *_) {
     if(isGameTicking) return;
-    tsc_copyGrid(currentGrid, tsc_getGrid("initial"));
+    if(isInitial) return;
+    tsc_saving_decodeWithAny((const char *)initialCode, currentGrid);
     isInitial = true;
     tickCount = 0;
+    tsc_trashedCellCount = 0;
 }
 
 static void tsc_setInitial(void *_) {
@@ -332,6 +338,9 @@ static void tsc_setInitial(void *_) {
     tsc_copyGrid(tsc_getGrid("initial"), currentGrid);
     isInitial = true;
     tickCount = 0;
+    free((void *)initialCode);
+    initialCode = tsc_saving_safeFast(currentGrid);
+    assert(initialCode != NULL);
 }
 
 static void tsc_pasteButton(void *_) {

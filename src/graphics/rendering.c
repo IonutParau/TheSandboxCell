@@ -361,10 +361,118 @@ static void tsc_updateCellbar(tsc_category *category, tsc_categorybutton *button
     }
 }
 
+typedef struct tsc_resized_bounds {
+    int startX;
+    int startY;
+    int endX;
+    int endY;
+} tsc_resized_bounds;
+
 
 void tsc_drawGrid() {
     Vector2 emptyOrigin = {0, 0};
     Rectangle emptyDest = {-renderingCamera.x, -renderingCamera.y, renderingCamera.cellSize * currentGrid->width, renderingCamera.cellSize * currentGrid->height};
+    tsc_resized_bounds bounds = {0, 0, currentGrid->width-1, currentGrid->height-1};
+    if(tsc_isResizingGrid) {
+        int centerX = currentGrid->width/2;
+        int centerY = currentGrid->height/2;
+
+        int mx = tsc_cellMouseX();
+        int my = tsc_cellMouseY();
+
+        if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            if(tsc_sideResized == 4) {
+                if(mx >= currentGrid->width) tsc_sideResized = 0;
+                else if(my > currentGrid->height) tsc_sideResized = 1;
+                else if(mx < 0) tsc_sideResized = 2;
+                else if(my < 0) tsc_sideResized = 3;
+            }
+
+            switch(tsc_sideResized) {
+                case 0:
+                    bounds.endX = mx;
+                    break;
+                case 1:
+                    bounds.endY = my;
+                    break;
+                case 2:
+                    bounds.startX = mx;
+                    break;
+                case 3:
+                    bounds.startY = my;
+                    break;
+            }
+        
+            switch(tsc_sideResized) {
+                case 0:
+                    tsc_sideExtension = bounds.endX - currentGrid->width + 1;
+                    break;
+                case 1:
+                    tsc_sideExtension = bounds.endY - currentGrid->height + 1;
+                    break;
+                case 2:
+                    tsc_sideExtension = -bounds.startX;
+                    break;
+                case 3:
+                    tsc_sideExtension = -bounds.startY;
+                    break;
+            }
+        } else {
+            switch(tsc_sideResized) {
+                case 0:
+                    bounds.endX += tsc_sideExtension;
+                    break;
+                case 1:
+                    bounds.endY += tsc_sideExtension;
+                    break;
+                case 2:
+                    bounds.startX -= tsc_sideExtension;
+                    break;
+                case 3:
+                    bounds.startY -= tsc_sideExtension;
+                    break;
+            }
+        }
+    
+        // In case of bounds being fucked
+        if(bounds.startX > bounds.endX) bounds.endX = bounds.startX;
+        if(bounds.startY > bounds.endY) bounds.endY = bounds.startY;
+        if(bounds.endX < bounds.startX) bounds.startX = bounds.endX;
+        if(bounds.endY < bounds.startY) bounds.startY = bounds.endY;
+            
+
+        if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && tsc_sideResized != 4) {
+            tsc_sideResized = 4;
+
+            int w = bounds.endX - bounds.startX + 1;
+            int h = bounds.endY - bounds.startY + 1;
+
+            // move the camera to lie
+            renderingCamera.x -= bounds.startX * renderingCamera.cellSize;
+            renderingCamera.y -= bounds.startY * renderingCamera.cellSize;
+
+            tsc_grid *newGrid = tsc_createGrid("tmpResize", w, h, currentGrid->title, currentGrid->desc);
+            
+            for(int y = 0; y < currentGrid->height; y++) {
+                for(int x = 0; x < currentGrid->width; x++) {
+                    tsc_cell *c = tsc_grid_get(currentGrid, x, y);
+                    tsc_cell *b = tsc_grid_background(currentGrid, x, y);
+                    
+                    tsc_grid_set(newGrid, x - bounds.startX, y - bounds.startY, c);
+                    tsc_grid_setBackground(newGrid, x - bounds.startX, y - bounds.startY, b);
+                }
+            }
+
+            tsc_copyGrid(currentGrid, newGrid);
+            tsc_deleteGrid(newGrid);
+        }
+    }
+
+    emptyDest.x = bounds.startX * renderingCamera.cellSize - renderingCamera.x;
+    emptyDest.y = bounds.startY * renderingCamera.cellSize - renderingCamera.y;
+    emptyDest.width = (bounds.endX - bounds.startX + 1) * renderingCamera.cellSize;
+    emptyDest.height = (bounds.endY - bounds.startY + 1) * renderingCamera.cellSize;
+
     if(renderingCamera.cellSize < trueApproximationSize) {
         if(GetFPS() > 30 && renderingCamera.cellSize > tsc_sizeOptimizedByApproximation) {
             trueApproximationSize /= 2;
@@ -377,7 +485,7 @@ void tsc_drawGrid() {
             trueApproximationSize *= 2;
         }
         Texture empty = textures_get(tsc_idToString(builtin.empty));
-        float emptyScale[3] = {currentGrid->width, currentGrid->height, 1};
+        float emptyScale[3] = {emptyDest.width / renderingCamera.cellSize, emptyDest.height / renderingCamera.cellSize, 1};
         SetShaderValue(renderingRepeatingShader, renderingRepeatingScaleLoc, emptyScale, SHADER_UNIFORM_VEC3);
         BeginShaderMode(renderingRepeatingShader);
         {
@@ -483,6 +591,17 @@ void tsc_drawGrid() {
         }
     }
 
+    if(tsc_isResizingGrid) {
+        int textSpace = 10;
+        int textSize = 30;
+
+        int w = bounds.endX - bounds.startX + 1;
+        int h = bounds.endY - bounds.startY + 1;
+        const char *text = tsc_tsprintf("%d x %d", w, h);
+
+        DrawText(text, emptyDest.x, emptyDest.y - textSize - textSpace, textSize, WHITE);
+    }
+
     int selx;
     int sely;
     int selw;
@@ -527,7 +646,7 @@ void tsc_drawGrid() {
             }
         }
     }
-    if((!renderingIsSelecting || tsc_guidelineMode != 0) && !renderingIsPasting) {
+    if((!renderingIsSelecting || tsc_guidelineMode != 0) && !renderingIsPasting && !tsc_isResizingGrid) {
         int cmx = tsc_cellMouseX();
         int cmy = tsc_cellMouseY();
         cmx = cmx - brushSize;
@@ -819,6 +938,8 @@ void tsc_handleRenderInputs() {
     int absorbed = tsc_ui_absorbedPointer(GetMouseX(), GetMouseY());
     tsc_ui_popFrame();
 
+    if(tsc_isResizingGrid) absorbed = false;
+
     if(IsKeyDown(KEY_F5)) {
         trueApproximationSize = renderingApproximationSize;
         tsc_sizeOptimizedByApproximation = 0;
@@ -1033,6 +1154,10 @@ void tsc_handleRenderInputs() {
     if(!renderingIsSelecting && !renderingIsPasting) {
         if(IsKeyPressed(KEY_LEFT_ALT)) {
             tsc_isResizingGrid = !tsc_isResizingGrid;
+            if(tsc_isResizingGrid) {
+                tsc_sideResized = 4;
+                tsc_sideExtension = 0;
+            }
         }
     }
 
@@ -1118,7 +1243,7 @@ void tsc_handleRenderInputs() {
 
     if(IsKeyPressed(KEY_R)) {
         if(isGamePaused && !isGameTicking) {
-            tsc_copyGrid(currentGrid, tsc_getGrid("initial"));
+            tsc_saving_decodeWithAny((const char *)initialCode, currentGrid);
             isInitial = true;
             tickCount = 0;
             tsc_trashedCellCount = 0;

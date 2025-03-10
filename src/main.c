@@ -673,8 +673,6 @@ int main(int argc, char **argv) {
                     }
                     level = NULL;
                 }
-                tsc_grid *initial = tsc_createGrid("initial", grid->width, grid->height, NULL, NULL);
-                tsc_copyGrid(initial, grid);
                 tsc_currentMenu = "game";
                 tsc_resetRendering();
                 tickCount = 0;
@@ -812,6 +810,7 @@ int main(int argc, char **argv) {
                     int unit = 0;
                     size_t area = currentGrid->width * currentGrid->height;
                     double amount = area * sizeof(tsc_cell) + area * tsc_optSize() + currentGrid->chunkwidth * currentGrid->chunkheight;
+                    if(initialCode != NULL) amount += strlen((const char *)initialCode) + 1;
                     while(amount >= 1000 && unit < unitc) {
                         unit++;
                         amount /= 1000;
