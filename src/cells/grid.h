@@ -22,6 +22,10 @@ typedef int tsc_reg_t;
 #define TSC_NULL_REGISTRY 0
 
 typedef struct tsc_cell {
+#ifdef TSC_TURBO
+    unsigned char id : 6;
+    unsigned char rotData : 2;
+#else
     tsc_id_t id;
     tsc_id_t texture;
     char rotData;
@@ -30,6 +34,7 @@ typedef struct tsc_cell {
     tsc_reg_t reg;
     tsc_last_t lx;
     tsc_last_t ly;
+#endif
 } tsc_cell;
 
 extern size_t tsc_gridChunkSize;

@@ -194,19 +194,31 @@ static float tsc_rotInterp(char rot, signed char added) {
 }
 
 static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridRepeat, bool forceRectangle) {
-    if(cell->id == builtin.empty && cell->texture == TSC_NULL_TEXTURE) return;
+#ifdef TSC_TURBO
+    if(cell->id == builtin.empty) return;
+    tsc_id_t idToRender = cell->id;
+#else
+    if(cell->id == builtin.empty && cell->texture != TSC_NULL_TEXTURE) return;
     tsc_id_t idToRender = cell->texture == TSC_NULL_TEXTURE ? cell->id : cell->texture;
+#endif
     Texture texture = textures_get(tsc_idToString(idToRender));
     double size = renderingCamera.cellSize * gridRepeat;
     Vector2 origin = {size / 2, size / 2};
     Rectangle src = {0, 0, texture.width, texture.height};
 
     bool isRect = renderingCamera.cellSize < trueApproximationSize || forceRectangle;
+#ifdef TSC_TURBO
+    float ix = x;
+    float iy = y;
+    char rot = tsc_cell_getRotation(cell);
+    float irot = rot;
+#else
     float ix = isRect ? x : tsc_updateInterp(cell->lx, x);
     float iy = isRect ? y : tsc_updateInterp(cell->ly, y);
     char rot = tsc_cell_getRotation(cell);
     signed char addedRot = tsc_cell_getAddedRotation(cell);
     float irot = isRect ? rot : tsc_rotInterp(rot, addedRot);
+#endif
     Rectangle dest = {ix * renderingCamera.cellSize - renderingCamera.x + origin.x,
         iy * renderingCamera.cellSize - renderingCamera.y + origin.y,
         size,
@@ -442,6 +454,7 @@ void tsc_drawGrid() {
         }
     }
 
+#ifndef TSC_TURBO
     if(storeExtraGraphicInfo) {
         size_t len = tsc_trashedCellCount;
         if(len > TSC_MAX_TRASHED) len = TSC_MAX_TRASHED;
@@ -454,6 +467,7 @@ void tsc_drawGrid() {
             tsc_drawCell(&trashed, x, y, opacity, 1, false);
         }
     }
+#endif
 
     for(size_t y = sy; y <= ey; y = (y+skipLevel) - y % skipLevel) {
         for(size_t x = sx; x <= ex; x = (x+skipLevel) - x % skipLevel) {
@@ -519,8 +533,10 @@ void tsc_drawGrid() {
         cmx = cmx - brushSize;
         cmy = cmy - brushSize;
         tsc_cell cell = tsc_cell_create(tsc_findID(currentId), currentRot);
+#ifndef TSC_TURBO
         cell.lx = TSC_NULL_LAST;
         cell.ly = TSC_NULL_LAST;
+#endif
         tsc_drawCell(&cell, cmx, cmy, 0.5, brushSize*2+1, false);
     }
 
@@ -776,8 +792,10 @@ static void tsc_moveStuffInSelection(int x, int y) {
         for(int y = 0; y < height; y++) {
             int i = y * width + x;
             tsc_cell *cell = tmpBuffer + i;
+#ifndef TSC_TURBO
             cell->lx = fixed.sx + x;
             cell->ly = fixed.sy + y;
+#endif
             if(cell->id != builtin.empty) tsc_grid_set(currentGrid, fixed.sx + x, fixed.sy + y, cell);
         }
     }
@@ -1031,8 +1049,10 @@ void tsc_handleRenderInputs() {
             for(int y = 0; y < renderingGridClipboard.height; y++) {
                 int i = y * renderingGridClipboard.width + x;
                 if(renderingGridClipboard.cells[i].id == builtin.empty) continue;
+#ifndef TSC_TURBO
                 renderingGridClipboard.cells[i].lx = mx + x;
                 renderingGridClipboard.cells[i].ly = my + y;
+#endif
                 tsc_grid_set(currentGrid, mx + x, my + y, &renderingGridClipboard.cells[i]);
             }
         }

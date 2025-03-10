@@ -574,6 +574,7 @@ static void tsc_subtick_do(tsc_subtick_t *subtick) {
     }
 }
 
+#ifndef TSC_TURBO
 static void tsc_subtick_reset(void *data) {
     // Super smart optimization
     // If you don't understand, me neither
@@ -597,6 +598,7 @@ static void tsc_subtick_reset(void *data) {
         // TODO: cell reset method
     }
 }
+#endif
 
 void tsc_subtick_run() {
 #ifndef TSC_TURBO

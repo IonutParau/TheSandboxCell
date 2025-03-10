@@ -12,6 +12,7 @@ tsc_cell tsc_trashedCellBuffer[TSC_MAX_TRASHED] = {0};
 atomic_size_t tsc_trashedCellCount = 0;
 
 void tsc_trashCell(tsc_cell *cell, int x, int y) {
+#ifndef TSC_TURBO
     if(!storeExtraGraphicInfo) return;
     tsc_cell trashed = *cell;
     trashed.reg = 0;
@@ -20,6 +21,7 @@ void tsc_trashCell(tsc_cell *cell, int x, int y) {
     if(idx < TSC_MAX_TRASHED) {
         tsc_trashedCellBuffer[idx] = trashed;
     }
+#endif
 }
 
 tsc_cell_id_pool_t builtin;
@@ -60,13 +62,15 @@ void tsc_init_builtin_ids() {
 tsc_cell __attribute__((hot)) tsc_cell_create(tsc_id_t id, char rot) {
     tsc_cell cell;
     cell.id = id;
-    cell.texture = TSC_NULL_TEXTURE;
     cell.rotData = rot & 0b11;
+#ifndef TSC_TURBO
+    cell.texture = TSC_NULL_TEXTURE;
     cell.updated = false;
     cell.effect = TSC_NULL_EFFECT;
     cell.reg = TSC_NULL_REGISTRY;
     cell.lx = TSC_NULL_LAST;
     cell.ly = TSC_NULL_LAST;
+#endif
     return cell;
 }
 

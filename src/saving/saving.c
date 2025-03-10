@@ -154,9 +154,11 @@ static char tsc_saving_decodeChar74(char c) {
 // Caller owns memory
 // NULL if conversion fails (V3 does not support the cell)
 static char tsc_v3_celltochar(tsc_cell *cell, bool hasBg) {
+#ifndef TSC_TURBO
     if(cell->texture != TSC_NULL_TEXTURE) return '\0'; // Can not be stored accurately
     if(cell->effect != TSC_NULL_EFFECT) return '\0'; // Can not be stored accurately
     if(cell->reg != TSC_NULL_REGISTRY) return '\0'; // Can not be stored accurately
+#endif
     if(cell->id == builtin.empty) {
         return tsc_saving_encodeChar74(72 + (hasBg ? 1 : 0));
     }
