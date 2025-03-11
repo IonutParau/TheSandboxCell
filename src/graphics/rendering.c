@@ -61,6 +61,9 @@ static bool renderingBlockPlacing = false;
 static bool tsc_isResizingGrid = false;
 static char tsc_sideResized = 4;
 static int tsc_sideExtension = 0;
+static bool tsc_showEditorMenu = false;
+static ui_button *tsc_editorOkBtn = NULL;
+static ui_button *tsc_editorCancelBtn = NULL;
 
 static selection_t tsc_fixSelection(selection_t sel) {
     selection_t fixed = sel;
@@ -144,6 +147,7 @@ void tsc_resetRendering() {
     tsc_ui_clearButtonState(renderingSelectionButtons.cut);
     tsc_ui_clearButtonState(renderingSelectionButtons.del);
     tsc_clearGridClipboard();
+    tsc_showEditorMenu = false;
 }
 
 void tsc_setupRendering() {
@@ -171,6 +175,9 @@ void tsc_setupRendering() {
 
     renderingCellButtons = tsc_createCellButtons(tsc_rootCategory());
     tsc_resetRendering();
+
+    tsc_editorOkBtn = tsc_ui_newButtonState();
+    tsc_editorCancelBtn = tsc_ui_newButtonState();
 }
 
 static float tsc_updateInterp(float a, float b) {
@@ -756,8 +763,31 @@ void tsc_drawGrid() {
         tsc_ui_box(GetColor(tsc_queryOptionalColor("cellbarColor", 0x00000055)));
         tsc_ui_translate(0, height - rowHeight);
         tsc_buildCellbar(tsc_rootCategory(), renderingCellButtons, cellButton, padding, 0);
-        tsc_ui_render();
     }
+    if(tsc_showEditorMenu) {
+        Color buttonHoverColor = GetColor(0x3275A8FF);
+        tsc_ui_pushColumn();
+            tsc_ui_text("Confirm exit", 30, WHITE);
+            tsc_ui_space(10);
+            tsc_ui_pushRow();
+                tsc_ui_text("Ok", 15, WHITE);
+                tsc_ui_pad(10, 10);
+                if(tsc_ui_button(tsc_editorOkBtn) == UI_BUTTON_HOVER) {
+                    tsc_ui_box(buttonHoverColor);
+                }
+                tsc_ui_space(15);
+                tsc_ui_text("Cancel", 15, WHITE);
+                tsc_ui_pad(10, 10);
+                if(tsc_ui_button(tsc_editorCancelBtn) == UI_BUTTON_HOVER) {
+                    tsc_ui_box(buttonHoverColor);
+                }
+            tsc_ui_finishRow();
+        tsc_ui_finishColumn();
+        tsc_ui_pad(20, 20);
+        tsc_ui_box(GetColor(tsc_queryOptionalColor("cellbarColor", 0x00000055)));
+        tsc_ui_align(0.5, 0.5, GetScreenWidth(), GetScreenHeight());
+    }
+    tsc_ui_render();
     tsc_ui_popFrame();
 }
 
@@ -938,6 +968,19 @@ void tsc_handleRenderInputs() {
     int absorbed = tsc_ui_absorbedPointer(GetMouseX(), GetMouseY());
     tsc_ui_popFrame();
 
+    if(tsc_showEditorMenu) {
+        if(tsc_ui_checkbutton(tsc_editorOkBtn) == UI_BUTTON_PRESS) {
+            tsc_currentMenu = "main";
+            tsc_nukeGrids();
+            return;
+        }
+        if(tsc_ui_checkbutton(tsc_editorCancelBtn) == UI_BUTTON_PRESS) {
+            tsc_showEditorMenu = false;
+            return;
+        }
+        return;
+    }
+
     if(tsc_isResizingGrid) absorbed = false;
 
     if(IsKeyDown(KEY_F5)) {
@@ -1036,10 +1079,10 @@ void tsc_handleRenderInputs() {
         } else if(renderingIsSelecting && !renderingIsDragging) {
             renderingIsSelecting = false;
             renderingIsDragging = false;
+        } else if(tsc_showEditorMenu) {
+            tsc_showEditorMenu = false;
         } else if(!isGameTicking && isGamePaused) {
-            tsc_currentMenu = "main";
-            tsc_nukeGrids();
-            return; // game is done.
+            tsc_showEditorMenu = true;
         }
     }
 
