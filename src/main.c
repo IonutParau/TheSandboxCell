@@ -15,6 +15,7 @@
 #include "utils.h"
 #include "api/api.h"
 #include "graphics/ui.h"
+#include "graphics/nui.h"
 #include "graphics/resources.h"
 #include "cells/ticking.h"
 
@@ -328,6 +329,9 @@ int main(int argc, char **argv) {
 
     tsc_freefile(benchmarkText);
     tsc_freelines(benchmarkLines);
+
+    tsc_nui_frame *testFrame = tsc_nui_newFrame();
+    tsc_nui_buttonState *backToMainMenu = tsc_nui_newButton();
 
     while(!WindowShouldClose()) {
         tsc_areset(&tsc_tmp);
@@ -683,6 +687,25 @@ int main(int argc, char **argv) {
                 valid:;
             }
         }
+
+        if(tsc_streql(tsc_currentMenu, "nui")) {
+            GuiEnable();
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
+            if(GuiButton((Rectangle) { 20, 20, 100, 50 }, "Back")) {
+                tsc_currentMenu = "main";
+            }
+
+            tsc_nui_pushFrame(testFrame);
+            tsc_nui_setFontSize(50);
+            tsc_nui_text("N(ew)UI");
+            if(tsc_nui_button(backToMainMenu)) {
+                tsc_nui_translate(0, -10);
+            }
+            tsc_nui_translate(100, 150);
+            tsc_nui_render();
+            tsc_nui_popFrame();
+        }
+
         if(tsc_streql(tsc_currentMenu, "benchmark")) {
             GuiEnable();
             GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
@@ -809,7 +832,7 @@ int main(int argc, char **argv) {
                     int unitc = sizeof(units) / sizeof(units[0]);
                     int unit = 0;
                     size_t area = currentGrid->width * currentGrid->height;
-                    double amount = area * sizeof(tsc_cell) + area * tsc_optSize() + currentGrid->chunkwidth * currentGrid->chunkheight;
+                    double amount = area * sizeof(tsc_cell) * 2 + area * tsc_optSize() + currentGrid->chunkwidth * currentGrid->chunkheight;
                     if(initialCode != NULL) amount += strlen((const char *)initialCode) + 1;
                     while(amount >= 1000 && unit < unitc) {
                         unit++;
@@ -891,6 +914,14 @@ int main(int argc, char **argv) {
             if(IsKeyPressed(KEY_B)) {
                 tsc_currentMenu = "benchmark";
             }
+            if(IsKeyPressed(KEY_N)) {
+                tsc_currentMenu = "nui";
+            }
+        }
+        if(tsc_streql(tsc_currentMenu, "nui")) {
+            tsc_nui_pushFrame(testFrame);
+            tsc_nui_update();
+            tsc_nui_popFrame();
         }
 
         if(IsWindowFocused()) {

@@ -20,9 +20,9 @@ typedef struct tsc_nui_button {
     bool clicked;
     bool rightClick;
     bool hovered;
-} tsc_nui_button;
+} tsc_nui_buttonState;
 
-tsc_nui_button *tsc_nui_newButton();
+tsc_nui_buttonState *tsc_nui_newButton();
 
 #define TSC_NUI_BUTTON_CLICK 1
 #define TSC_NUI_BUTTON_PRESS 2
@@ -32,7 +32,7 @@ tsc_nui_button *tsc_nui_newButton();
 #define TSC_NUI_BUTTON_RIGHTLONGPRESS 6
 #define TSC_NUI_BUTTON_HOVER 7
 
-bool tsc_nui_checkButton(tsc_nui_button *button, int action);
+bool tsc_nui_checkButton(tsc_nui_buttonState *button, int action);
 
 #define TSC_NUI_INPUT_DEFAULT 0
 #define TSC_NUI_INPUT_SIZE 1
@@ -63,6 +63,7 @@ typedef struct tsc_nui_theme {
 #define TSC_NUI_ROW 2
 #define TSC_NUI_COLUMN 3
 #define TSC_NUI_TRANSLATE 4
+#define TSC_NUI_BUTTON 5
 
 typedef struct tsc_nui_element {
     char kind;
@@ -72,7 +73,8 @@ typedef struct tsc_nui_element {
         struct tsc_nui_frame *children;
     };
     union {
-        tsc_nui_button *button;
+        const char *text;
+        tsc_nui_buttonState *button;
         struct {
             float x;
             float y;
@@ -84,15 +86,16 @@ typedef struct tsc_nui_element {
 
 typedef struct tsc_nui_frame {
     size_t len;
-    tsc_nui_element elements[TSC_NUI_MAXELEMENTS];
+    tsc_nui_element *elements[TSC_NUI_MAXELEMENTS];
 } tsc_nui_frame;
 
 tsc_nui_frame *tsc_nui_newFrame();
 void tsc_nui_freeFrame(tsc_nui_frame *frame);
 tsc_nui_frame *tsc_nui_newTmpFrame();
 
-tsc_nui_element tsc_nui_newElement(char kind);
-void tsc_nui_pushElement(tsc_nui_element element);
+tsc_nui_element *tsc_nui_newElement(char kind);
+void tsc_nui_pushElement(tsc_nui_element *element);
+tsc_nui_element *tsc_nui_popElement();
 
 #define TSC_NUI_MAXFRAMES 64
 
@@ -127,10 +130,20 @@ void tsc_nui_endRow();
 void tsc_nui_beginColumn();
 void tsc_nui_endColumn();
 
-tsc_nui_geometry tsc_nui_position(tsc_nui_element *element, tsc_nui_geometry geometry);
+void tsc_nui_text(const char *text);
+
+void tsc_nui_translate(float x, float y);
+// returns true if hovered
+bool tsc_nui_button(tsc_nui_buttonState *button);
+
+tsc_nui_geometry tsc_nui_position(tsc_nui_element *element, tsc_nui_geometry parent);
+
+void tsc_nui_renderElement(tsc_nui_element *element, tsc_nui_geometry parent);
+void tsc_nui_updateElement(tsc_nui_element *element, tsc_nui_geometry parent);
+bool tsc_nui_absorbsElement(tsc_nui_element *element, tsc_nui_geometry parent, float x, float y);
 
 void tsc_nui_render();
 void tsc_nui_update();
-void tsc_nui_absorbs(float x, float y);
+bool tsc_nui_absorbs(float x, float y);
 
 #endif

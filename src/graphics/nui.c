@@ -1,7 +1,25 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <raylib.h>
 #include "nui.h"
 #include "../utils.h"
+#include "resources.h"
+
+tsc_nui_buttonState *tsc_nui_newButton() {
+    tsc_nui_buttonState *button = malloc(sizeof(tsc_nui_buttonState));
+    button->pressTime = 0;
+    button->longPressTime = 0.5;
+    button->clicked = false;
+    button->wasClicked = false;
+    button->hovered = false;
+    button->rightClick = false;
+    return button;
+}
+
+bool tsc_nui_checkButton(tsc_nui_buttonState *button, int action) {
+    if(action == TSC_NUI_BUTTON_HOVER) return button->hovered;
+    return false;
+}
 
 size_t tsc_nui_frameLen = 0;
 tsc_nui_frame *tsc_nui_frames[TSC_NUI_MAXFRAMES];
@@ -29,16 +47,25 @@ tsc_nui_frame *tsc_nui_newTmpFrame() {
     return frame;
 }
 
-tsc_nui_element tsc_nui_newElement(char kind) {
-    tsc_nui_element element;
-    element.kind = kind;
-    element.themeData = tsc_nui_globalTheme;
+tsc_nui_element *tsc_nui_newElement(char kind) {
+    tsc_nui_element *element = tsc_talloc(sizeof(tsc_nui_element));
+    element->kind = kind;
+    element->themeData = tsc_nui_globalTheme;
     return element;
 }
 
-void tsc_nui_pushElement(tsc_nui_element element) {
-    tsc_nui_frame *frame = tsc_nui_frames[tsc_nui_frameLen - 1];
+static tsc_nui_frame *tsc_nui_topFrame() {
+    return tsc_nui_frames[tsc_nui_frameLen - 1];
+}
+
+void tsc_nui_pushElement(tsc_nui_element *element) {
+    tsc_nui_frame *frame = tsc_nui_topFrame();
     frame->elements[frame->len++] = element;
+}
+
+tsc_nui_element *tsc_nui_popElement() {
+    tsc_nui_frame *frame = tsc_nui_topFrame();
+    return frame->elements[--frame->len];
 }
 
 double tsc_nui_scaling() {
@@ -92,6 +119,7 @@ unsigned int tsc_nui_getCursorSize() {
 
 void tsc_nui_pushFrame(tsc_nui_frame *frame) {
     tsc_nui_frames[tsc_nui_frameLen++] = frame;
+    frame->len = 0;
 }
 
 tsc_nui_frame *tsc_nui_popFrame() {
@@ -104,8 +132,9 @@ void tsc_nui_beginStack() {
 
 void tsc_nui_endStack() {
     tsc_nui_frame *frame = tsc_nui_popFrame();
-    tsc_nui_element element = tsc_nui_newElement(TSC_NUI_STACK);
-    element.children = frame;
+    tsc_nui_element *element = tsc_nui_newElement(TSC_NUI_STACK);
+    element->children = frame;
+    tsc_nui_pushElement(element);
 }
 
 void tsc_nui_beginRow() {
@@ -114,8 +143,9 @@ void tsc_nui_beginRow() {
 
 void tsc_nui_endRow() {
     tsc_nui_frame *frame = tsc_nui_popFrame();
-    tsc_nui_element element = tsc_nui_newElement(TSC_NUI_ROW);
-    element.children = frame;
+    tsc_nui_element *element = tsc_nui_newElement(TSC_NUI_ROW);
+    element->children = frame;
+    tsc_nui_pushElement(element);
 }
 
 void tsc_nui_beginColumn() {
@@ -124,15 +154,183 @@ void tsc_nui_beginColumn() {
 
 void tsc_nui_endColumn() {
     tsc_nui_frame *frame = tsc_nui_popFrame();
-    tsc_nui_element element = tsc_nui_newElement(TSC_NUI_COLUMN);
-    element.children = frame;
+    tsc_nui_element *element = tsc_nui_newElement(TSC_NUI_COLUMN);
+    element->children = frame;
+    tsc_nui_pushElement(element);
+}
+
+void tsc_nui_text(const char *text) {
+    tsc_nui_element *element = tsc_nui_newElement(TSC_NUI_TEXT);
+    element->text = text;
+    tsc_nui_pushElement(element);
+}
+
+void tsc_nui_translate(float x, float y) {
+    tsc_nui_element *child = tsc_nui_popElement();
+    tsc_nui_element *element = tsc_nui_newElement(TSC_NUI_TRANSLATE);
+    element->child = child;
+    element->translate.x = x;
+    element->translate.y = y;
+    tsc_nui_pushElement(element);
+}
+
+bool tsc_nui_button(tsc_nui_buttonState *button) {
+    tsc_nui_element *child = tsc_nui_popElement();
+    tsc_nui_element *element = tsc_nui_newElement(TSC_NUI_BUTTON);
+    element->child = child;
+    element->button = button;
+    tsc_nui_pushElement(element);
+    return tsc_nui_checkButton(button, TSC_NUI_BUTTON_HOVER);
+}
+
+static tsc_nui_geometry tsc_nui_rootGeometry() {
+    double scale = tsc_nui_scaling();
+    return (tsc_nui_geometry) {0, 0, GetScreenWidth() / scale, GetScreenHeight() / scale};
+}
+
+static tsc_nui_geometry tsc_nui_frameGeometry(tsc_nui_frame *frame, tsc_nui_geometry position, bool x, bool y) {
+    float w = 0;
+    float h = 0;
+
+    for(size_t i = 0; i < frame->len; i++) {
+        tsc_nui_element *element = frame->elements[i];
+        tsc_nui_geometry geo = tsc_nui_position(element, position);
+
+        if(x) w += geo.w;
+        else if(w < geo.w) w = geo.w;
+        if(y) h += geo.h;
+        else if(h < geo.h) h = geo.h;
+    }
+
+    return (tsc_nui_geometry) {0, 0, w, h};
+}
+
+static void tsc_nui_drawFrame(tsc_nui_frame *frame, tsc_nui_geometry position, bool x, bool y) {
+    for(size_t i = 0; i < frame->len; i++) {
+        tsc_nui_element *element = frame->elements[i];
+        tsc_nui_renderElement(element, position);
+        tsc_nui_geometry geo = tsc_nui_position(element, position);
+
+        if(x) position.x += geo.w;
+        if(y) position.y += geo.h;
+    }
+}
+
+static void tsc_nui_updateFrame(tsc_nui_frame *frame, tsc_nui_geometry position, bool x, bool y) {
+    for(size_t i = 0; i < frame->len; i++) {
+        tsc_nui_element *element = frame->elements[i];
+        tsc_nui_updateElement(element, position);
+        tsc_nui_geometry geo = tsc_nui_position(element, position);
+
+        if(x) position.x += geo.w;
+        if(y) position.y += geo.h;
+    }
+}
+
+static bool tsc_nui_absorbsFrame(tsc_nui_frame *frame, tsc_nui_geometry position, float mx, float my, bool x, bool y) {
+    for(size_t i = 0; i < frame->len; i++) {
+        tsc_nui_element *element = frame->elements[i];
+        tsc_nui_geometry geo = tsc_nui_position(element, position);
+        if(tsc_nui_absorbsElement(element, geo, mx, my)) {
+            return true;
+        }
+
+        if(x) position.x += geo.w;
+        if(y) position.y += geo.h;
+    }
+    return false;
 }
 
 tsc_nui_geometry tsc_nui_position(tsc_nui_element *element, tsc_nui_geometry parent) {
     tsc_nui_geometry geometry = parent;
+    double scaling = tsc_nui_scaling();
+    if(element->kind == TSC_NUI_TEXT) {
+        Font font = font_get();
+        // geometry is scaled so we dont scale it here
+        double size = element->themeData.fontSize;
+        double spacing = element->themeData.spacing;
+        Vector2 v = MeasureTextEx(font, element->text, size, spacing);
+        geometry.w = v.x;
+        geometry.h = v.y;
+    } else if(element->kind == TSC_NUI_TRANSLATE) {
+        geometry.x += element->translate.x;
+        geometry.y += element->translate.y;
+    } else if(element->kind == TSC_NUI_STACK) {
+        return tsc_nui_frameGeometry(element->children, parent, false, false);
+    } else if(element->kind == TSC_NUI_ROW) {
+        return tsc_nui_frameGeometry(element->children, parent, true, false);
+    } else if(element->kind == TSC_NUI_COLUMN) {
+        return tsc_nui_frameGeometry(element->children, parent, false, true);
+    } else if(element->kind == TSC_NUI_BUTTON) {
+        return tsc_nui_position(element->child, parent);
+    }
     return geometry;
 }
 
-void tsc_nui_render();
-void tsc_nui_update();
-void tsc_nui_absorbs(float x, float y);
+void tsc_nui_renderElement(tsc_nui_element *element, tsc_nui_geometry parent) {
+start:;
+    double scaling = tsc_nui_scaling();
+    if(element->kind == TSC_NUI_TEXT) {
+        Font font = font_get();
+        double size = element->themeData.fontSize * scaling;
+        double spacing = element->themeData.spacing * scaling;
+        Color color = GetColor(element->themeData.color);
+        Vector2 pos = {parent.x * scaling, parent.y * scaling};
+        DrawTextEx(font, element->text, pos, size, spacing, color);
+    } else if(element->kind == TSC_NUI_TRANSLATE) {
+        parent.x += element->translate.x;
+        parent.y += element->translate.y;
+        element = element->child;
+        goto start;
+    } else if(element->kind == TSC_NUI_BUTTON) {
+        element = element->child;
+        goto start;
+    }
+}
+
+void tsc_nui_updateElement(tsc_nui_element *element, tsc_nui_geometry parent) {
+start:;
+    double scaling = tsc_nui_scaling();
+    if(element->kind == TSC_NUI_TRANSLATE) {
+        parent.x += element->translate.x;
+        parent.y += element->translate.y;
+        element = element->child;
+        goto start;
+    } else if(element->kind == TSC_NUI_BUTTON) {
+        tsc_nui_geometry geo = tsc_nui_position(element->child, parent);
+        tsc_nui_buttonState *state = element->button;
+        float mx = GetMouseX() / scaling;
+        float my = GetMouseY() / scaling;
+        if(mx >= geo.x && mx <= geo.x + geo.w && my >= geo.y && my <= geo.y + geo.h) state->hovered = true;
+        else state->hovered = false;
+
+        printf("Hovered %s\n", state->hovered ? "true" : "false");
+        element = element->child;
+        goto start;
+    }
+}
+
+bool tsc_nui_absorbsElement(tsc_nui_element *element, tsc_nui_geometry parent, float x, float y) {
+    double scaling = tsc_nui_scaling();
+    if(element->kind == TSC_NUI_TRANSLATE) {
+        parent.x += element->translate.x;
+        parent.y += element->translate.y;
+        return tsc_nui_absorbsElement(element->child, parent, x, y);
+    }
+    return false;
+}
+
+void tsc_nui_render() {
+    tsc_nui_drawFrame(tsc_nui_topFrame(), tsc_nui_rootGeometry(), false, false);
+}
+
+void tsc_nui_update() {
+    tsc_nui_updateFrame(tsc_nui_topFrame(), tsc_nui_rootGeometry(), false, false);
+}
+
+bool tsc_nui_absorbs(float x, float y) {
+    double scaling = tsc_nui_scaling();
+    x /= scaling;
+    y /= scaling;
+    return tsc_nui_absorbsFrame(tsc_nui_topFrame(), tsc_nui_rootGeometry(), x, y, false, false);
+}

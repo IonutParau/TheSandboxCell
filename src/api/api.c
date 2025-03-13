@@ -297,7 +297,6 @@ static void tsc_loadButton(void *_) {
         tsc_saving_decodeWithAny(clipboard, currentGrid);
         isInitial = true;
         tickCount = 0;
-        tsc_copyGrid(tsc_getGrid("initial"), currentGrid);
     }
 }
 

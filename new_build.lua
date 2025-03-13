@@ -287,6 +287,7 @@ local libtsc = {
     "src/graphics/resources.c",
     "src/graphics/rendering.c",
     "src/graphics/ui.c",
+    "src/graphics/nui.c",
     "src/saving/saving.c",
     "src/saving/saving_buffer.c",
     "src/api/api.c",
