@@ -689,19 +689,26 @@ int main(int argc, char **argv) {
         }
 
         if(tsc_streql(tsc_currentMenu, "nui")) {
-            GuiEnable();
-            GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
-            if(GuiButton((Rectangle) { 20, 20, 100, 50 }, "Back")) {
+            tsc_nui_pushFrame(testFrame);
+            tsc_nui_setFontSize(20);
+            tsc_nui_setColor(tsc_nui_checkButton(backToMainMenu, TSC_NUI_BUTTON_HOVER) ? 0x00FFFFFF : 0xFFFFFFFF );
+            tsc_nui_text("Back");
+            tsc_nui_button(backToMainMenu);
+            if(tsc_nui_checkButton(backToMainMenu, TSC_NUI_BUTTON_PRESS)) {
                 tsc_currentMenu = "main";
             }
+            tsc_nui_translate(20, 20);
 
-            tsc_nui_pushFrame(testFrame);
-            tsc_nui_setFontSize(50);
-            tsc_nui_text("N(ew)UI");
-            if(tsc_nui_button(backToMainMenu)) {
-                tsc_nui_translate(0, -10);
-            }
-            tsc_nui_translate(100, 150);
+            float titleSize = 40;
+            float textSize = 20;
+            float titlePad = 10;
+
+            tsc_nui_setColor(0xFFFFFFFF);
+            tsc_nui_setFontSize(40);
+            tsc_nui_text("The Sandbox Cell v0.1.0");
+            tsc_nui_pad(titlePad, titlePad);
+            tsc_nui_aligned(0.5, 0);
+
             tsc_nui_render();
             tsc_nui_popFrame();
         }
@@ -919,7 +926,7 @@ int main(int argc, char **argv) {
             }
         }
         if(tsc_streql(tsc_currentMenu, "nui")) {
-            tsc_nui_pushFrame(testFrame);
+            tsc_nui_bringBackFrame(testFrame);
             tsc_nui_update();
             tsc_nui_popFrame();
         }

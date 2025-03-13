@@ -64,6 +64,9 @@ typedef struct tsc_nui_theme {
 #define TSC_NUI_COLUMN 3
 #define TSC_NUI_TRANSLATE 4
 #define TSC_NUI_BUTTON 5
+#define TSC_NUI_ALIGN 6
+#define TSC_NUI_SIZED 7
+#define TSC_NUI_PAD 8
 
 typedef struct tsc_nui_element {
     char kind;
@@ -79,6 +82,18 @@ typedef struct tsc_nui_element {
             float x;
             float y;
         } translate;
+        struct {
+            float x;
+            float y;
+        } alignment;
+        struct {
+            float x;
+            float y;
+        } size;
+        struct {
+            float x;
+            float y;
+        } pad;
     };
 } tsc_nui_element;
 
@@ -119,6 +134,7 @@ void tsc_nui_setCursorSize(unsigned int size);
 unsigned int tsc_nui_getCursorSize();
 
 void tsc_nui_pushFrame(tsc_nui_frame *frame);
+void tsc_nui_bringBackFrame(tsc_nui_frame *frame);
 tsc_nui_frame *tsc_nui_popFrame();
 
 void tsc_nui_beginStack();
@@ -133,6 +149,9 @@ void tsc_nui_endColumn();
 void tsc_nui_text(const char *text);
 
 void tsc_nui_translate(float x, float y);
+void tsc_nui_aligned(float x, float y);
+void tsc_nui_sized(float w, float h);
+void tsc_nui_pad(float x, float y);
 // returns true if hovered
 bool tsc_nui_button(tsc_nui_buttonState *button);
 

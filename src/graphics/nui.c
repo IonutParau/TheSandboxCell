@@ -18,6 +18,12 @@ tsc_nui_buttonState *tsc_nui_newButton() {
 
 bool tsc_nui_checkButton(tsc_nui_buttonState *button, int action) {
     if(action == TSC_NUI_BUTTON_HOVER) return button->hovered;
+    if(action == TSC_NUI_BUTTON_CLICK) return button->clicked && !button->rightClick;
+    if(action == TSC_NUI_BUTTON_RIGHTCLICK) return button->clicked && button->rightClick;
+    if(action == TSC_NUI_BUTTON_PRESS) return button->clicked && button->pressTime < button->longPressTime && !button->rightClick;
+    if(action == TSC_NUI_BUTTON_LONGPRESS) return button->clicked && button->pressTime >= button->longPressTime && !button->rightClick;
+    if(action == TSC_NUI_BUTTON_RIGHTPRESS) return button->clicked && button->pressTime < button->longPressTime && button->rightClick;
+    if(action == TSC_NUI_BUTTON_RIGHTLONGPRESS) return button->clicked && button->pressTime >= button->longPressTime && button->rightClick;
     return false;
 }
 
@@ -122,6 +128,10 @@ void tsc_nui_pushFrame(tsc_nui_frame *frame) {
     frame->len = 0;
 }
 
+void tsc_nui_bringBackFrame(tsc_nui_frame *frame) {
+    tsc_nui_frames[tsc_nui_frameLen++] = frame;
+}
+
 tsc_nui_frame *tsc_nui_popFrame() {
     return tsc_nui_frames[--tsc_nui_frameLen];
 }
@@ -181,6 +191,33 @@ bool tsc_nui_button(tsc_nui_buttonState *button) {
     element->button = button;
     tsc_nui_pushElement(element);
     return tsc_nui_checkButton(button, TSC_NUI_BUTTON_HOVER);
+}
+
+void tsc_nui_aligned(float x, float y) {
+    tsc_nui_element *child = tsc_nui_popElement();
+    tsc_nui_element *element = tsc_nui_newElement(TSC_NUI_ALIGN);
+    element->child = child;
+    element->alignment.x = x;
+    element->alignment.y = y;
+    tsc_nui_pushElement(element);
+}
+
+void tsc_nui_sized(float w, float h) {
+    tsc_nui_element *child = tsc_nui_popElement();
+    tsc_nui_element *element = tsc_nui_newElement(TSC_NUI_SIZED);
+    element->child = child;
+    element->size.x = w;
+    element->size.y = h;
+    tsc_nui_pushElement(element);
+}
+
+void tsc_nui_pad(float x, float y) {
+    tsc_nui_element *child = tsc_nui_popElement();
+    tsc_nui_element *element = tsc_nui_newElement(TSC_NUI_PAD);
+    element->child = child;
+    element->pad.x = x;
+    element->pad.y = y;
+    tsc_nui_pushElement(element);
 }
 
 static tsc_nui_geometry tsc_nui_rootGeometry() {
@@ -263,8 +300,26 @@ tsc_nui_geometry tsc_nui_position(tsc_nui_element *element, tsc_nui_geometry par
         return tsc_nui_frameGeometry(element->children, parent, false, true);
     } else if(element->kind == TSC_NUI_BUTTON) {
         return tsc_nui_position(element->child, parent);
+    } else if(element->kind == TSC_NUI_SIZED) {
+        geometry.w = element->size.x;
+        geometry.h = element->size.y;
+    } else if(element->kind == TSC_NUI_PAD) {
+        geometry = tsc_nui_position(element->child, parent);
+        geometry.x += element->pad.x;
+        geometry.y += element->pad.y;
+        geometry.w += element->pad.x * 2;
+        geometry.h += element->pad.y * 2;
     }
     return geometry;
+}
+        
+static tsc_nui_geometry tsc_nui_alignedPosition(tsc_nui_geometry parent, tsc_nui_geometry child, float x, float y) {
+    float offX = parent.w * x - child.w * x;
+    float offY = parent.h * y - child.h * y;
+
+    child.x += offX;
+    child.y += offY;
+    return child;
 }
 
 void tsc_nui_renderElement(tsc_nui_element *element, tsc_nui_geometry parent) {
@@ -285,6 +340,24 @@ start:;
     } else if(element->kind == TSC_NUI_BUTTON) {
         element = element->child;
         goto start;
+    } else if(element->kind == TSC_NUI_SIZED) {
+        parent = tsc_nui_position(element, parent);
+        element = element->child;
+        goto start;
+    } else if(element->kind == TSC_NUI_ALIGN) {
+        float x = element->alignment.x;
+        float y = element->alignment.y;
+        element = element->child;
+        tsc_nui_geometry older = parent;
+        parent = tsc_nui_position(element, parent);
+        parent = tsc_nui_alignedPosition(older, parent, x, y);
+        goto start;
+    } else if(element->kind == TSC_NUI_PAD) {
+        parent = tsc_nui_position(element, parent);
+        element = element->child;
+        goto start;
+    } else if(element->kind == TSC_NUI_COLUMN) {
+        tsc_nui_drawFrame(element->children, parent, false, true);
     }
 }
 
@@ -304,9 +377,26 @@ start:;
         if(mx >= geo.x && mx <= geo.x + geo.w && my >= geo.y && my <= geo.y + geo.h) state->hovered = true;
         else state->hovered = false;
 
-        printf("Hovered %s\n", state->hovered ? "true" : "false");
+        if(state->hovered) {
+            if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                state->clicked = true;
+                state->rightClick = false;
+            } else if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+                state->clicked = true;
+                state->rightClick = true;
+            } else state->clicked = false;
+        } else state->clicked = false;
+        if(state->clicked) {
+            if(!state->wasClicked) state->pressTime = 0;
+            state->pressTime += GetFrameTime();
+        }
+
+        state->wasClicked = state->clicked;
+
         element = element->child;
         goto start;
+    } else if(element->kind == TSC_NUI_COLUMN) {
+        tsc_nui_updateFrame(element->children, parent, false, true);
     }
 }
 
