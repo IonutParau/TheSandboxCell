@@ -205,7 +205,7 @@ static void tsc_drawCell(tsc_cell *cell, int x, int y, double opacity, int gridR
     if(cell->id == builtin.empty) return;
     tsc_id_t idToRender = cell->id;
 #else
-    if(cell->id == builtin.empty && cell->texture != TSC_NULL_TEXTURE) return;
+    if(cell->id == builtin.empty && cell->texture == TSC_NULL_TEXTURE) return;
     tsc_id_t idToRender = cell->texture == TSC_NULL_TEXTURE ? cell->id : cell->texture;
 #endif
     Texture texture = textures_get(tsc_idToString(idToRender));
