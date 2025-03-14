@@ -558,7 +558,7 @@ int main(int argc, char **argv) {
             float offset = 40;
             float texturePackTitleSize = 100;
             float texturePackAuthorSize = 30;
-            const char *defaultTexturePackName = "Unnamed";
+            const char *defaultTexturePackName = "(Bugged)";
             const char *defaultTexturePackAuthor = "Unknown";
 
             float curY = 90;
