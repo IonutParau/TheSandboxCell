@@ -40,9 +40,6 @@ static void tsc_initPartOfGrid(tsc_grid_init_task_t *task) {
 }
 
 tsc_grid *tsc_createGrid(const char *id, int width, int height, const char *title, const char *description) {
-    assert(width > 0);
-    assert(height > 0);
-
     if(gridStorage == NULL) {
         gridStorage = malloc(sizeof(tsc_gridStorage));
         gridStorage->grid = NULL;

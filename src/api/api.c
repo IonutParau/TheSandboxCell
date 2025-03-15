@@ -288,6 +288,7 @@ void tsc_closeCategory(tsc_category *category) {
     }
 }
 
+
 static void tsc_loadButton(void *_) {
     if(isGameTicking) return;
     const char *clipboard = GetClipboardText();
@@ -298,6 +299,37 @@ static void tsc_loadButton(void *_) {
         isInitial = true;
         tickCount = 0;
     }
+}
+
+static void tsc_pasteClipboardButton(void *_) {
+    const char *clipboard = GetClipboardText();
+    if(clipboard == NULL || strlen(clipboard) == 0) {
+        tsc_sound_play(builtin.audio.explosion);
+    } else {
+        tsc_grid *grid = tsc_createGrid("clipboard-tmp", 0, 0, NULL, NULL);
+        tsc_saving_decodeWithAny(clipboard, grid);
+        size_t area = grid->width * grid->height;
+        if(area == 0) {
+            tsc_sound_play(builtin.audio.explosion);
+            tsc_deleteGrid(grid);
+            return;
+        }
+        tsc_cell *c = malloc(sizeof(tsc_cell) * area);
+        if(c == NULL) {
+            tsc_sound_play(builtin.audio.explosion);
+            tsc_deleteGrid(grid);
+            return;
+        }
+        for(size_t i = 0; i < area; i++) {
+            c[i] = tsc_cell_clone(grid->cells + i);
+        }
+        tsc_renderingGridClipboard.width = grid->width;
+        tsc_renderingGridClipboard.height = grid->height;
+        tsc_renderingGridClipboard.cells = c;
+        tsc_pasteGridClipboard();
+        tsc_deleteGrid(grid);
+    }
+
 }
 
 static void tsc_saveButton(void *_) {
@@ -316,7 +348,7 @@ static void tsc_saveV3Button(void *_) {
     tsc_buffer buffer = tsc_saving_newBuffer("");
     int success = tsc_saving_encodeWith(&buffer, currentGrid, "V3");
     if(success) {
-    SetClipboardText(buffer.mem);
+        SetClipboardText(buffer.mem);
     } else {
         tsc_sound_play(builtin.audio.explosion);
     }
@@ -326,6 +358,7 @@ static void tsc_saveV3Button(void *_) {
 static void tsc_restoreInitial(void *_) {
     if(isGameTicking) return;
     if(isInitial) return;
+    if(initialCode == NULL) return;
     tsc_saving_decodeWithAny((const char *)initialCode, currentGrid);
     isInitial = true;
     tickCount = 0;
@@ -334,7 +367,6 @@ static void tsc_restoreInitial(void *_) {
 
 static void tsc_setInitial(void *_) {
     if(isGameTicking) return;
-    tsc_copyGrid(tsc_getGrid("initial"), currentGrid);
     isInitial = true;
     tickCount = 0;
     free((void *)initialCode);
@@ -356,6 +388,7 @@ void tsc_loadDefaultCellBar() {
     tsc_addButton(tools, "setinitial", "Set Initial", "Set the current grid state as the initial one", tsc_setInitial, NULL);
     tsc_addButton(tools, "restoreinitial", "Restore Initial", "Restore the initial grid state", tsc_restoreInitial, NULL);
     tsc_addButton(tools, "paste", "Paste", "Paste the copied selection (drag with Middle Click to select)", tsc_pasteButton, NULL);
+    tsc_addButton(tools, "paste_clipboard", "Paste from Clipboard", "Paste the copied selection (drag with Middle Click to select)", tsc_pasteClipboardButton, NULL);
 
     tsc_addCategory(root, tools);
     tsc_category *movers = tsc_newCellGroup("Movers", "Cells that move by themselves and may also move other cells", tsc_idToString(builtin.mover));

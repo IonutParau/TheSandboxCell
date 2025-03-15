@@ -43,21 +43,19 @@ typedef struct selection_btn_t {
     ui_button *copy;
     ui_button *cut;
     ui_button *del;
+    ui_button *fill;
+    ui_button *flip_h;
+    ui_button *flip_v;
 } selection_btn_t;
 
-typedef struct gridclip_t {
-    tsc_cell *cells;
-    int width;
-    int height;
-} gridclip_t;
+gridclip_t tsc_renderingGridClipboard;
 
-static gridclip_t renderingGridClipboard;
 static selection_t renderingSelection;
 static selection_btn_t renderingSelectionButtons;
 static bool renderingIsSelecting = false;
 static bool renderingIsDragging = false;
-static bool renderingIsPasting = false;
 static bool renderingBlockPlacing = false;
+bool tsc_renderingIsPasting = false;
 static bool tsc_isResizingGrid = false;
 static char tsc_sideResized = 4;
 static int tsc_sideExtension = 0;
@@ -100,14 +98,14 @@ static tsc_categorybutton *tsc_createCellButtons(tsc_category *category) {
 }
 
 static void tsc_clearGridClipboard() {
-    int l = renderingGridClipboard.width * renderingGridClipboard.height;
+    int l = tsc_renderingGridClipboard.width * tsc_renderingGridClipboard.height;
     for(int i = 0; i < l; i++) {
-        tsc_cell_destroy(renderingGridClipboard.cells[i]);
+        tsc_cell_destroy(tsc_renderingGridClipboard.cells[i]);
     }
-    free(renderingGridClipboard.cells);
-    renderingGridClipboard.cells = NULL;
-    renderingGridClipboard.width = 0;
-    renderingGridClipboard.height = 0;
+    free(tsc_renderingGridClipboard.cells);
+    tsc_renderingGridClipboard.cells = NULL;
+    tsc_renderingGridClipboard.width = 0;
+    tsc_renderingGridClipboard.height = 0;
 }
 
 static void tsc_centerCamera() {
@@ -135,7 +133,7 @@ void tsc_resetRendering() {
     renderingCellBrushSize = 0;
     renderingCellBrushId = NULL;
     renderingIsSelecting = false;
-    renderingIsPasting = false;
+    tsc_renderingIsPasting = false;
     tsc_isResizingGrid = false;
     tsc_sideResized = 4;
     tsc_sideExtension = 0;
@@ -158,9 +156,12 @@ void tsc_setupRendering() {
     renderingSelectionButtons.copy = tsc_ui_newButtonState();
     renderingSelectionButtons.cut = tsc_ui_newButtonState();
     renderingSelectionButtons.del = tsc_ui_newButtonState();
-    renderingGridClipboard.cells = NULL;
-    renderingGridClipboard.width = 0;
-    renderingGridClipboard.height = 0;
+    renderingSelectionButtons.fill = tsc_ui_newButtonState();
+    renderingSelectionButtons.flip_h = tsc_ui_newButtonState();
+    renderingSelectionButtons.flip_v = tsc_ui_newButtonState();
+    tsc_renderingGridClipboard.cells = NULL;
+    tsc_renderingGridClipboard.width = 0;
+    tsc_renderingGridClipboard.height = 0;
 
     // Why is this in setupRendering?
     // I have no idea
@@ -643,17 +644,17 @@ void tsc_drawGrid() {
         DrawRectangle(selx, sely, selw, selh, GetColor(0x00000066));
         float sizeHeight = (float)GetScreenHeight()/40;
         DrawText(TextFormat("%d x %d\n", width, height), selx, sely - sizeHeight, sizeHeight, WHITE);
-    } else if(renderingIsPasting) {
+    } else if(tsc_renderingIsPasting) {
         int mx = tsc_cellMouseX();
         int my = tsc_cellMouseY();
-        for(int x = 0; x < renderingGridClipboard.width; x++) {
-            for(int y = 0; y < renderingGridClipboard.height; y++) {
-                int i = y * renderingGridClipboard.width + x;
-                tsc_drawCell(&renderingGridClipboard.cells[i], mx + x, my + y, 0.5, 1, false);
+        for(int x = 0; x < tsc_renderingGridClipboard.width; x++) {
+            for(int y = 0; y < tsc_renderingGridClipboard.height; y++) {
+                int i = y * tsc_renderingGridClipboard.width + x;
+                tsc_drawCell(&tsc_renderingGridClipboard.cells[i], mx + x, my + y, 0.5, 1, false);
             }
         }
     }
-    if((!renderingIsSelecting || tsc_guidelineMode != 0) && !renderingIsPasting && !tsc_isResizingGrid) {
+    if((!renderingIsSelecting || tsc_guidelineMode != 0) && !tsc_renderingIsPasting && !tsc_isResizingGrid) {
         int cmx = tsc_cellMouseX();
         int cmy = tsc_cellMouseY();
         cmx = cmx - brushSize;
@@ -749,6 +750,15 @@ void tsc_drawGrid() {
             tsc_ui_pad(selbtnpad, selbtnpad);
             tsc_ui_image(builtin.textures.del, selbtnsize, selbtnsize);
             tsc_ui_button(renderingSelectionButtons.del);
+            tsc_ui_pad(selbtnpad, selbtnpad);
+            tsc_ui_image(builtin.textures.fill, selbtnsize, selbtnsize);
+            tsc_ui_button(renderingSelectionButtons.fill);
+            tsc_ui_pad(selbtnpad, selbtnpad);
+            tsc_ui_image(builtin.textures.flip_h, selbtnsize, selbtnsize);
+            tsc_ui_button(renderingSelectionButtons.flip_h);
+            tsc_ui_pad(selbtnpad, selbtnpad);
+            tsc_ui_image(builtin.textures.flip_v, selbtnsize, selbtnsize);
+            tsc_ui_button(renderingSelectionButtons.flip_v);
             tsc_ui_pad(selbtnpad, selbtnpad);
         });
         tsc_ui_translate(selx, sely + selh + (selrowpad < selbtnsize ? selrowpad : selbtnsize));
@@ -863,16 +873,16 @@ static void tsc_copySelection() {
     selection_t fixed = tsc_fixSelection(renderingSelection);
     int width = fixed.ex - fixed.sx + 1;
     int height = fixed.ey - fixed.sy + 1;
-    renderingGridClipboard.width = width;
-    renderingGridClipboard.height = height;
-    renderingGridClipboard.cells = malloc(sizeof(tsc_cell) * width * height);
+    tsc_renderingGridClipboard.width = width;
+    tsc_renderingGridClipboard.height = height;
+    tsc_renderingGridClipboard.cells = malloc(sizeof(tsc_cell) * width * height);
     for(int x = 0; x < width; x++) {
         for(int y = 0; y < height; y++) {
             int i = y * width + x;
-            renderingGridClipboard.cells[i] = tsc_cell_clone(tsc_grid_get(currentGrid, fixed.sx + x, fixed.sy + y));
+            tsc_renderingGridClipboard.cells[i] = tsc_cell_clone(tsc_grid_get(currentGrid, fixed.sx + x, fixed.sy + y));
         }
     }
-    renderingIsPasting = true;
+    tsc_renderingIsPasting = true;
 }
 
 static void tsc_cutSelection() {
@@ -881,18 +891,18 @@ static void tsc_cutSelection() {
     selection_t fixed = tsc_fixSelection(renderingSelection);
     int width = fixed.ex - fixed.sx + 1;
     int height = fixed.ey - fixed.sy + 1;
-    renderingGridClipboard.width = width;
-    renderingGridClipboard.height = height;
-    renderingGridClipboard.cells = malloc(sizeof(tsc_cell) * width * height);
+    tsc_renderingGridClipboard.width = width;
+    tsc_renderingGridClipboard.height = height;
+    tsc_renderingGridClipboard.cells = malloc(sizeof(tsc_cell) * width * height);
     for(int x = 0; x < width; x++) {
         for(int y = 0; y < height; y++) {
             int i = y * width + x;
-            renderingGridClipboard.cells[i] = tsc_cell_clone(tsc_grid_get(currentGrid, fixed.sx + x, fixed.sy + y));
+            tsc_renderingGridClipboard.cells[i] = tsc_cell_clone(tsc_grid_get(currentGrid, fixed.sx + x, fixed.sy + y));
             tsc_cell empty = tsc_cell_create(builtin.empty, 0);
             tsc_grid_set(currentGrid, fixed.sx + x, fixed.sy + y, &empty);
         }
     }
-    renderingIsPasting = true;
+    tsc_renderingIsPasting = true;
 }
 
 static void tsc_deleteSelection() {
@@ -951,11 +961,41 @@ static void tsc_moveStuffInSelection(int x, int y) {
     free(tmpBuffer);
 }
 
+static void tsc_fillSelection() {
+    selection_t fixed = tsc_fixSelection(renderingSelection);
+    tsc_cell c = tsc_cell_create(tsc_findID(currentId), currentRot);
+    for(int x = fixed.sx; x <= fixed.ex; x++) {
+        for(int y = fixed.sy; y <= fixed.ey; y++) {
+            tsc_cell *o = tsc_grid_get(currentGrid, x, y);
+            if(o == NULL) continue;
+            if(o->id != builtin.empty) continue;
+            tsc_grid_set(currentGrid, x, y, &c);
+        }
+    }
+}
+
+static void tsc_flipSelection(bool vertical) {
+    selection_t fixed = tsc_fixSelection(renderingSelection);
+    int width = fixed.ex - fixed.sx + 1;
+    int height = fixed.ey - fixed.sy + 1;
+    for(int x = 0; x < (vertical ? width : width/2); x++) {
+        for(int y = 0; y < (vertical ? height/2 : height); y++) {
+            int nx = fixed.sx + x;
+            int ny = fixed.sy + y;
+            int fx = fixed.ex - x;
+            int fy = fixed.ey - y;
+            tsc_cell *a = tsc_grid_get(currentGrid, nx, ny);
+            tsc_cell *b = tsc_grid_get(currentGrid, vertical ? nx : fx, vertical ? fy : ny);
+            tsc_cell_swap(a, b);
+        }
+    }
+}
+
 void tsc_pasteGridClipboard() {
-    if(renderingGridClipboard.width == 0) return;
+    if(tsc_renderingGridClipboard.width == 0) return;
     renderingIsSelecting = false;
     renderingIsDragging = false;
-    renderingIsPasting = true;
+    tsc_renderingIsPasting = true;
 }
 
 
@@ -1008,7 +1048,7 @@ void tsc_handleRenderInputs() {
         }
         if(IsKeyPressed(KEY_V) && renderingIsSelecting) {
             renderingIsSelecting = false;
-            renderingIsPasting = true;
+            tsc_renderingIsPasting = true;
         }
         if(renderingIsSelecting) {
             if(IsKeyPressed(KEY_LEFT_SHIFT)) {
@@ -1074,8 +1114,8 @@ void tsc_handleRenderInputs() {
     }
    
     if(IsKeyPressed(KEY_ESCAPE)) {
-        if(renderingIsPasting) {
-            renderingIsPasting = false;
+        if(tsc_renderingIsPasting) {
+            tsc_renderingIsPasting = false;
         } else if(renderingIsSelecting && !renderingIsDragging) {
             renderingIsSelecting = false;
             renderingIsDragging = false;
@@ -1087,50 +1127,50 @@ void tsc_handleRenderInputs() {
     }
 
     if(IsKeyPressed(KEY_Q)) {
-        if(renderingIsPasting) {
-            int width = renderingGridClipboard.width;
-            int height = renderingGridClipboard.height;
+        if(tsc_renderingIsPasting) {
+            int width = tsc_renderingGridClipboard.width;
+            int height = tsc_renderingGridClipboard.height;
             tsc_cell *copy = malloc(sizeof(tsc_cell) * width * height);
 
             for(int x = 0; x < width; x++) {
                 for(int y = 0; y < height; y++) {
                     int o = x * height + y;
                     int i = y * width + (width - x - 1);
-                    copy[o] = renderingGridClipboard.cells[i];
+                    copy[o] = tsc_renderingGridClipboard.cells[i];
                     tsc_cell_rotate(copy + o, 3);
                 }
             }
 
-            free(renderingGridClipboard.cells);
-            renderingGridClipboard.cells = copy;
+            free(tsc_renderingGridClipboard.cells);
+            tsc_renderingGridClipboard.cells = copy;
 
-            renderingGridClipboard.width = height;
-            renderingGridClipboard.height = width;
+            tsc_renderingGridClipboard.width = height;
+            tsc_renderingGridClipboard.height = width;
         } else {
             currentRot--;
             while(currentRot < 0) currentRot += 4;
         }
     }
     if(IsKeyPressed(KEY_E)) {
-        if(renderingIsPasting) {
-            int width = renderingGridClipboard.width;
-            int height = renderingGridClipboard.height;
+        if(tsc_renderingIsPasting) {
+            int width = tsc_renderingGridClipboard.width;
+            int height = tsc_renderingGridClipboard.height;
             tsc_cell *copy = malloc(sizeof(tsc_cell) * width * height);
 
             for(int x = 0; x < width; x++) {
                 for(int y = 0; y < height; y++) {
                     int o = x * height + y;
                     int i = (height - y - 1) * width + x;
-                    copy[o] = renderingGridClipboard.cells[i];
+                    copy[o] = tsc_renderingGridClipboard.cells[i];
                     tsc_cell_rotate(copy + o, 1);
                 }
             }
 
-            free(renderingGridClipboard.cells);
-            renderingGridClipboard.cells = copy;
+            free(tsc_renderingGridClipboard.cells);
+            tsc_renderingGridClipboard.cells = copy;
 
-            renderingGridClipboard.width = height;
-            renderingGridClipboard.height = width;
+            tsc_renderingGridClipboard.width = height;
+            tsc_renderingGridClipboard.height = width;
         } else {
             currentRot++;
             currentRot %= 4;
@@ -1165,7 +1205,7 @@ void tsc_handleRenderInputs() {
 
 #undef CELL_KEY
 
-    if(IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE) && !renderingIsPasting) {
+    if(IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE) && !tsc_renderingIsPasting) {
         renderingIsSelecting = true;
         renderingIsDragging = true;
         long mx = tsc_cellMouseX();
@@ -1191,10 +1231,10 @@ void tsc_handleRenderInputs() {
         renderingSelection = tsc_fixSelection(renderingSelection);
     }
 
-    if(!absorbed && ((!renderingIsSelecting && !renderingIsPasting) || tsc_guidelineMode != 0) && !renderingBlockPlacing && !tsc_isResizingGrid)
+    if(!absorbed && ((!renderingIsSelecting && !tsc_renderingIsPasting) || tsc_guidelineMode != 0) && !renderingBlockPlacing && !tsc_isResizingGrid)
         tsc_handleCellPlace();
 
-    if(!renderingIsSelecting && !renderingIsPasting) {
+    if(!renderingIsSelecting && !tsc_renderingIsPasting) {
         if(IsKeyPressed(KEY_LEFT_ALT)) {
             tsc_isResizingGrid = !tsc_isResizingGrid;
             if(tsc_isResizingGrid) {
@@ -1208,20 +1248,20 @@ void tsc_handleRenderInputs() {
         renderingBlockPlacing = false;
     }
 
-    if(renderingIsPasting && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        renderingIsPasting = false;
+    if(tsc_renderingIsPasting && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        tsc_renderingIsPasting = false;
         renderingBlockPlacing = true;
         int mx = tsc_cellMouseX();
         int my = tsc_cellMouseY();
-        for(int x = 0; x < renderingGridClipboard.width; x++) {
-            for(int y = 0; y < renderingGridClipboard.height; y++) {
-                int i = y * renderingGridClipboard.width + x;
-                if(renderingGridClipboard.cells[i].id == builtin.empty) continue;
+        for(int x = 0; x < tsc_renderingGridClipboard.width; x++) {
+            for(int y = 0; y < tsc_renderingGridClipboard.height; y++) {
+                int i = y * tsc_renderingGridClipboard.width + x;
+                if(tsc_renderingGridClipboard.cells[i].id == builtin.empty) continue;
 #ifndef TSC_TURBO
-                renderingGridClipboard.cells[i].lx = mx + x;
-                renderingGridClipboard.cells[i].ly = my + y;
+                tsc_renderingGridClipboard.cells[i].lx = mx + x;
+                tsc_renderingGridClipboard.cells[i].ly = my + y;
 #endif
-                tsc_grid_set(currentGrid, mx + x, my + y, &renderingGridClipboard.cells[i]);
+                tsc_grid_set(currentGrid, mx + x, my + y, &tsc_renderingGridClipboard.cells[i]);
             }
         }
     }
@@ -1249,16 +1289,36 @@ void tsc_handleRenderInputs() {
         tsc_clearGridClipboard();
         tsc_deleteSelection();
     }
+    if(tsc_ui_checkbutton(renderingSelectionButtons.copy) == UI_BUTTON_PRESS) {
+        printf("Copied selection\n");
+        tsc_ui_clearButtonState(renderingSelectionButtons.copy);
+        tsc_copySelection();
+    }
+    if(tsc_ui_checkbutton(renderingSelectionButtons.fill) == UI_BUTTON_PRESS) {
+        printf("Filled selection\n");
+        tsc_ui_clearButtonState(renderingSelectionButtons.fill);
+        tsc_fillSelection();
+    }
+    if(tsc_ui_checkbutton(renderingSelectionButtons.flip_h) == UI_BUTTON_PRESS) {
+        printf("Flipped selection horizontally\n");
+        tsc_ui_clearButtonState(renderingSelectionButtons.flip_h);
+        tsc_flipSelection(false);
+    }
+    if(tsc_ui_checkbutton(renderingSelectionButtons.flip_v) == UI_BUTTON_PRESS) {
+        printf("Flipped selection vertically\n");
+        tsc_ui_clearButtonState(renderingSelectionButtons.flip_v);
+        tsc_flipSelection(true);
+    }
     if(IsKeyPressed(KEY_BACKSPACE) && IsKeyDown(KEY_LEFT_CONTROL)) {
         if(renderingIsSelecting) tsc_deleteSelection();
     }
 
-    if(renderingGridClipboard.width != 0 && IsKeyPressed(KEY_V) && IsKeyDown(KEY_LEFT_CONTROL)) {
-        renderingIsPasting = true;
+    if(tsc_renderingGridClipboard.width != 0 && IsKeyPressed(KEY_V) && IsKeyDown(KEY_LEFT_CONTROL)) {
+        tsc_renderingIsPasting = true;
     }
 
-    if(renderingIsPasting && IsKeyPressed(KEY_ESCAPE)) {
-        renderingIsPasting = false;
+    if(tsc_renderingIsPasting && IsKeyPressed(KEY_ESCAPE)) {
+        tsc_renderingIsPasting = false;
     }
 
     float mouseWheel = GetMouseWheelMove();
@@ -1280,7 +1340,7 @@ void tsc_handleRenderInputs() {
         tsc_setZoomLevel(32.0 * (pow(2, tsc_zoomScrollTotal / 1.5)));
     }
 
-    if(IsKeyPressed(KEY_SPACE) && !renderingIsPasting && !renderingIsSelecting && !renderingIsDragging && !tsc_isResizingGrid) {
+    if(IsKeyPressed(KEY_SPACE) && !tsc_renderingIsPasting && !renderingIsSelecting && !renderingIsDragging && !tsc_isResizingGrid) {
         isGamePaused = !isGamePaused;
     }
 

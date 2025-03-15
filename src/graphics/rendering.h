@@ -7,6 +7,15 @@
 extern const char *currentId;
 extern char currentRot;
 
+typedef struct gridclip_t {
+    tsc_cell *cells;
+    int width;
+    int height;
+} gridclip_t;
+
+extern gridclip_t tsc_renderingGridClipboard;
+extern bool tsc_renderingIsPasting;
+
 typedef union tsc_categorybutton {
     ui_button *cell;
     ui_button *button;

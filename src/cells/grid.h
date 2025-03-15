@@ -69,6 +69,9 @@ typedef struct tsc_texture_id_pool_t {
     const char *del;
     const char *setinitial;
     const char *restoreinitial;
+    const char *fill;
+    const char *flip_h;
+    const char *flip_v;
 } tsc_texture_id_pool_t;
 
 typedef struct tsc_audio_id_pool_t {

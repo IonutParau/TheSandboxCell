@@ -48,6 +48,9 @@ void tsc_init_builtin_ids() {
     builtin.textures.del = tsc_strintern("delete");
     builtin.textures.setinitial = tsc_strintern("setinitial");
     builtin.textures.restoreinitial = tsc_strintern("restoreinitial");
+    builtin.textures.fill = tsc_strintern("fill");
+    builtin.textures.flip_h = tsc_strintern("horizontal_flip");
+    builtin.textures.flip_v = tsc_strintern("vertical_flip");
 
     builtin.audio.destroy = tsc_strintern("destroy");
     builtin.audio.explosion = tsc_strintern("explosion");
