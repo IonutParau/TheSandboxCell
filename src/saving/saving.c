@@ -410,9 +410,7 @@ static void tsc_v3_remember(tsc_v3_lookback_cache *cache, int start) {
 
 static tsc_v3_lookback tsc_v3_findLookback(tsc_v3_lookback_cache *cache, char *cells, int cell_len, int current, int maxWork, int *deadspace) {
     tsc_v3_lookback lookback = {.lookback = -1, .len = 0};
-    bool cached = true;
-
-    if(cached) {
+    if(cache != NULL) {
         tsc_v3_lookback_cache *currentCache = cache;
         int lookedLen = 0;
 
@@ -520,7 +518,7 @@ static int tsc_v3_encode(tsc_buffer *buffer, tsc_grid *grid) {
     free(ewidth);
     free(eheight);
 
-    tsc_v3_lookback_cache *cache = tsc_v3_newCache();
+    tsc_v3_lookback_cache *cache = tsc_toBoolean(tsc_getSetting(builtin.settings.v3cache)) ? tsc_v3_newCache() : NULL;
 
     char *cells = malloc(sizeof(char) * grid->width * grid->height);
     int *deadspace = malloc(sizeof(int) * grid->width * grid->height);
@@ -558,7 +556,7 @@ static int tsc_v3_encode(tsc_buffer *buffer, tsc_grid *grid) {
         if(look.lookback == -1) {
             tsc_saving_write(buffer, cells[i]);
         } else {
-            tsc_v3_cacheLookback(cache, cells, i, look.len, deadspace);
+            if(cache != NULL) tsc_v3_cacheLookback(cache, cells, i, look.len, deadspace);
             tsc_v3_writeRepeater(buffer, look.len, look.lookback);
             i += look.len - 1;
         }

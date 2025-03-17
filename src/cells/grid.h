@@ -97,6 +97,7 @@ typedef struct tsc_setting_id_pool_t {
     const char *v3speed;
     const char *fancyRendering;
     const char *debugMode;
+    const char *v3cache;
 } tsc_setting_id_pool_t;
 
 typedef struct tsc_id_pool_t {
