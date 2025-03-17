@@ -377,7 +377,142 @@ static int tsc_v3_weightOfRepeat(int length, int back) {
     return 1 + tsc_saving_count74(back) + tsc_saving_count74(length);
 }
 
+typedef struct tsc_v3_lookback_cache {
+    int *history;
+    size_t historyLength;
+    size_t historyCapacity;
+    struct tsc_v3_lookback_cache *branches[256];
+} tsc_v3_lookback_cache;
+
+typedef struct tsc_v3_lookback {
+    int lookback;
+    int len;
+} tsc_v3_lookback;
+
+static tsc_v3_lookback_cache *tsc_v3_newCache() {
+    tsc_v3_lookback_cache *cache = tsc_talloc(sizeof(*cache));
+    // fuck your safety
+    memset(cache, 0, sizeof(*cache));
+    cache->historyCapacity = 16;
+    cache->history = tsc_talloc(sizeof(int) * cache->historyCapacity);
+    return cache;
+}
+
+static void tsc_v3_remember(tsc_v3_lookback_cache *cache, int start) {
+    if(cache->historyLength == cache->historyCapacity) {
+        cache->historyCapacity *= 2;
+        int *revisionist = tsc_talloc(sizeof(int) * cache->historyCapacity);
+        memcpy(revisionist, cache->history, sizeof(int) * cache->historyLength);
+        cache->history = revisionist;
+    }
+    cache->history[cache->historyLength++] = start;
+}
+
+static tsc_v3_lookback tsc_v3_findLookback(tsc_v3_lookback_cache *cache, char *cells, int cell_len, int current, int maxWork, int *deadspace) {
+    tsc_v3_lookback lookback = {.lookback = -1, .len = 0};
+    bool cached = true;
+
+    if(cached) {
+        tsc_v3_lookback_cache *currentCache = cache;
+        int lookedLen = 0;
+
+        while(true) {
+            tsc_v3_lookback_cache *nextCache = currentCache->branches[cells[current+lookedLen]];
+
+            // end of sequence
+            if(nextCache == NULL) {
+                int *history = currentCache->history;
+                int historyc = currentCache->historyLength;
+                //if(historyc > 0) printf("Found loopback in cache %lf\n", tsc_clock());
+
+                // using most recent for compression
+                for(int j = historyc-1; j >= 0; j--) {
+                    int b = current-history[j];
+                    int len = lookedLen;
+                    while(current + len < cell_len) {
+                        if(cells[current+len] == cells[current-b+len]) {
+                            len++;
+                        } else {
+                            break;
+                        }
+                    }
+                    int weight = tsc_v3_weightOfRepeat(b, len);
+                    if(weight > len) continue;
+                    if(len > lookback.len) {
+                        lookback.len = len;
+                        lookback.lookback = b;
+                    }
+                }
+                break;
+            }
+
+            currentCache = nextCache;
+            lookedLen++;
+            if(current+lookedLen== cell_len) break;
+        }
+    }
+
+    if(lookback.lookback != -1) {
+        if(tsc_v3_weightOfRepeat(lookback.lookback, lookback.len) > lookback.len) {
+            // its just too bad
+            lookback.lookback = -1;
+            lookback.len = 0;
+            printf("WARNING: DISCARED A LOOKBACK %lf\n", tsc_clock());
+        } else {
+            //printf("Used loopback from cache %lf\n", tsc_clock());
+            return lookback;
+        }
+    }
+
+    //printf("slowass loopback %lf\n", tsc_clock());
+    for(int b = 1; b <= current && b <= maxWork; b++) {
+        if(deadspace[current-b] > 0) {
+            b += deadspace[current-b] - 1; // -1 cuz b++
+            continue;
+        }
+        if(cells[current] == cells[current-b]) {
+            int len = 1;
+            while(current + len < cell_len) {
+                if(cells[current+len] == cells[current-b+len]) {
+                    len++;
+                } else {
+                    break;
+                }
+            }
+            int weight = tsc_v3_weightOfRepeat(b, len);
+            if(weight > len) continue;
+            if(len > lookback.len) {
+                lookback.len = len;
+                lookback.lookback = b;
+            }
+        }
+    }
+
+    return lookback;
+}
+
+static void tsc_v3_cacheLookback(tsc_v3_lookback_cache *cache, char *cells, int current, int len, int *deadspace) {
+    //printf("Caching lookback %lf\n", tsc_clock());
+    int start = current;
+    int startLen = len;
+    while(len > 0) {
+        deadspace[current] = startLen - len + 1;
+        char byte = cells[current];
+        if(cache->branches[byte] == NULL) {
+            cache->branches[byte] = tsc_v3_newCache();
+        }
+        cache = cache->branches[byte];
+        current++;
+        len--;
+        if(len == 0) {
+            tsc_v3_remember(cache, start);
+        }
+    }
+    //printf("Finished caching lookback %lf\n", tsc_clock());
+}
+
 static int tsc_v3_encode(tsc_buffer *buffer, tsc_grid *grid) {
+    double time = tsc_clock();
     tsc_saving_writeStr(buffer, "V3;");
     char *ewidth = tsc_saving_encode74(grid->width);
     char *eheight = tsc_saving_encode74(grid->height);
@@ -385,7 +520,10 @@ static int tsc_v3_encode(tsc_buffer *buffer, tsc_grid *grid) {
     free(ewidth);
     free(eheight);
 
+    tsc_v3_lookback_cache *cache = tsc_v3_newCache();
+
     char *cells = malloc(sizeof(char) * grid->width * grid->height);
+    int *deadspace = malloc(sizeof(int) * grid->width * grid->height);
     int ci = 0;
     for(int y = grid->height-1; y >= 0; y--) {
         for(int x = 0; x < grid->width; x++) {
@@ -399,6 +537,7 @@ static int tsc_v3_encode(tsc_buffer *buffer, tsc_grid *grid) {
             }
 
             cells[ci] = encoded;
+            deadspace[ci] = 0;
             ci++;
         }
     }
@@ -413,40 +552,26 @@ static int tsc_v3_encode(tsc_buffer *buffer, tsc_grid *grid) {
     int maxWork = cell_len / (speed + 1);
 
     for(int i = 0; i < cell_len; i++) {
-        int bestback = -1;
-        int bestbacklen = 0;
-
-        for(int b = 1; b <= i && b <= maxWork; b++) {
-            if(cells[i] == cells[i-b]) {
-                int len = 1;
-                while(i + len < cell_len) {
-                    if(cells[i+len] == cells[i-b+len]) {
-                        len++;
-                    } else {
-                        break;
-                    }
-                }
-                int weight = tsc_v3_weightOfRepeat(b, len);
-                if(weight > len) continue;
-                if(len > bestbacklen) {
-                    bestbacklen = len;
-                    bestback = b;
-                }
-            }
-        }
+        tsc_v3_lookback look = tsc_v3_findLookback(cache, cells, cell_len, i, maxWork, deadspace);
 
         // Either no copy found or the copy would not save space
-        if(bestback == -1) {
+        if(look.lookback == -1) {
             tsc_saving_write(buffer, cells[i]);
         } else {
-            tsc_v3_writeRepeater(buffer, bestbacklen, bestback);
-            i += bestbacklen - 1;
+            tsc_v3_cacheLookback(cache, cells, i, look.len, deadspace);
+            tsc_v3_writeRepeater(buffer, look.len, look.lookback);
+            i += look.len - 1;
         }
     }
 
     tsc_saving_write(buffer, ';');
 
     tsc_saving_writeFormat(buffer, "%s;%s;", grid->title == NULL ? "" : grid->title, grid->desc == NULL ? "" : grid->desc);
+
+    double endTime = tsc_clock();
+
+    printf("V3 encoding took %.2f\n", endTime - time);
+    printf("Temporary Storage Used: %lu\n", tsc_aused(&tsc_tmp));
 
     return 1; // Yo it worked!
 }

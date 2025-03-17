@@ -425,18 +425,21 @@ void *tsc_aallocAligned(tsc_arena_t *arena, size_t size, size_t align) {
         // align must be power of 2
         ptrdiff_t off = -(size_t)(chunk->buffer + chunk->len) & (align - 1);
         size_t idx = chunk->len + off;
-        if(idx + size > chunk->capacity) {
+        if(idx + size >= chunk->capacity) {
             if(chunk->next == NULL) {
                 // try to add another chunk.
-                size_t needed = chunk->capacity;
+                size_t needed = chunk->capacity*2;
                 while(needed < size) {
                     needed *= 2;
                 }
                 tsc_arena_chunk_t *newChunk = tsc_aallocChunk(needed);
-                chunk->next = newChunk;
+                newChunk->next = arena->chunk;
+                arena->chunk = newChunk;
                 chunk = newChunk;
                 continue;
             }
+            chunk = chunk->next;
+            continue;
         }
         void *buffer = chunk->buffer + idx;
         chunk->len = idx + size;
