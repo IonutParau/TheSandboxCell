@@ -509,7 +509,7 @@ void tsc_loadSettings() {
   
     const char *v3level[2] = {"0123456789", "0"};
     builtin.settings.v3speed = tsc_addSetting("v3speed", "V3 Speed Level (decreases compression)", saving, TSC_SETTING_INPUT, v3level, tsc_settingHandler);
-    builtin.settings.v3cache = tsc_addSetting("v3cache", "V3 Use Cache", saving, TSC_SETTING_TOGGLE, "", tsc_settingHandler);
+    builtin.settings.v3cache = tsc_addSetting("v3cache", "V3 Use Cache", saving, TSC_SETTING_TOGGLE, NULL, tsc_settingHandler);
 
     if(isDefault) { // just a hack, mods can use tsc_hasSetting()
         tsc_setSetting(builtin.settings.updateDelay, tsc_number(tickDelay));

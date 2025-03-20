@@ -377,6 +377,12 @@ static int tsc_v3_weightOfRepeat(int length, int back) {
     return 1 + tsc_saving_count74(back) + tsc_saving_count74(length);
 }
 
+static int tsc_v3_savingsOfRepeat(int length, int back) {
+    if(back == -1) return 0;
+    int weight = tsc_v3_weightOfRepeat(length, back);
+    return length - weight;
+}
+
 typedef struct tsc_v3_lookback_cache {
     int *history;
     size_t historyLength;
@@ -434,9 +440,9 @@ static tsc_v3_lookback tsc_v3_findLookback(tsc_v3_lookback_cache *cache, char *c
                             break;
                         }
                     }
-                    int weight = tsc_v3_weightOfRepeat(b, len);
+                    int weight = tsc_v3_weightOfRepeat(len, b);
                     if(weight > len) continue;
-                    if(len > lookback.len) {
+                    if(tsc_v3_savingsOfRepeat(len, b) > tsc_v3_savingsOfRepeat(lookback.len, lookback.lookback)) {
                         lookback.len = len;
                         lookback.lookback = b;
                     }
@@ -451,7 +457,7 @@ static tsc_v3_lookback tsc_v3_findLookback(tsc_v3_lookback_cache *cache, char *c
     }
 
     if(lookback.lookback != -1) {
-        if(tsc_v3_weightOfRepeat(lookback.lookback, lookback.len) > lookback.len) {
+        if(tsc_v3_weightOfRepeat(lookback.len, lookback.lookback) > lookback.len) {
             // its just too bad
             lookback.lookback = -1;
             lookback.len = 0;
@@ -477,9 +483,9 @@ static tsc_v3_lookback tsc_v3_findLookback(tsc_v3_lookback_cache *cache, char *c
                     break;
                 }
             }
-            int weight = tsc_v3_weightOfRepeat(b, len);
+            int weight = tsc_v3_weightOfRepeat(len, b);
             if(weight > len) continue;
-            if(len > lookback.len) {
+            if(tsc_v3_savingsOfRepeat(len, b) > tsc_v3_savingsOfRepeat(lookback.len, lookback.lookback)) {
                 lookback.len = len;
                 lookback.lookback = b;
             }
