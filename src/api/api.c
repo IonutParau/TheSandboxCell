@@ -382,13 +382,13 @@ void tsc_loadDefaultCellBar() {
     tsc_category *root = tsc_rootCategory();
 
     tsc_category *tools = tsc_newCategory("Tools", "Simple tools and buttons", "icon");
-    tsc_addButton(tools, "save", "Save to Clipboard", "Saves the current grid to clipboard using the smallest format", tsc_saveButton, NULL);
-    tsc_addButton(tools, "save_v3", "Save to V3", "Saves the current grid using V3, which is supported by a lot more remakes. This can fail.", tsc_saveV3Button, NULL);
+    tsc_addButton(tools, "save", "Save to Clipboard", "Save the current grid to clipboard using the most optimal encoding", tsc_saveButton, NULL);
+    tsc_addButton(tools, "save_v3", "Save to V3", "Save the current grid using V3 encoding, which is compatible with lots of remakes (might fail)", tsc_saveV3Button, NULL);
     tsc_addButton(tools, "load", "Load from Clipboard", "Load a level code from clipboard", tsc_loadButton, NULL);
     tsc_addButton(tools, "setinitial", "Set Initial", "Set the current grid state as the initial one", tsc_setInitial, NULL);
     tsc_addButton(tools, "restoreinitial", "Restore Initial", "Restore the initial grid state", tsc_restoreInitial, NULL);
     tsc_addButton(tools, "paste", "Paste", "Paste the copied selection (drag with Middle Click to select)", tsc_pasteButton, NULL);
-    tsc_addButton(tools, "paste_clipboard", "Paste from Clipboard", "Paste the copied selection (drag with Middle Click to select)", tsc_pasteClipboardButton, NULL);
+    tsc_addButton(tools, "paste_clipboard", "Paste from Clipboard", "Paste a structure from clipboard", tsc_pasteClipboardButton, NULL);
 
     tsc_addCategory(root, tools);
     tsc_category *movers = tsc_newCellGroup("Movers", "Cells that move by themselves and may also move other cells", tsc_idToString(builtin.mover));
