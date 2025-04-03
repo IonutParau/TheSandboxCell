@@ -1205,7 +1205,9 @@ void tsc_handleRenderInputs() {
 
 #undef CELL_KEY
 
-    if(IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE) && !tsc_renderingIsPasting) {
+    bool trackPadDrag = IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && IsKeyDown(KEY_LEFT_CONTROL);
+
+    if((IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE) || trackPadDrag) && !tsc_renderingIsPasting) {
         renderingIsSelecting = true;
         renderingIsDragging = true;
         long mx = tsc_cellMouseX();
@@ -1226,7 +1228,7 @@ void tsc_handleRenderInputs() {
     }
 
 
-    if(IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE)) {
+    if(IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE) || IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
         renderingIsDragging = false;
         renderingSelection = tsc_fixSelection(renderingSelection);
     }
