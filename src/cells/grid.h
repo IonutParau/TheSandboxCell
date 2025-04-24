@@ -21,6 +21,11 @@ typedef int tsc_reg_t;
 #define TSC_NULL_EFFECT 0
 #define TSC_NULL_REGISTRY 0
 
+// TODO: maybe do some optimizations BlobKat suggested
+// shrink texture to 1 byte, have texture IDs associated with cell IDs
+// make lx and ly 1 byte each, and relative to current position
+// make effect 1 byte too
+
 typedef struct tsc_cell {
 #ifdef TSC_TURBO
     unsigned char id : 6;
