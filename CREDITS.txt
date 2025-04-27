@@ -6,4 +6,5 @@ blendigoose for emotional support, helping with musl compatibility,
 writing ui_widthof() and ui_heightof() for a few widgets and making
 rotators work
 uku1928 for improving some textures
+zxspectrum128 for improving subtick sorting.
 Sam Hogan for making the original Cell Machine

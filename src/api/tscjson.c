@@ -45,7 +45,7 @@ static int tsc_json_encodeValueInto(tsc_value value, tsc_buffer *buffer, tsc_buf
     } else if(tsc_isString(value)) {
         tsc_json_encodeStringInto(buffer, tsc_toString(value));
     } else if(tsc_isCell(value)) {
-        if(err != NULL) tsc_saving_writeFormat(err, "Unencodeable value: Cell");
+        if(err != NULL) tsc_saving_writeFormat(err, "Unencodable value: Cell");
         return 1;
     } else if(tsc_isBoolean(value)) {
         if(tsc_toBoolean(value)) {

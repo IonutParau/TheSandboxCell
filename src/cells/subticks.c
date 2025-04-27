@@ -52,14 +52,32 @@ static int tsc_subtick_partition(int low, int high) {
     return j;
 }
 
-// Warning: Recursive. If there are too many subticks then the sorting function might stackoverflow.
-// TODO: use heap stack
+// Credit to zxspectrum128 for writing a version of the original sort but which uses a stack on heap.
+// In theory this should support arbitrarily many subticks without stackoverflows if you have enough RAM.
 static void tsc_subtick_sort(int low, int high) {
-    if(low < high) {
-        int partition = tsc_subtick_partition(low, high);
-        tsc_subtick_sort(low, partition - 1);
-        tsc_subtick_sort(partition + 1, high);
+    int *stack = calloc(2 * (high - low + 1), sizeof(int));
+    int top = 0;
+
+    stack[top++] = low;
+    stack[top++] = high;
+
+    while (top > 0) {
+        high = stack[--top];
+        low = stack[--top];
+
+        const int partition = tsc_subtick_partition(low, high);
+
+        if (partition - 1 > low) {
+            stack[top++] = low;
+            stack[top++] = partition - 1;
+        }
+
+        if (partition + 1 < high) {
+            stack[top++] = partition + 1;
+            stack[top++] = high;
+        }
     }
+    free(stack);
 }
 
 tsc_subtick_t *tsc_subtick_add(tsc_subtick_t subtick) {
