@@ -651,9 +651,11 @@ void tsc_drawGrid() {
             for(int y = 0; y < tsc_renderingGridClipboard.height; y++) {
                 int i = y * tsc_renderingGridClipboard.width + x;
                 tsc_cell *c = &tsc_renderingGridClipboard.cells[i];
+#ifndef TSC_TURBO
                 c->rotData &= 3;
                 c->lx = mx + x;
                 c->ly = my + y;
+#endif
                 tsc_drawCell(c, mx + x, my + y, 0.5, 1, false);
             }
         }
