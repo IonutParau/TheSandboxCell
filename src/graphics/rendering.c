@@ -993,6 +993,12 @@ static void tsc_flipSelection(bool vertical) {
             tsc_cell *a = tsc_grid_get(currentGrid, nx, ny);
             tsc_cell *b = tsc_grid_get(currentGrid, vertical ? nx : fx, vertical ? fy : ny);
             tsc_cell_swap(a, b);
+            a->rotData += 2;
+            b->rotData += 2;
+#ifndef TSC_TURBO
+            a->rotData &= 0b11;
+            b->rotData &= 0b11;
+#endif
         }
     }
 }
