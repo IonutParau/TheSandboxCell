@@ -111,7 +111,7 @@ static int tsc_json_skipWhitespace(const char **text, tsc_buffer *err) {
         }
         if(c == '/') {
             tsc_json_next(text);
-            tsc_json_next(text);
+            c = tsc_json_next(text);
             if(c == '/') {
                 while(true) {
                     char ch = tsc_json_next(text);
