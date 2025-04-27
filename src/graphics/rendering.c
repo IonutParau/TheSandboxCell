@@ -994,17 +994,49 @@ static void tsc_flipSelection(bool vertical) {
             tsc_cell *b = tsc_grid_get(currentGrid, vertical ? nx : fx, vertical ? fy : ny);
             tsc_cell_swap(a, b);
             a->rotData += 2;
-            b->rotData += 2;
+            if (a != b) b->rotData += 2;
 #ifndef TSC_TURBO
             a->rotData &= 0b11;
-            b->rotData &= 0b11;
+            if (a != b) b->rotData &= 0b11;
 #endif
         }
     }
 }
 
 void tsc_pasteGridClipboard() {
-    if(tsc_renderingGridClipboard.width == 0) return;
+    if(tsc_renderingGridClipboard.width ==l c = tsc_cell_create(tsc_findID(currentId), currentRot);
+    for(int x = fixed.sx; x <= fixed.ex; x++) {
+        for(int y = fixed.sy; y <= fixed.ey; y++) {
+            tsc_cell *o = tsc_grid_get(currentGrid, x, y);
+            if(o == NULL) continue;
+            if(o->id != builtin.empty) continue;
+            tsc_grid_set(currentGrid, x, y, &c);
+        }
+    }
+}
+
+static void tsc_flipSelection(bool vertical) {
+    selection_t fixed = tsc_fixSelection(renderingSelection);
+    int width = fixed.ex - fixed.sx + 1;
+    int height = fixed.ey - fixed.sy + 1;
+    for(int x = 0; x < (vertical ? width : width/2); x++) {
+        for(int y = 0; y < (vertical ? height/2 : height); y++) {
+            int nx = fixed.sx + x;
+            int ny = fixed.sy + y;
+            int fx = fixed.ex - x;
+            int fy = fixed.ey - y;
+            tsc_cell *a = tsc_grid_get(currentGrid, nx, ny);
+            tsc_cell *b = tsc_grid_get(currentGrid, vertical ? nx : fx, vertical ? fy : ny);
+            tsc_cell_swap(a, b);
+            a->rotData += 2;
+            if (a != b) b->rotData += 2;
+#ifndef TSC_TURBO
+            a->rotData &= 0b11;
+            if (a != b) b->rotData &= 0b11;
+#endif
+        }
+    }
+} 1) return;
     renderingIsSelecting = false;
     renderingIsDragging = false;
     tsc_renderingIsPasting = true;
