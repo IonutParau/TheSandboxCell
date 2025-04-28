@@ -1013,11 +1013,11 @@ static void tsc_flipSelection(bool vertical) {
                 tsc_cell *a = tsc_grid_get(currentGrid, sx + x, row);
                 tsc_cell *b = tsc_grid_get(currentGrid, ex - x, row);
 
-                a->rotData ^= (~a->rotData & 1) << 1;
+                a->rotData ^= (!(a->rotData & 1)) << 1;
 
                 // prevent double flipping
                 if (a != b) {
-                    a->rotData ^= (~b->rotData & 1) << 1;
+                    b->rotData ^= (!(b->rotData & 1)) << 1;
                     tsc_cell_swap(a, b);
                 }
             }
