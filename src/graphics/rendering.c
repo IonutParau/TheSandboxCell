@@ -980,27 +980,47 @@ static void tsc_fillSelection() {
     }
 }
 
-static void tsc_cell_flip(tsc_cell *cell, bool vertical) {
-    if ((vertical && (cell->rotData & 1)) || (!vertical && !(cell->rotData & 1))) {
-        cell->rotData ^= 2;
-    }
-}
-
 static void tsc_flipSelection(bool vertical) {
     selection_t fixed = tsc_fixSelection(renderingSelection);
-    int width = fixed.ex - fixed.sx + 1;
-    int height = fixed.ey - fixed.sy + 1;
-    for(int x = 0; x < (vertical ? width : width/2); x++) {
-        for(int y = 0; y < (vertical ? height/2 : height); y++) {
-            int nx = fixed.sx + x;
-            int ny = fixed.sy + y;
-            int fx = fixed.ex - x;
-            int fy = fixed.ey - y;
-            tsc_cell *a = tsc_grid_get(currentGrid, nx, ny);
-            tsc_cell *b = tsc_grid_get(currentGrid, vertical ? nx : fx, vertical ? fy : ny);
-            tsc_cell_swap(a, b);
-            tsc_cell_flip(a, vertical);
-            if (a != b) tsc_cell_flip(b, vertical);
+
+    const int sx = fixed.sx, sy = fixed.sy;
+    const int ex = fixed.ex, ey = fixed.ey;
+
+    const int width = ex - sx + 1;
+    const int height = ey - sy + 1;
+
+    if (vertical) {
+        for (int x = 0; x < width; x++) {
+            const int col = sx + x; // precalculate column value
+            for (int y = 0; y < (height + 1) / 2; y++) {
+                tsc_cell *a = tsc_grid_get(currentGrid, col, sy + y);
+                tsc_cell *b = tsc_grid_get(currentGrid, col, ey - y);
+
+                a->rotData ^= (a->rotData & 1) << 1;
+
+                // prevent double flipping
+                if (a != b) {
+                    b->rotData ^= (b->rotData & 1) << 1;
+                    tsc_cell_swap(a, b);
+                }
+            }
+        }
+    }
+    else {
+        for (int y = 0; y < height; y++) {
+            const int row = sy + y; // precalculate row value
+            for (int x = 0; x < (width + 1) / 2; x++) {
+                tsc_cell *a = tsc_grid_get(currentGrid, sx + x, row);
+                tsc_cell *b = tsc_grid_get(currentGrid, ex - x, row);
+
+                a->rotData ^= (~a->rotData & 1) << 1;
+
+                // prevent double flipping
+                if (a != b) {
+                    a->rotData ^= (~b->rotData & 1) << 1;
+                    tsc_cell_swap(a, b);
+                }
+            }
         }
     }
 }
