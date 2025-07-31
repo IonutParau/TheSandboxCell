@@ -291,7 +291,8 @@ local libtsc = {
     "src/saving/saving.c",
     "src/saving/saving_buffer.c",
     "src/api/api.c",
-    "src/api/tscjson.c",
+    "src/api/tscjson_decode.c",
+    "src/api/tscjson_encode.c",
     "src/api/value.c",
     "src/api/modloader.c",
 }

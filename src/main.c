@@ -103,7 +103,7 @@ void tsc_saveEnabledPacks() {
     char enabledPath[] = "data/enabled.json";
     tsc_pathfix(enabledPath);
     FILE *f = fopen(enabledPath, "w");
-    tsc_buffer buffer = tsc_json_encode(theList, NULL);
+    tsc_buffer buffer = tsc_json_encode(theList, NULL, 0, false);
 
     fwrite(buffer.mem, sizeof(char), buffer.len, f);
 
@@ -117,10 +117,10 @@ void tsc_loadEnabledPacks() {
     tsc_pathfix(enabledPath);
     if(!tsc_hasfile(enabledPath)) return;
     char *data = tsc_allocfile(enabledPath, NULL);
-    tsc_buffer err = tsc_saving_newBuffer("");
+    tsc_json_error_t err;
     tsc_value l = tsc_json_decode(data, &err); // if this fails u are an idiot
-    if(err.len != 0) {
-        fprintf(stderr, "ERROR: %s\n", err.mem);
+    if(err.status != TSC_JSON_ERROR_SUCCESS) {
+        fprintf(stderr, "ERROR: %s: byte %d\n", tsc_json_error[err.status], err.index);
         exit(1);
     }
 

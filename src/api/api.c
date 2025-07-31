@@ -450,10 +450,10 @@ void tsc_settingHandler(const char *title) {
 void tsc_storeSettings() {
     char savingPath[] = "data/settings.json";
     tsc_pathfix(savingPath);
-    tsc_saving_buffer err = tsc_saving_newBuffer("");
-    tsc_buffer buffer = tsc_json_encode(tsc_settingStore, &err);
-    if(err.len != 0) {
-        fprintf(stderr, "Error: %s\n", err.mem);
+    tsc_json_error_t err;
+    tsc_buffer buffer = tsc_json_encode(tsc_settingStore, &err, 0, false);
+    if(err.status != TSC_JSON_ERROR_SUCCESS) {
+        fprintf(stderr, "Error: %s\n", tsc_json_error[err.status]);
         exit(1);
     }
     FILE *settings = fopen(savingPath, "w");
@@ -471,11 +471,11 @@ void tsc_loadSettings() {
     tsc_pathfix(savingPath);
     bool isDefault = false;
     if(tsc_hasfile(savingPath)) {
-        tsc_saving_buffer err = tsc_saving_newBuffer("");
+        tsc_json_error_t err;
         char *buffer = tsc_allocfile(savingPath, NULL);
         tsc_settingStore = tsc_json_decode(buffer, &err);
-        if(err.len != 0) {
-            fprintf(stderr, "Error: %s\n", err.mem);
+        if(err.status != TSC_JSON_ERROR_SUCCESS) {
+            fprintf(stderr, "Error: %s: byte %d\n", tsc_json_error[err.status], err.index);
             exit(1);
         }
         tsc_freefile(buffer);

@@ -22,6 +22,7 @@ tsc_buffer tsc_saving_newBufferCapacity(const char *initial, size_t capacity) {
     if(capacity != 0) {
         buffer.mem = malloc(sizeof(char) * (capacity + 1));
         if(initial != NULL) strcpy(buffer.mem, initial);
+        else buffer.mem[0] = '\0';
         buffer.mem[capacity] = '\0';
         buffer.len = initlen;
         buffer.cap = capacity;
