@@ -393,14 +393,14 @@ tsc_resourcepack *tsc_createResourcePack(const char *id) {
 
     char *packJson = tsc_allocfile(packFileBuf, NULL);
 
-    tsc_saving_buffer jsonErr = tsc_saving_newBuffer("");
+    tsc_json_error_t jsonErr;
     pack->value = tsc_json_decode(packJson, &jsonErr);
     if(!tsc_isObject(pack->value)) {
         tsc_destroy(pack->value);
         pack->value = tsc_object();
     }
-    if(jsonErr.len != 0) {
-        fprintf(stderr, "JSON Error: %s\n", jsonErr.mem);
+    if(jsonErr.status != TSC_JSON_ERROR_SUCCESS) {
+        fprintf(stderr, "JSON Error: %s: byte %d\n", tsc_json_error[jsonErr.status], jsonErr.index);
     }
 
     pack->id = id;

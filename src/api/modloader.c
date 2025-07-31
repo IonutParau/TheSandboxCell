@@ -125,9 +125,8 @@ static void tsc_initPlatformMod(const char *id, const char *platform, tsc_value 
     static char sym[256];
     snprintf(sym, 256, "%s_loadMod", platform);
     static char buf[256];
-    char *path;
     snprintf(buf, 256, "data/mods/%s", id);
-    path = tsc_strdup(buf);
+    char *path = tsc_strdup(buf);
     tsc_pathfix(path);
 #ifdef _WIN32
     tsc_platform_loadMod *loadMod = (tsc_platform_loadMod *)GetProcAddress(lib, sym);
@@ -176,14 +175,12 @@ void tsc_initMod(const char *id) {
     }
 
     char *contents = tsc_allocfile(configpath, NULL);
-    tsc_buffer buffer = tsc_saving_newBuffer("");
-    tsc_value config = tsc_json_decode(contents, &buffer);
-    if(buffer.len != 0) {
-        printf("Unable to load %s: %s\n", configpath, buffer.mem);
+    tsc_json_error_t error;
+    tsc_value config = tsc_json_decode(contents, &error);
+    if(error.status != TSC_JSON_ERROR_SUCCESS) {
+        printf("Unable to load %s: %s: byte %d\n", configpath, tsc_json_error[error.status], error.index);
         exit(1);
-        return;
     }
-    tsc_saving_deleteBuffer(buffer);
     free(contents);
 
     size_t idx = modc++;

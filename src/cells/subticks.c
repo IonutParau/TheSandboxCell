@@ -52,7 +52,7 @@ static int tsc_subtick_partition(int low, int high) {
     return j;
 }
 
-// Credit to zxspectrum128 for writing a version of the original sort but which uses a stack on heap.
+// Credit to tema5002 for writing a version of the original sort but which uses a stack on heap.
 // In theory this should support arbitrarily many subticks without stackoverflows if you have enough RAM.
 static void tsc_subtick_sort(int low, int high) {
     int *stack = calloc(2 * (high - low + 1), sizeof(int));
