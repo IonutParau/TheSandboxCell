@@ -336,7 +336,15 @@ static tsc_json_error_t tsc_json_decode_object(
 
         const char sep = TSC_JSON_TAKE_CHAR();
         if (sep == '}') return TSC_JSON_SUCCESS;
-        if (sep != ',') return TSC_JSON_ERROR(EXPECTED_COMMA_DELIMITER, *idx - 1);
+        if (sep == ',') {
+            TSC_JSON_CALL(tsc_json_skip_whitespace(s, idx), tsc_destroy(*out));
+            if (TSC_JSON_PEEK_CHAR() == '}') {
+                TSC_JSON_TAKE_CHAR();
+                return TSC_JSON_SUCCESS;
+            }
+            continue;
+        }
+        return TSC_JSON_ERROR(EXPECTED_COMMA_DELIMITER, *idx - 1);
     }
 }
 
@@ -362,9 +370,19 @@ static tsc_json_error_t tsc_json_decode_array(
 
         TSC_JSON_CALL(tsc_json_skip_whitespace(s, idx), tsc_destroy(*out));
 
+
         const char sep = TSC_JSON_TAKE_CHAR();
         if (sep == ']') return TSC_JSON_SUCCESS;
-        if (sep != ',') return TSC_JSON_ERROR(EXPECTED_COMMA_DELIMITER, *idx - 1);
+
+        if (sep == ',') {
+            TSC_JSON_CALL(tsc_json_skip_whitespace(s, idx), tsc_destroy(*out));
+            if (TSC_JSON_PEEK_CHAR() == ']') {
+                TSC_JSON_TAKE_CHAR();
+                return TSC_JSON_SUCCESS;
+            }
+            continue;
+        }
+        return TSC_JSON_ERROR(EXPECTED_COMMA_DELIMITER, *idx - 1);
     }
 }
 
