@@ -169,6 +169,39 @@ void tsc_setBlueprint(void *idxPtr) {
 	tsc_deleteGrid(g);
 }
 
+static void tsc_loadBlueprintsFrom(const char *path, size_t *counter, tsc_category *cat) {
+	if(tsc_isdir(path)) {
+		size_t len = 0;
+		char **dirfiles = tsc_dirfiles(path, &len);
+
+		for(size_t i = 0; i < len; i++) {
+			char tmp[256];
+			snprintf(tmp, 256, "%s/%s", path, dirfiles[i]);
+
+			tsc_loadBlueprintsFrom(tmp, counter, cat);
+		}
+
+		tsc_freedirfiles(dirfiles);
+	} else {
+		size_t idx = *counter;
+		(*counter)++;
+		tsc_blueprints[idx] = tsc_allocfile(path, NULL);
+
+		char *name = tsc_strdup(path);
+		tsc_fextension(name); // side-effect: removes extensions
+
+		int slashPos = -1;
+
+		for(int i = 0; name[i]; i++) {
+			if(name[i] == '/') slashPos = i;
+		}
+
+		tsc_addButton(cat, "load", name + (slashPos + 1), path, tsc_setBlueprint, (void *)idx);
+
+		free(name);
+	}
+}
+
 static void tsc_loadBlueprints() {
 	// TODO: make it recursive
 	
@@ -180,26 +213,17 @@ static void tsc_loadBlueprints() {
 	char blueprintDir[] = "data/blueprints";
 	tsc_pathfix(blueprintDir);
 
-	size_t len = 0;
-	char **blueprintFiles = tsc_dirfiles(blueprintDir, &len);
+	printf("Amount of blueprints: %ld\n", tsc_countFilesRecursively(blueprintDir));
+
+	size_t len = tsc_countFilesRecursively(blueprintDir);
 
 	tsc_blueprints = malloc(sizeof(const char *) * len);
 
-	for(size_t i = 0; i < len; i++) {
-		char tmpPath[256];
-		snprintf(tmpPath, 256, "%s/%s", blueprintDir, blueprintFiles[i]);
-		tsc_pathfix(tmpPath);
-		tsc_blueprints[i] = tsc_allocfile(tmpPath, NULL);
+	size_t counter = 0;
 
-		char *name = tsc_strdup(blueprintFiles[i]);
+	tsc_loadBlueprintsFrom(blueprintDir, &counter, blueprintsCategory);
 
-		// side-effect: gets rid of file extension
-		tsc_fextension(name);
-
-		tsc_addButton(blueprintsCategory, "load", name, tmpPath, tsc_setBlueprint, (void *)i);
-	}
-
-	tsc_freedirfiles(blueprintFiles);
+	assert(counter == len);
 }
 
 int main(int argc, char **argv) {

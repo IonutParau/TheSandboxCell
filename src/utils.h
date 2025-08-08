@@ -73,6 +73,7 @@ int tsc_hasfile(const char *path);
 // NULL if there is no extension.
 const char *tsc_fextension(char *path);
 
+bool tsc_isdir(const char *path);
 char **tsc_dirfiles(const char *path, size_t *len);
 void tsc_freedirfiles(char **dirfiles);
 size_t tsc_countFilesRecursively(const char *path);

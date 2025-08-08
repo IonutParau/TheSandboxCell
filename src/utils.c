@@ -216,6 +216,17 @@ const char *tsc_fextension(char *path) {
     return NULL;
 }
 
+bool tsc_isdir(const char *path) {
+#ifdef TSC_LINUX
+    DIR *dir = opendir(path);
+	if(dir == NULL) return false;
+	closedir(dir);
+	return true;
+#else
+	return false; // FUCK WINDOWS
+#endif
+}
+
 char **tsc_dirfiles(const char *path, size_t *len) {
     char **files = malloc(sizeof(char *));
     files[0] = NULL;
@@ -246,7 +257,7 @@ char **tsc_dirfiles(const char *path, size_t *len) {
     // Taken from https://learn.microsoft.com/en-us/windows/win32/fileio/listing-the-files-in-a-directory,
     // except we use FindFirstFileA because we love ASCII and UTF-16 is terrible.
     HANDLE hFind = INVALID_HANDLE_VALUE;
-    static char pattern[256];
+    char pattern[256];
     snprintf(pattern, 256, "%s\\*", path);
     WIN32_FIND_DATAA ffd;
     hFind = FindFirstFileA(pattern, &ffd);
@@ -538,20 +549,18 @@ double tsc_frand() {
 }
 
 size_t tsc_countFilesRecursively(const char *path) {
+	if(!tsc_isdir(path)) return 1;
+
 	char buf[256];
 
 	size_t len = 0;
 	char **dirfiles = tsc_dirfiles(path, &len);
 
-	size_t count = len;
+	size_t count = 0;
 
 	for(size_t i = 0; i < len; i++) {
 		snprintf(buf, 256, "%s/%s", path, dirfiles[i]);
 		tsc_pathfix(buf);
-
-		if(tsc_hasfile(buf)) {
-			continue; // normal file
-		}
 
 		count += tsc_countFilesRecursively(buf);
 	}
