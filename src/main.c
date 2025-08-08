@@ -196,7 +196,7 @@ static void tsc_loadBlueprints() {
 		// side-effect: gets rid of file extension
 		tsc_fextension(name);
 
-		tsc_addButton(blueprintsCategory, "blueprint", name, tmpPath, tsc_setBlueprint, (void *)i);
+		tsc_addButton(blueprintsCategory, "load", name, tmpPath, tsc_setBlueprint, (void *)i);
 	}
 
 	tsc_freedirfiles(blueprintFiles);
