@@ -75,6 +75,7 @@ const char *tsc_fextension(char *path);
 
 char **tsc_dirfiles(const char *path, size_t *len);
 void tsc_freedirfiles(char **dirfiles);
+size_t tsc_countFilesRecursively(const char *path);
 
 void *tsc_malloc(size_t len);
 void *tsc_realloc(void *buffer, size_t len);
@@ -131,5 +132,7 @@ size_t tsc_acount(tsc_arena_t *arena);
 size_t tsc_aused(tsc_arena_t *arena);
 void *tsc_tallocAligned(size_t size, size_t align);
 void *tsc_talloc(size_t size);
+
+double tsc_frand();
 
 #endif

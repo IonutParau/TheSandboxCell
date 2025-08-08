@@ -24,6 +24,7 @@
 
 // dont worry about this this would never fuck shit up
 void *rp_resourceTableGet(tsc_resourcetable *table, const char *id); 
+extern size_t tsc_particleCount;
 
 ui_frame *tsc_mainMenu;
 ui_frame *tsc_creditsMenu;
@@ -146,6 +147,61 @@ void tsc_loadEnabledPacks() {
 
 #define TSC_GRID_SIZE_BUFSIZE 16
 
+const char **tsc_blueprints = NULL;
+
+void tsc_setBlueprint(void *idxPtr) {
+	size_t idx = (size_t)idxPtr;
+
+	const char *bp = tsc_blueprints[idx];
+
+	tsc_grid *g = tsc_createGrid(bp, 1, 1, "", "");
+	tsc_saving_decodeWithAny(bp, g);
+
+	tsc_cell *cells = malloc(sizeof(tsc_cell) * g->width * g->height);
+
+	memcpy(cells, g->cells, sizeof(tsc_cell) * g->width * g->height);
+
+	tsc_renderingGridClipboard.width = g->width;
+	tsc_renderingGridClipboard.height = g->height;
+	tsc_renderingGridClipboard.cells = cells;
+	tsc_renderingIsPasting = true;
+	
+	tsc_deleteGrid(g);
+}
+
+static void tsc_loadBlueprints() {
+	// TODO: make it recursive
+	
+	tsc_category *blueprintsCategory = tsc_newCategory("Blueprints", "Common builds sitting in your data/blueprints directory", "blueprints");
+	tsc_category *root = tsc_rootCategory();
+	tsc_category *tools = tsc_getCategory(root, "Tools");
+	tsc_addCategory(tools, blueprintsCategory);
+	
+	char blueprintDir[] = "data/blueprints";
+	tsc_pathfix(blueprintDir);
+
+	size_t len = 0;
+	char **blueprintFiles = tsc_dirfiles(blueprintDir, &len);
+
+	tsc_blueprints = malloc(sizeof(const char *) * len);
+
+	for(size_t i = 0; i < len; i++) {
+		char tmpPath[256];
+		snprintf(tmpPath, 256, "%s/%s", blueprintDir, blueprintFiles[i]);
+		tsc_pathfix(tmpPath);
+		tsc_blueprints[i] = tsc_allocfile(tmpPath, NULL);
+
+		char *name = tsc_strdup(blueprintFiles[i]);
+
+		// side-effect: gets rid of file extension
+		tsc_fextension(name);
+
+		tsc_addButton(blueprintsCategory, "blueprint", name, tmpPath, tsc_setBlueprint, (void *)i);
+	}
+
+	tsc_freedirfiles(blueprintFiles);
+}
+
 int main(int argc, char **argv) {
     srand(time(NULL));
 
@@ -184,6 +240,7 @@ int main(int argc, char **argv) {
     tsc_subtick_addCore();
     tsc_saving_registerCore();
     tsc_loadDefaultCellBar();
+	tsc_loadBlueprints();
 
     tsc_mainMenu = tsc_ui_newFrame();
     tsc_creditsMenu = tsc_ui_newFrame();
@@ -846,6 +903,7 @@ int main(int argc, char **argv) {
                         amount /= 1000;
                     }
                     tsc_ui_text(TextFormat("Grid Memory: %.2lf %s", amount, units[unit]), textSize, WHITE);
+                    tsc_ui_text(TextFormat("Particle Count: %ld", tsc_particleCount), textSize, WHITE);
                 }
             };
             tsc_ui_finishColumn();

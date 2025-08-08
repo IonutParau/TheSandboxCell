@@ -2,6 +2,7 @@
 #include "../utils.h"
 #include "../graphics/resources.h"
 #include "../api/api.h"
+#include "../threads/threads.h"
 #include "ticking.h"
 #include <stdatomic.h>
 #include <stdlib.h>
@@ -24,9 +25,74 @@ void tsc_trashCell(tsc_cell *cell, int x, int y) {
 #endif
 }
 
+typedef struct tsc_particleQueue {
+	bool containsStuff;
+	tsc_particleConfig config;
+	struct tsc_particleQueue *next;
+} tsc_particleQueue;
+
+mtx_t tsc_particlesLock;
+volatile tsc_particleQueue tsc_particleQueueRoot;
+
+void tsc_requestParticle(tsc_particleConfig config) {
+#ifndef TSC_TURBO
+    if(!storeExtraGraphicInfo) return;
+
+	mtx_lock(&tsc_particlesLock);
+
+	if(tsc_particleQueueRoot.containsStuff) {
+		tsc_particleQueue *next = malloc(sizeof(tsc_particleQueue));
+		*next = tsc_particleQueueRoot;
+		tsc_particleQueueRoot = (tsc_particleQueue) {
+			.containsStuff = true,
+			.config = config,
+			.next = next,
+		};
+	} else {
+		tsc_particleQueueRoot = (tsc_particleQueue) {
+			.containsStuff = true,
+			.config = config,
+			.next = NULL,
+		};
+	}
+
+	mtx_unlock(&tsc_particlesLock);
+#endif
+}
+
+bool tsc_getRequestedParticle(tsc_particleConfig *config) {
+	if(!tsc_particleQueueRoot.containsStuff) return false;
+	mtx_lock(&tsc_particlesLock);
+
+	if(!tsc_particleQueueRoot.containsStuff) {
+		mtx_unlock(&tsc_particlesLock);
+		return false;
+	}
+
+	*config = tsc_particleQueueRoot.config;
+
+	if(tsc_particleQueueRoot.next == NULL) {
+		// last one
+		tsc_particleQueueRoot.containsStuff = false;
+	} else {
+		// shit!!!!!
+		tsc_particleQueue *next = tsc_particleQueueRoot.next;
+		tsc_particleQueueRoot = *next;
+		free(next);
+	}
+
+	mtx_unlock(&tsc_particlesLock);
+	return true;
+}
+
 tsc_cell_id_pool_t builtin;
 
 void tsc_init_builtin_ids() {
+	// yup its here don't ask
+	mtx_init(&tsc_particlesLock, mtx_plain);
+	tsc_particleQueueRoot.containsStuff = false;
+	tsc_particleQueueRoot.next = NULL;
+
     builtin.empty = tsc_registerCell("empty", "Empty", "Literally pure nothingness");
     builtin.push = tsc_registerCell("push", "Push", "Can be pushed from all directions");
     builtin.slide = tsc_registerCell("slide", "Slide", "Can be pushed horizontally");
@@ -208,10 +274,30 @@ void tsc_cell_onTrash(tsc_grid *grid, tsc_cell *cell, int x, int y, char dir, co
         tsc_cell empty = tsc_cell_create(builtin.empty, 0);
         tsc_grid_set(grid, x, y, &empty);
         tsc_sound_play(builtin.audio.explosion);
+		if(storeExtraGraphicInfo) {
+			tsc_requestParticle((tsc_particleConfig) {
+				.particleCount = 50,
+				.radius = 20,
+				.lifespan = 0.5,
+				.color = tsc_queryOptionalColor("enemy_particle_color", 0x9C3B2BFF),
+				.x = x,
+				.y = y,
+			});
+		}
     }
     if(cell->id == builtin.trash) {
         tsc_trashCell(eating, x, y);
         tsc_sound_play(builtin.audio.destroy);
+		if(storeExtraGraphicInfo) {
+			tsc_requestParticle((tsc_particleConfig) {
+				.particleCount = 2,
+				.radius = 2,
+				.lifespan = 0.2,
+				.color = tsc_queryOptionalColor("trash_particle_color", 0x5519AAFF),
+				.x = x,
+				.y = y,
+			});
+		}
     }
     tsc_celltable *celltable = tsc_cell_getTable(cell);
     if(celltable == NULL) return;

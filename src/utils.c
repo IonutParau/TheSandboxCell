@@ -531,3 +531,31 @@ void *tsc_tallocAligned(size_t size, size_t align) {
 void *tsc_talloc(size_t size) {
     return tsc_aalloc(&tsc_tmp, size);
 }
+
+double tsc_frand() {
+	double e = rand();
+	return e / RAND_MAX;
+}
+
+size_t tsc_countFilesRecursively(const char *path) {
+	char buf[256];
+
+	size_t len = 0;
+	char **dirfiles = tsc_dirfiles(path, &len);
+
+	size_t count = len;
+
+	for(size_t i = 0; i < len; i++) {
+		snprintf(buf, 256, "%s/%s", path, dirfiles[i]);
+		tsc_pathfix(buf);
+
+		if(tsc_hasfile(buf)) {
+			continue; // normal file
+		}
+
+		count += tsc_countFilesRecursively(buf);
+	}
+
+	tsc_freedirfiles(dirfiles);
+	return count;
+}

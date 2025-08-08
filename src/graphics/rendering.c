@@ -48,6 +48,19 @@ typedef struct selection_btn_t {
     ui_button *flip_v;
 } selection_btn_t;
 
+typedef struct tsc_particle {
+	Color color;
+	int x, y;
+	// delta between final point and origin
+	float dx, dy;
+	float elapsedTime;
+	float lifespan;
+} tsc_particle;
+
+#define TSC_MAXIMUM_PARTICLES 16384
+tsc_particle tsc_particles[TSC_MAXIMUM_PARTICLES];
+size_t tsc_particleCount = 0;
+
 gridclip_t tsc_renderingGridClipboard;
 
 static selection_t renderingSelection;
@@ -123,6 +136,7 @@ static void tsc_centerCamera() {
 }
 
 void tsc_resetRendering() {
+	tsc_particleCount = 0;
     brushSize = 0;
     renderingCamera.cellSize = 32;
     renderingCamera.speed = 200;
@@ -572,6 +586,7 @@ void tsc_drawGrid() {
 
 #ifndef TSC_TURBO
     if(storeExtraGraphicInfo) {
+		// trashed shit
         size_t len = tsc_trashedCellCount;
         if(len > TSC_MAX_TRASHED) len = TSC_MAX_TRASHED;
         for(size_t i = 0; i < len; i++) {
@@ -582,7 +597,60 @@ void tsc_drawGrid() {
             float opacity = tsc_updateInterp(1, 0);
             tsc_drawCell(&trashed, x, y, opacity, 1, false);
         }
+		if(tsc_particleCount < TSC_MAXIMUM_PARTICLES) {
+			// fetch new particles
+			tsc_particleConfig conf;
+			while(tsc_getRequestedParticle(&conf)) {
+				if(tsc_particleCount == TSC_MAXIMUM_PARTICLES) continue;
+				for(size_t i = 0; i < conf.particleCount; i++) {
+					float dx = tsc_frand() * 2 - 1;
+					float dy = tsc_frand() * 2 - 1;
+					float l = sqrt(dx * dx + dy * dy);
+					dx = dx / l * conf.radius;
+					dy = dy / l * conf.radius;
+					float rngSpeed = tsc_frand();
+					dx *= rngSpeed;
+					dy *= rngSpeed;
+					tsc_particle p = {
+						.color = GetColor(conf.color),
+						.lifespan = conf.lifespan,
+						.x = conf.x,
+						.y = conf.y,
+						.elapsedTime = 0,
+						.dx = dx,
+						.dy = dy,
+					};
+					tsc_particles[tsc_particleCount] = p;
+					tsc_particleCount++;
+					if(tsc_particleCount == TSC_MAXIMUM_PARTICLES) break;
+				}
+			}
+		}
     }
+
+	size_t nextParticleCount = 0;
+	for(size_t i = 0; i < tsc_particleCount; i++) {
+		tsc_particle p = tsc_particles[i];
+		if(p.elapsedTime > p.lifespan) continue;
+		p.elapsedTime += GetFrameTime();
+
+		float t = p.elapsedTime / p.lifespan;
+		float cx = p.x + p.dx * t;
+		float cy = p.y + p.dy * t;
+		float size = renderingCamera.cellSize / 4;
+
+		cx = cx * renderingCamera.cellSize - renderingCamera.x;
+		cy = cy * renderingCamera.cellSize - renderingCamera.y;
+		cx += renderingCamera.cellSize/2;
+		cy += renderingCamera.cellSize/2;
+
+		Color c = ColorAlpha(p.color, 1 - t);
+
+		DrawRectangle(cx, cy, size, size, c);
+		tsc_particles[nextParticleCount] = p;
+		nextParticleCount++;
+	}
+	tsc_particleCount = nextParticleCount;
 #endif
 
     for(size_t y = sy; y <= ey; y = (y+skipLevel) - y % skipLevel) {

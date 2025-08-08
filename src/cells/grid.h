@@ -167,6 +167,21 @@ extern atomic_size_t tsc_trashedCellCount;
 
 void tsc_trashCell(tsc_cell *cell, int x, int y);
 
+typedef struct tsc_particleConfig {
+	int particleCount;
+	// in cells
+	float radius;
+	// in seconds
+	float lifespan;
+	// 0xRRGGBBAA
+	unsigned int color;
+	// position
+	int x, y;
+} tsc_particleConfig;
+
+void tsc_requestParticle(tsc_particleConfig config);
+bool tsc_getRequestedParticle(tsc_particleConfig *config);
+
 // hideapi
 extern tsc_gridStorage *gridStorage;
 extern size_t gridChunkSize;
