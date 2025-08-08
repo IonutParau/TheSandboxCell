@@ -57,7 +57,7 @@ typedef struct tsc_particle {
 	float lifespan;
 } tsc_particle;
 
-#define TSC_MAXIMUM_PARTICLES 16384
+#define TSC_MAXIMUM_PARTICLES 131072
 tsc_particle tsc_particles[TSC_MAXIMUM_PARTICLES];
 size_t tsc_particleCount = 0;
 
