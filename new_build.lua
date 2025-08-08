@@ -284,6 +284,7 @@ local libtsc = {
     "src/cells/grid.c",
     "src/cells/ticking.c",
     "src/cells/subticks.c",
+    "src/cells/particles.c",
     "src/graphics/resources.c",
     "src/graphics/rendering.c",
     "src/graphics/ui.c",

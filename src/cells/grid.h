@@ -183,6 +183,10 @@ void tsc_requestParticle(tsc_particleConfig config);
 bool tsc_getRequestedParticle(tsc_particleConfig *config);
 
 // hideapi
+void tsc_initParticleQueue();
+// hideapi
+
+// hideapi
 extern tsc_gridStorage *gridStorage;
 extern size_t gridChunkSize;
 // hideapi

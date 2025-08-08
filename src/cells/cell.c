@@ -2,7 +2,6 @@
 #include "../utils.h"
 #include "../graphics/resources.h"
 #include "../api/api.h"
-#include "../threads/threads.h"
 #include "ticking.h"
 #include <stdatomic.h>
 #include <stdlib.h>
@@ -25,73 +24,11 @@ void tsc_trashCell(tsc_cell *cell, int x, int y) {
 #endif
 }
 
-typedef struct tsc_particleQueue {
-	bool containsStuff;
-	tsc_particleConfig config;
-	struct tsc_particleQueue *next;
-} tsc_particleQueue;
-
-mtx_t tsc_particlesLock;
-volatile tsc_particleQueue tsc_particleQueueRoot;
-
-void tsc_requestParticle(tsc_particleConfig config) {
-#ifndef TSC_TURBO
-    if(!storeExtraGraphicInfo) return;
-
-	mtx_lock(&tsc_particlesLock);
-
-	if(tsc_particleQueueRoot.containsStuff) {
-		tsc_particleQueue *next = malloc(sizeof(tsc_particleQueue));
-		*next = tsc_particleQueueRoot;
-		tsc_particleQueueRoot = (tsc_particleQueue) {
-			.containsStuff = true,
-			.config = config,
-			.next = next,
-		};
-	} else {
-		tsc_particleQueueRoot = (tsc_particleQueue) {
-			.containsStuff = true,
-			.config = config,
-			.next = NULL,
-		};
-	}
-
-	mtx_unlock(&tsc_particlesLock);
-#endif
-}
-
-bool tsc_getRequestedParticle(tsc_particleConfig *config) {
-	if(!tsc_particleQueueRoot.containsStuff) return false;
-	mtx_lock(&tsc_particlesLock);
-
-	if(!tsc_particleQueueRoot.containsStuff) {
-		mtx_unlock(&tsc_particlesLock);
-		return false;
-	}
-
-	*config = tsc_particleQueueRoot.config;
-
-	if(tsc_particleQueueRoot.next == NULL) {
-		// last one
-		tsc_particleQueueRoot.containsStuff = false;
-	} else {
-		// shit!!!!!
-		tsc_particleQueue *next = tsc_particleQueueRoot.next;
-		tsc_particleQueueRoot = *next;
-		free(next);
-	}
-
-	mtx_unlock(&tsc_particlesLock);
-	return true;
-}
-
 tsc_cell_id_pool_t builtin;
 
 void tsc_init_builtin_ids() {
 	// yup its here don't ask
-	mtx_init(&tsc_particlesLock, mtx_plain);
-	tsc_particleQueueRoot.containsStuff = false;
-	tsc_particleQueueRoot.next = NULL;
+	tsc_initParticleQueue();
 
     builtin.empty = tsc_registerCell("empty", "Empty", "Literally pure nothingness");
     builtin.push = tsc_registerCell("push", "Push", "Can be pushed from all directions");
