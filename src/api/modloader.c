@@ -62,13 +62,11 @@ static void tsc_initDLLMod(const char *id) {
     if(library == NULL) {
         fprintf(stderr, "Unable to open %s\n", dlerror());
         exit(1);
-        return;
     }
     void (*init)(void) = dlsym(library, sym);
     if(init == NULL) {
         fprintf(stderr, "%s has no init or an invalid init. Must use the name %s\n", buffer, sym);
         exit(1);
-        return;
     }
     init();
 #endif
@@ -107,7 +105,6 @@ static tsc_lib_t tsc_getPlatform(const char *platform) {
     if(library == NULL) {
         fprintf(stderr, "Unable to open %s\n", dlerror());
         exit(1);
-        return NULL;
     }
 #endif
     tsc_platform_t p;
@@ -142,7 +139,6 @@ static void tsc_initPlatformMod(const char *id, const char *platform, tsc_value 
     if(loadMod == NULL) {
         printf("Unable to load %s with %s due to missing symbol %s\n", id, platform, sym);
         exit(1);
-        return;
     }
     loadMod(id, path, value);
 #endif
@@ -175,10 +171,10 @@ void tsc_initMod(const char *id) {
     }
 
     char *contents = tsc_allocfile(configpath, NULL);
-    tsc_json_error_t error;
-    tsc_value config = tsc_json_decode(contents, &error);
-    if(error.status != TSC_JSON_ERROR_SUCCESS) {
-        printf("Unable to load %s: %s: byte %d\n", configpath, tsc_json_error[error.status], error.index);
+    tsc_json_error_t err;
+    tsc_value config = tsc_json_decode(contents, &err);
+    if(err.status != TSC_JSON_ERROR_SUCCESS) {
+        tsc_json_perror(err);
         exit(1);
     }
     free(contents);

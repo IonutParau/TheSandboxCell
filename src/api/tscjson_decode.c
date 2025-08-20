@@ -1,15 +1,8 @@
-#include <stdlib.h>
+#include <stdlib.h> // fuck you floats
+                    // also we need it for string allocations
 
 #include "tscjson.h"
-#include "tscjson_arrays.h"
-
-#ifndef INFINITY
-#define INFINITY (1.0f/0.0f)
-#endif
-
-#ifndef NAN
-#define NAN (0.0f/0.0f)
-#endif
+#include "tscjson_macros.h"
 
 #define TSC_JSON_CALL(thing, another_thing) do { \
     tsc_json_error_t result = thing; \
@@ -21,11 +14,9 @@
 
 #define TSC_JSON_ERROR(err, idx) ((tsc_json_error_t) { (uint32_t)(TSC_JSON_PARSE_ERROR_##err), (uint32_t)(idx) })
 #define TSC_JSON_SUCCESS ((tsc_json_error_t) { (uint32_t)(TSC_JSON_ERROR_SUCCESS), 0 })
-#define TSC_JSON_PEEK_CHAR() (s[*idx])
-#define TSC_JSON_TAKE_CHAR() (s[(*idx)++])
 #define TSC_JSON_EXPECT_CHAR(expected_char, error_code, thing) do { \
     TSC_JSON_CALL(tsc_json_skip_whitespace(s, idx), thing); \
-    if (TSC_JSON_TAKE_CHAR() != expected_char) { \
+    if ((s[(*idx)++]) != expected_char) { \
         thing; \
         return TSC_JSON_ERROR(error_code, *idx - 1); \
     } \
@@ -36,8 +27,8 @@ static void tsc_json_skip_line_comment(
         size_t *idx
 ) {
     while (1) {
-        const char c = TSC_JSON_TAKE_CHAR();
-        if (c == '\0') (*idx)--;
+        const unsigned char c = s[(*idx)];
+        *idx += c != '\0';
         if (c == '\0' || c == '\n') break;
     }
 }
@@ -48,12 +39,12 @@ static tsc_json_error_t tsc_json_skip_block_comment(
 ) {
     const size_t start = *idx;
     while (1) {
-        const char c = TSC_JSON_TAKE_CHAR();
+        const char c = s[(*idx)++];
         if (c == '\0') {
             return TSC_JSON_ERROR(UNTERMINATED_MULTILINE_COMMENT, start);
         }
-        if (c == '*' && TSC_JSON_PEEK_CHAR() == '/') {
-            TSC_JSON_TAKE_CHAR();
+        if (c == '*' && s[*idx] == '/') {
+            (*idx)++;
             return TSC_JSON_SUCCESS;
         }
     }
@@ -64,16 +55,16 @@ static tsc_json_error_t tsc_json_skip_whitespace(
         size_t *idx
 ) {
     while (1) {
-        char c = TSC_JSON_PEEK_CHAR();
+        char c = s[*idx];
         if (c == '\0') break;
         if (isspace(c)) {
-            TSC_JSON_TAKE_CHAR();
+            (*idx)++;
             continue;
         }
 
         if (c == '/') {
-            TSC_JSON_TAKE_CHAR();
-            c = TSC_JSON_TAKE_CHAR();
+            (*idx)++;
+            c = s[(*idx)++];
             if (c == '/') {
                 tsc_json_skip_line_comment(s, idx);
                 continue;
@@ -91,160 +82,174 @@ static tsc_json_error_t tsc_json_skip_whitespace(
     return TSC_JSON_SUCCESS;
 }
 
-static void tsc_json_utf8_encode(
+static int tsc_json_utf8_encode(
         const unsigned int cp,
-        tsc_buffer *buf
+        char *p
 ) {
     if (cp <= 0x7F) {
-        tsc_saving_write(buf, cp);
+        p[0] = cp;
+        return 1;
     }
-    else if (cp <= 0x7FF) {
-        tsc_saving_write(buf, 0xC0 | (unsigned int)cp >> 6);
-        tsc_saving_write(buf, 0x80 | (unsigned int)cp & 0x3F);
+    if (cp <= 0x7FF) {
+        p[0] = 0xC0 | cp >> 6;
+        p[1] = 0x80 | cp & 0x3F;
+        return 2;
     }
-    else if (cp <= 0xFFFF) {
-        tsc_saving_write(buf, 0xE0 | (unsigned int)cp >> 12);
-        tsc_saving_write(buf, 0x80 | (unsigned int)cp >> 6 & 0x3F);
-        tsc_saving_write(buf, 0x80 | (unsigned int)cp & 0x3F);
+    if (cp <= 0xFFFF) {
+        p[0] = 0xE0 | cp >> 12;
+        p[1] = 0x80 | cp >> 6 & 0x3F;
+        p[2] = 0x80 | cp & 0x3F;
+        return 3;
     }
-    else {
-        tsc_saving_write(buf, 0xF0 | (unsigned int)cp >> 18);
-        tsc_saving_write(buf, 0x80 | (unsigned int)cp >> 12 & 0x3F);
-        tsc_saving_write(buf, 0x80 | (unsigned int)cp >> 6 & 0x3F);
-        tsc_saving_write(buf, 0x80 | (unsigned int)cp & 0x3F);
-    }
+    p[0] = 0xF0 | cp >> 18;
+    p[1] = 0x80 | cp >> 12 & 0x3F;
+    p[2] = 0x80 | cp >> 6 & 0x3F;
+    p[3] = 0x80 | cp & 0x3F;
+    return 4;
 }
 
-static tsc_json_error_t tsc_json_decode_xXX(
+static tsc_json_error_t tsc_json_calculate_string_length(
         const char *s,
-        size_t *idx,
-        tsc_buffer *buf
+        size_t start_idx,
+        size_t *out_length
 ) {
-    if (!isxdigit(s[*idx]) ||
-        !isxdigit(s[*idx + 1]) ) {
-        return TSC_JSON_ERROR(INVALID_xXX_ESCAPE, *idx);
+    size_t length = 1;
+    size_t temp_idx = start_idx;
+
+    while (1) {
+        const char c = s[temp_idx];
+        if ((unsigned char)c < ' ') {
+            return TSC_JSON_ERROR(UNTERMINATED_STRING, start_idx - 1);
+        }
+        if (c == '"') {
+            break;
+        }
+        if (c == '\\') {
+            temp_idx++;
+            const char esc = s[temp_idx];
+            if (esc == '\0') {
+                return TSC_JSON_ERROR(UNTERMINATED_STRING, start_idx - 1);
+            }
+            temp_idx++;
+
+            if (TSC_JSON_BACKSLASH[(unsigned char)esc]) {
+                length++;
+            }
+            else if (esc == 'x') {
+                if (!isxdigit(s[temp_idx]) || !isxdigit(s[temp_idx + 1])) {
+                    return TSC_JSON_ERROR(INVALID_xXX_ESCAPE, temp_idx);
+                }
+                temp_idx += 2;
+                length += 1;
+            }
+            else if (esc == 'u') {
+                if (!isxdigit(s[temp_idx]) || !isxdigit(s[temp_idx + 1]) ||
+                    !isxdigit(s[temp_idx + 2]) || !isxdigit(s[temp_idx + 3])) {
+                    return TSC_JSON_ERROR(INVALID_uXXXX_ESCAPE, temp_idx);
+                }
+
+                const unsigned int cp =
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[temp_idx]] << 12 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[temp_idx + 1]] << 8 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[temp_idx + 2]] << 4 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[temp_idx + 3]];
+
+                temp_idx += 4;
+
+                if (cp <= 0x7F) {
+                    length += 1;
+                }
+                else if (cp <= 0x7FF) {
+                    length += 2;
+                }
+                else {
+                    length += 3;
+                }
+            }
+            else if (esc == 'U') {
+                if (!isxdigit(s[temp_idx]) || !isxdigit(s[temp_idx + 1]) ||
+                    !isxdigit(s[temp_idx + 2]) || !isxdigit(s[temp_idx + 3]) ||
+                    !isxdigit(s[temp_idx + 4]) || !isxdigit(s[temp_idx + 5]) ||
+                    !isxdigit(s[temp_idx + 6]) || !isxdigit(s[temp_idx + 7])) {
+                    return TSC_JSON_ERROR(INVALID_UXXXXXXXX_ESCAPE, temp_idx);
+                }
+
+                const unsigned int cp =
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[temp_idx]] << 28 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[temp_idx + 1]] << 24 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[temp_idx + 2]] << 20 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[temp_idx + 3]] << 16 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[temp_idx + 4]] << 12 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[temp_idx + 5]] << 8 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[temp_idx + 6]] << 4 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[temp_idx + 7]];
+
+                temp_idx += 8;
+
+                if (cp <= 0x7F) {
+                    length += 1;
+                }
+                else if (cp <= 0x7FF) {
+                    length += 2;
+                }
+                else if (cp <= 0xFFFF) {
+                    length += 3;
+                }
+                else {
+                    length += 4;
+                }
+            }
+            else {
+                return TSC_JSON_ERROR(BAD_BACKSLASH, temp_idx);
+            }
+            continue;
+        }
+
+        const unsigned char b0 = (unsigned char)s[temp_idx];
+
+        if ((b0 & 0x80) == 0) {
+            temp_idx++;
+            length += 1;
+        }
+        else if ((b0 & 0xE0) == 0xC0) {
+            if (s[temp_idx + 1] == '\0' ||
+                (s[temp_idx + 1] & 0xC0) != 0x80 ||
+                b0 < 0xC2) {
+                return TSC_JSON_ERROR(BAD_UTF8, temp_idx);
+            }
+            temp_idx += 2;
+            length += 2;
+        }
+        else if ((b0 & 0xF0) == 0xE0) {
+            if (s[temp_idx + 1] == '\0' || s[temp_idx + 2] == '\0' ||
+                (s[temp_idx + 1] & 0xC0) != 0x80 ||
+                (s[temp_idx + 2] & 0xC0) != 0x80 ||
+                (b0 == 0xE0 && (unsigned char)s[temp_idx + 1] < 0xA0) ||
+                (b0 == 0xED && (unsigned char)s[temp_idx + 1] >= 0xA0)) {
+                return TSC_JSON_ERROR(BAD_UTF8, temp_idx);
+            }
+            temp_idx += 3;
+            length += 3;
+        }
+        else if ((b0 & 0xF8) == 0xF0) {
+            if (s[temp_idx + 1] == '\0' || s[temp_idx + 2] == '\0' || s[temp_idx + 3] == '\0' ||
+                (s[temp_idx + 1] & 0xC0) != 0x80 ||
+                (s[temp_idx + 2] & 0xC0) != 0x80 ||
+                (s[temp_idx + 3] & 0xC0) != 0x80 ||
+                (b0 == 0xF0 && (unsigned char)s[temp_idx + 1] < 0x90) ||
+                (b0 > 0xF4 || (b0 == 0xF4 && (unsigned char)s[temp_idx + 1] > 0x8F))) {
+                return TSC_JSON_ERROR(BAD_UTF8, temp_idx);
+            }
+            temp_idx += 4;
+            length += 4;
+        }
+        else {
+            return TSC_JSON_ERROR(BAD_UTF8, temp_idx);
+        }
     }
 
-    const unsigned int cp =
-        (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx]] << 4 |
-        (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 1]];
-
-    *idx += 2;
-    tsc_json_utf8_encode(cp, buf);
+    *out_length = length;
     return TSC_JSON_SUCCESS;
-}
-
-static tsc_json_error_t tsc_json_decode_uXXXX(
-        const char *s,
-        size_t *idx,
-        tsc_buffer *buf
-) {
-    if (!isxdigit(s[*idx]) ||
-        !isxdigit(s[*idx + 1]) ||
-        !isxdigit(s[*idx + 2]) ||
-        !isxdigit(s[*idx + 3])) {
-        return TSC_JSON_ERROR(INVALID_uXXXX_ESCAPE, *idx);
-    }
-
-    const unsigned int cp =
-        (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx]] << 12 |
-        (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 1]] << 8 |
-        (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 2]] << 4 |
-        (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 3]];
-
-    *idx += 4;
-    tsc_json_utf8_encode(cp, buf);
-    return TSC_JSON_SUCCESS;
-}
-
-static tsc_json_error_t tsc_json_decode_UXXXXXXXX(
-        const char *s,
-        size_t *idx,
-        tsc_buffer *buf
-) {
-    if (!isxdigit(s[*idx]) ||
-        !isxdigit(s[*idx + 1]) ||
-        !isxdigit(s[*idx + 2]) ||
-        !isxdigit(s[*idx + 3]) ||
-        !isxdigit(s[*idx + 4]) ||
-        !isxdigit(s[*idx + 5]) ||
-        !isxdigit(s[*idx + 6]) ||
-        !isxdigit(s[*idx + 7])) {
-        return TSC_JSON_ERROR(INVALID_UXXXXXXXX_ESCAPE, *idx);
-    }
-
-    const unsigned int cp =
-        (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx]] << 28 |
-        (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 1]] << 24 |
-        (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 2]] << 20 |
-        (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 3]] << 16 |
-        (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 4]] << 12 |
-        (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 5]] << 8 |
-        (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 6]] << 4 |
-        (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 7]];
-
-    *idx += 8;
-    tsc_json_utf8_encode(cp, buf);
-    return TSC_JSON_SUCCESS;
-}
-
-static tsc_json_error_t tsc_json_decode_utf8(
-        const char *s,
-        size_t *idx,
-        tsc_buffer *buf
-) {
-    const unsigned char b0 = (unsigned char)s[*idx];
-
-    if (b0 == '\0') goto bad_utf8;
-
-    if ((b0 & 0x80) == 0) {
-        tsc_saving_write(buf, TSC_JSON_TAKE_CHAR());
-        return TSC_JSON_SUCCESS;
-    }
-
-    if ((b0 & 0xE0) == 0xC0) {
-        if (s[*idx + 1] == '\0') goto bad_utf8;
-
-        const unsigned char b1 = (unsigned char)s[*idx + 1];
-        if ((b1 & 0xC0) != 0x80) goto bad_utf8;
-        if (b0 < 0xC2) goto bad_utf8; // too long
-        tsc_saving_write(buf, TSC_JSON_TAKE_CHAR());
-        tsc_saving_write(buf, TSC_JSON_TAKE_CHAR());
-        return TSC_JSON_SUCCESS;
-    }
-
-    if ((b0 & 0xF0) == 0xE0) {
-        if (s[*idx + 1] == '\0' || s[*idx + 2] == '\0') goto bad_utf8;
-
-        const unsigned char b1 = (unsigned char)s[*idx + 1];
-        const unsigned char b2 = (unsigned char)s[*idx + 2];
-        if ((b1 & 0xC0) != 0x80 || (b2 & 0xC0) != 0x80) goto bad_utf8;
-        if (b0 == 0xE0 && b1 < 0xA0) goto bad_utf8; // too long
-        if (b0 == 0xED && b1 >= 0xA0) goto bad_utf8; // utf 16 surrogate range
-        tsc_saving_write(buf, TSC_JSON_TAKE_CHAR());
-        tsc_saving_write(buf, TSC_JSON_TAKE_CHAR());
-        tsc_saving_write(buf, TSC_JSON_TAKE_CHAR());
-        return TSC_JSON_SUCCESS;
-    }
-
-    if ((b0 & 0xF8) == 0xF0) {
-        if (s[*idx + 1] == '\0' || s[*idx + 2] == '\0' || s[*idx + 3] == '\0') goto bad_utf8;
-
-        const unsigned char b1 = (unsigned char)s[*idx + 1];
-        const unsigned char b2 = (unsigned char)s[*idx + 2];
-        const unsigned char b3 = (unsigned char)s[*idx + 3];
-        if ((b1 & 0xC0) != 0x80 || (b2 & 0xC0) != 0x80 || (b3 & 0xC0) != 0x80) goto bad_utf8;
-        if (b0 == 0xF0 && b1 < 0x90) goto bad_utf8; // too long
-        if (b0 > 0xF4 || (b0 == 0xF4 && b1 > 0x8F)) goto bad_utf8; // beyond unicode
-        tsc_saving_write(buf, TSC_JSON_TAKE_CHAR());
-        tsc_saving_write(buf, TSC_JSON_TAKE_CHAR());
-        tsc_saving_write(buf, TSC_JSON_TAKE_CHAR());
-        tsc_saving_write(buf, TSC_JSON_TAKE_CHAR());
-        return TSC_JSON_SUCCESS;
-    }
-
-bad_utf8:
-    return TSC_JSON_ERROR(BAD_UTF8, *idx);
 }
 
 static tsc_json_error_t tsc_json_decode_string(
@@ -252,50 +257,80 @@ static tsc_json_error_t tsc_json_decode_string(
         size_t *idx,
         char **out
 ) {
-    tsc_buffer buf = tsc_saving_newBufferCapacity(NULL, 32);
-    const size_t start = *idx - 1;
+    size_t needed_length;
+    TSC_JSON_CALL(tsc_json_calculate_string_length(s, *idx, &needed_length), ;);
+    char *buf = malloc(needed_length);
+    size_t buf_idx = 0;
 
-    while (1) {
-        const char c = TSC_JSON_PEEK_CHAR();
-        if ((unsigned char)c < ' ') {
-            tsc_saving_deleteBuffer(buf);
-            return TSC_JSON_ERROR(UNTERMINATED_STRING, start);
-        }
-        if (c == '"') {
-            TSC_JSON_TAKE_CHAR();
-            break;
-        }
+    while (s[*idx] != '"') {
+        const char c = s[*idx];
+
         if (c == '\\') {
-            TSC_JSON_TAKE_CHAR();
-
-            const char esc = TSC_JSON_TAKE_CHAR();
-            if (esc == '\0') {
-                tsc_saving_deleteBuffer(buf);
-                return TSC_JSON_ERROR(UNTERMINATED_STRING, start);
-            }
+            (*idx)++;
+            const char esc = s[*idx];
+            (*idx)++;
 
             if (TSC_JSON_BACKSLASH[(unsigned char)esc]) {
-                tsc_saving_write(&buf, TSC_JSON_BACKSLASH[(unsigned char)esc]);
+                buf[buf_idx++] = TSC_JSON_BACKSLASH[(unsigned char)esc];
             }
             else if (esc == 'x') {
-                TSC_JSON_CALL(tsc_json_decode_xXX(s, idx, &buf), tsc_saving_deleteBuffer(buf));
+                const unsigned int cp =
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx]] << 4 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 1]];
+                *idx += 2;
+                buf_idx += tsc_json_utf8_encode(cp, buf + buf_idx); // Pass the correct buffer offset
             }
             else if (esc == 'u') {
-                TSC_JSON_CALL(tsc_json_decode_uXXXX(s, idx, &buf), tsc_saving_deleteBuffer(buf));
+                const unsigned int cp =
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx]] << 12 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 1]] << 8 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 2]] << 4 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 3]];
+                *idx += 4;
+                buf_idx += tsc_json_utf8_encode(cp, buf + buf_idx); // Pass the correct buffer offset
             }
             else if (esc == 'U') {
-                TSC_JSON_CALL(tsc_json_decode_UXXXXXXXX(s, idx, &buf), tsc_saving_deleteBuffer(buf));
+                const unsigned int cp =
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx]] << 28 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 1]] << 24 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 2]] << 20 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 3]] << 16 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 4]] << 12 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 5]] << 8 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 6]] << 4 |
+                    (unsigned int)TSC_JSON_XDIGIT[(unsigned char)s[*idx + 7]];
+                *idx += 8;
+                buf_idx += tsc_json_utf8_encode(cp, buf + buf_idx); // Pass the correct buffer offset
             }
-            else {
-                tsc_saving_deleteBuffer(buf);
-                return TSC_JSON_ERROR(BAD_BACKSLASH, *idx);
-            }
-            continue;
         }
-        TSC_JSON_CALL(tsc_json_decode_utf8(s, idx, &buf), tsc_saving_deleteBuffer(buf));
+        else {
+            const unsigned char b0 = (unsigned char)s[*idx];
+
+            if ((b0 & 0x80) == 0) {
+                buf[buf_idx++] = s[(*idx)++];
+            }
+            else if ((b0 & 0xE0) == 0xC0) {
+                buf[buf_idx++] = s[(*idx)++];
+                buf[buf_idx++] = s[(*idx)++];
+            }
+            else if ((b0 & 0xF0) == 0xE0) {
+                buf[buf_idx++] = s[(*idx)++];
+                buf[buf_idx++] = s[(*idx)++];
+                buf[buf_idx++] = s[(*idx)++];
+            }
+            else if ((b0 & 0xF8) == 0xF0) {
+                buf[buf_idx++] = s[(*idx)++];
+                buf[buf_idx++] = s[(*idx)++];
+                buf[buf_idx++] = s[(*idx)++];
+                buf[buf_idx++] = s[(*idx)++];
+            }
+        }
     }
 
-    *out = buf.mem;
+    (*idx)++;
+    buf[buf_idx] = '\0';
+
+    *out = buf;
     return TSC_JSON_SUCCESS;
 }
 
@@ -314,8 +349,8 @@ static tsc_json_error_t tsc_json_decode_object(
 
     TSC_JSON_CALL(tsc_json_skip_whitespace(s, idx), tsc_destroy(*out));
 
-    if (TSC_JSON_PEEK_CHAR() == '}') {
-        TSC_JSON_TAKE_CHAR();
+    if (s[*idx] == '}') {
+        (*idx)++;
         return TSC_JSON_SUCCESS;
     }
 
@@ -334,12 +369,12 @@ static tsc_json_error_t tsc_json_decode_object(
 
         TSC_JSON_CALL(tsc_json_skip_whitespace(s, idx), tsc_destroy(*out));
 
-        const char sep = TSC_JSON_TAKE_CHAR();
+        const char sep = s[(*idx)++];
         if (sep == '}') return TSC_JSON_SUCCESS;
         if (sep == ',') {
             TSC_JSON_CALL(tsc_json_skip_whitespace(s, idx), tsc_destroy(*out));
-            if (TSC_JSON_PEEK_CHAR() == '}') {
-                TSC_JSON_TAKE_CHAR();
+            if (s[*idx] == '}') {
+                (*idx)++;
                 return TSC_JSON_SUCCESS;
             }
             continue;
@@ -357,8 +392,8 @@ static tsc_json_error_t tsc_json_decode_array(
 
     TSC_JSON_CALL(tsc_json_skip_whitespace(s, idx), tsc_destroy(*out));
 
-    if (TSC_JSON_PEEK_CHAR() == ']') {
-        TSC_JSON_TAKE_CHAR();
+    if (s[*idx] == ']') {
+        (*idx)++;
         return TSC_JSON_SUCCESS;
     }
 
@@ -370,14 +405,13 @@ static tsc_json_error_t tsc_json_decode_array(
 
         TSC_JSON_CALL(tsc_json_skip_whitespace(s, idx), tsc_destroy(*out));
 
-
-        const char sep = TSC_JSON_TAKE_CHAR();
+        const char sep = s[(*idx)++];
         if (sep == ']') return TSC_JSON_SUCCESS;
 
         if (sep == ',') {
             TSC_JSON_CALL(tsc_json_skip_whitespace(s, idx), tsc_destroy(*out));
-            if (TSC_JSON_PEEK_CHAR() == ']') {
-                TSC_JSON_TAKE_CHAR();
+            if (s[*idx] == ']') {
+                (*idx)++;
                 return TSC_JSON_SUCCESS;
             }
             continue;
@@ -457,78 +491,8 @@ static int tsc_json_decode_number(
     *idx = pos;
 
     if (is_float) {
-        double result = 0;
-        size_t i = start;
-
-        const double sign = s[i] == '-' ? -1 : 1;
-        if (s[i] == '-') i++;
-
-        // i[s] because i am going mentally insane right now
-        if (i[s] == '.') {
-            i++;
-            const int ib = i;
-            while (isdigit(s[i])) {
-                result = result * 10.0 + (s[i] - '0');
-                i++;
-            }
-            result /= TSC_JSON_POWER_OF_10[ib - i];
-        }
-        else if (isdigit(s[i])) {
-            while (isdigit(s[i])) {
-                result = result * 10.0 + (s[i] - '0');
-                i++;
-            }
-
-            if (s[i] == '.') {
-                i++;
-                double fraction = 0.0;
-                const int ib = i;
-                while (isdigit(s[i])) {
-                    fraction = fraction * 10.0 + (s[i] - '0');
-                    i++;
-                }
-                result += fraction / TSC_JSON_POWER_OF_10[i - ib];
-            }
-        }
-        if (s[i] == 'e' || s[i] == 'E') {
-            i++;
-            int exp_sign = 1;
-            if (s[i] == '+') {
-                i++;
-            }
-            else if (s[i] == '-') {
-                exp_sign = -1;
-                i++;
-            }
-
-            int exponent = 0;
-            while (isdigit(s[i])) {
-                exponent = exponent * 10 + (s[i] - '0');
-                i++;
-            }
-
-            const int exp_val = exp_sign * exponent;
-            if (exp_val != 0) {
-                int n = exp_val < 0 ? -exp_val : exp_val;
-                double factor = 1.0;
-                double base_power = 10.0;
-                while (n) {
-                    if (n & 1) {
-                        factor *= base_power;
-                    }
-                    base_power *= base_power;
-                    n >>= 1;
-                }
-                if (exp_val < 0) {
-                    result /= factor;
-                }
-                else {
-                    result *= factor;
-                }
-            }
-        }
-
-        *out = tsc_number(result * sign);
+        // TODO: make it not use FPU and glibc
+        *out = tsc_number(atof(s + start));
     }
     else if (is_bin) {
         int64_t result = 0;
@@ -627,7 +591,7 @@ static tsc_json_error_t tsc_json_decode_any(
         tsc_value *out
 ) {
     TSC_JSON_CALL(tsc_json_skip_whitespace(s, idx), ;);
-    const char c = TSC_JSON_TAKE_CHAR();
+    const char c = s[(*idx)++];
 
     if (c == '{') {
         TSC_JSON_CALL(tsc_json_decode_object(s, idx, out), ;);
@@ -640,10 +604,10 @@ static tsc_json_error_t tsc_json_decode_any(
     }
 
     if (c == '"') {
-        char* str;
-        TSC_JSON_CALL(tsc_json_decode_string(s, idx, &str), ;);
-        *out = tsc_string(str);
-        free(str);
+        char* buf;
+        TSC_JSON_CALL(tsc_json_decode_string(s, idx, &buf), ;);
+        *out = tsc_string(buf);
+        free(buf);
         return TSC_JSON_SUCCESS;
     }
 

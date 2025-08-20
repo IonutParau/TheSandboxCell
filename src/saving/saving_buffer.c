@@ -63,7 +63,7 @@ void tsc_saving_write(tsc_buffer *buffer, char ch) {
 
 void tsc_saving_writeStr(tsc_buffer *buffer, const char *str) {
     if(str == NULL) return;
-   strcpy(tsc_saving_reserveFor(buffer, strlen(str)), str); 
+    strcpy(tsc_saving_reserveFor(buffer, strlen(str)), str);
 }
 
 void __attribute__((format (printf, 2, 3))) tsc_saving_writeFormat(tsc_buffer *buffer, const char *fmt, ...) {

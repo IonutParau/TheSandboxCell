@@ -1,12 +1,68 @@
 #pragma once
-#include <stdint.h>
-// as you can tell i do not trust the compiler in anything related to glibc
+#include <stdint.h> // uint8_t is fine
+
+// We are getting rid of glibc with this one 🔥🔥🔥🗣️🗣️🗣️🗣️🗣️
+#ifndef INFINITY
+#define INFINITY (1.0f/0.0f)
+#endif
+
+#ifndef NAN
+#define NAN (0.0f/0.0f)
+#endif
+
+#ifndef INT64_MAX
+#define INT64_MAX 9223372036854775807L
+#endif
+
+#ifndef INT64_MIN
+#define INT64_MIN (-9223372036854775808L)
+#endif
+
+static uint64_t double_to_bits(const double d) {
+    union {
+        double d;
+        uint64_t u;
+    } conv;
+    conv.d = d;
+    return conv.u;
+}
+
+static double bits_to_double(const uint64_t u) {
+    union {
+        double d;
+        uint64_t u;
+    } conv;
+    conv.u = u;
+    return conv.d;
+}
+
+#ifndef isnan
+static int isnan(const double d) {
+    uint64_t b = double_to_bits(d);
+    return (b >> 52 == 0x7FF && (b & ((1ULL << 52) - 1)) != 0);
+}
+#define isnan isnan
+#endif
+
+#ifndef isinf
+#define isinf(d) (double_to_bits(d) == 0x7FF0000000000000)
+#endif
+
+#ifndef signbit
+#define signbit(d) ((double_to_bits(d) & 0x8000000000000000ULL) != 0)
+#endif
+
+#define flipsign(d) (bits_to_double(double_to_bits(d) ^ 0x8000000000000000ULL))
 
 #ifndef __NO_CTYPE
 #define __NO_CTYPE
 #define isdigit(c) (TSC_JSON_ISDIGIT[(unsigned char)(c)])
 #define isspace(c) (TSC_JSON_ISSPACE[(unsigned char)(c)])
 #define isxdigit(c) (TSC_JSON_ISXDIGIT[(unsigned char)(c)])
+#endif
+
+#ifndef NULL
+#define NULL (void*)0
 #endif
 
 static const char TSC_JSON_BACKSLASH[256] = {
@@ -64,6 +120,11 @@ static const uint8_t TSC_JSON_XDIGIT[256] = {
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+};
+
+static const char TSC_JSON_CHAR_TO_HEX[16] = {
+    '0', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
 };
 
 static const int TSC_JSON_DIGIT[256] = {

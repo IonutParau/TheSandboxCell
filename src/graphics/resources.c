@@ -400,7 +400,7 @@ tsc_resourcepack *tsc_createResourcePack(const char *id) {
         pack->value = tsc_object();
     }
     if(jsonErr.status != TSC_JSON_ERROR_SUCCESS) {
-        fprintf(stderr, "JSON Error: %s: byte %d\n", tsc_json_error[jsonErr.status], jsonErr.index);
+        tsc_json_perror(jsonErr);
     }
 
     pack->id = id;

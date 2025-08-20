@@ -1,6 +1,10 @@
 #ifndef TSC_JSON_H
 #define TSC_JSON_H
 
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h> // FILE*
+
 #include "value.h"
 #include "../saving/saving.h"
 
@@ -25,31 +29,14 @@ enum {
     TSC_JSON_ERROR_COUNT
 };
 
-static const char *tsc_json_error[TSC_JSON_ERROR_COUNT] = {
-    [TSC_JSON_ERROR_SUCCESS] = "Success",
-    [TSC_JSON_PARSE_ERROR_UNTERMINATED_MULTILINE_COMMENT] = "Unterminated multiline comment starting at",
-    [TSC_JSON_PARSE_ERROR_UNEXPECTED_CHARACTER] = "Unexpected character at",
-    [TSC_JSON_PARSE_ERROR_INVALID_xXX_ESCAPE] = "Invalid \\xXX escape starting at",
-    [TSC_JSON_PARSE_ERROR_INVALID_uXXXX_ESCAPE] = "Invalid \\uXXXX escape starting at",
-    [TSC_JSON_PARSE_ERROR_INVALID_UXXXXXXXX_ESCAPE] = "Invalid \\UXXXXXXXX escape starting at",
-    [TSC_JSON_PARSE_ERROR_BAD_UTF8] = "Can't parse character at",
-    [TSC_JSON_PARSE_ERROR_BAD_BACKSLASH] = "Invalid '\\' escape at",
-    [TSC_JSON_PARSE_ERROR_UNTERMINATED_STRING] = "Unterminated string starting at",
-    [TSC_JSON_PARSE_ERROR_OBJECT_NO_KEY] = "Expected string at",
-    [TSC_JSON_PARSE_ERROR_EXPECTED_COLON] = "Expected ':' at",
-    [TSC_JSON_PARSE_ERROR_EXPECTED_COMMA_DELIMITER] = "Expected ',' delimiter at",
-    [TSC_JSON_PARSE_ERROR_EXPECTED_ANY] = "Expecting value",
-    [TSC_JSON_PARSE_ERROR_TRAILING_CHARACTERS_AFTER_VALUE] = "Trailing characters after JSON value",
-
-    [TSC_JSON_ENCODE_ERROR_INVALID_STRING] = "Can't encode string as UTF-8",
-    [TSC_JSON_ENCODE_ERROR_CANT_ENCODE_CELL] = "Unencodable value: Cell"
-};
-
 typedef struct tsc_json_error_t {
     uint32_t status;
     uint32_t index;
 } tsc_json_error_t;
 
+int tsc_json_strerror(void *buf, size_t capacity, tsc_json_error_t err);
+int tsc_json_fperror(FILE *file, tsc_json_error_t err);
+int tsc_json_perror(tsc_json_error_t err);
 tsc_buffer tsc_json_encode(const tsc_value value, tsc_json_error_t *err, const int indent, const bool ensure_ascii);
 tsc_value tsc_json_decode(const char *text, tsc_json_error_t *err);
 

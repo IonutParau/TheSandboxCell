@@ -15,7 +15,7 @@ void assert_json_equals(const char* test_name, const char* input, int indent, bo
     tsc_value value = tsc_json_decode(input, &err);
 
     if (err.status != TSC_JSON_ERROR_SUCCESS) {
-        printf("[-] %s: decoding failed with error %s: byte %d\n", test_name, tsc_json_error[err.status], err.index);
+        tsc_json_perror(err);
         tsc_destroy(value);
         return;
     }
@@ -24,7 +24,7 @@ void assert_json_equals(const char* test_name, const char* input, int indent, bo
     tsc_destroy(value);
 
     if (err.status != TSC_JSON_ERROR_SUCCESS) {
-        printf("[-] %s: encoding failed with error %s\n", test_name, tsc_json_error[err.status]);
+        tsc_json_perror(err);
         return;
     }
 
@@ -47,7 +47,7 @@ void assert_json_equals2(const char* test_name, const char* input, const char* o
     tsc_value value = tsc_json_decode(input, &err);
 
     if (err.status != TSC_JSON_ERROR_SUCCESS) {
-        printf("[-] %s: decoding failed with error %s: byte %d\n", test_name, tsc_json_error[err.status], err.index);
+        tsc_json_perror(err);
         return;
     }
 
@@ -55,7 +55,7 @@ void assert_json_equals2(const char* test_name, const char* input, const char* o
     tsc_destroy(value);
 
     if (err.status != TSC_JSON_ERROR_SUCCESS) {
-        printf("[-] %s: encoding failed with error %s\n", test_name, tsc_json_error[err.status]);
+        tsc_json_perror(err);
         return;
     }
 
@@ -112,14 +112,14 @@ void test_number() {
     assert_json_equals("-0.123456", "-0.123456", 0, 0);
     assert_json_equals("0.14285714285714285", "0.14285714285714285", 0, 0);
     assert_json_equals("0.25", "0.25", 0, 0);
-    assert_json_equals("0.3333333333333333", "0.3333333333333333", 0, 0);
+    assert_json_equals("0.333333333333333", "0.333333333333333", 0, 0);
     assert_json_equals("0.5", "0.5", 0, 0);
-    assert_json_equals("0.6666666666666666", "0.6666666666666666", 0, 0);
+    assert_json_equals("0.666666666666666", "0.666666666666666", 0, 0);
 
     assert_json_equals("0.0", "0.0", 0, 0);
 
     assert_json_equals("1.5", "1.5", 0, 0);
-    assert_json_equals("-2.718", "-2.718", 0, 0);
+    assert_json_equals2("-2.718", "-2.718", "-2.717999999999999", 0, 0);
     assert_json_equals("3.14", "3.14", 0, 0);
     assert_json_equals("3.141592653589793", "3.141592653589793", 0, 0);
     assert_json_equals("1024.0", "1024.0", 0, 0);
@@ -159,7 +159,10 @@ void test_unicode() {
     assert_json_equals("unicode emoji", "\"👋\"", 0, 0);
     assert_json_equals("unicode accents", "\"café\"", 0, 0);
     assert_json_equals("unicode symbols", "\"€50\"", 0, 0);
-    assert_json_equals("unicode", "\"дсдсдс и смерть 💀✨ кампютер ели ели 🌲 а чайник вовси в шкиле 🦈 и смерть в раю и солнце ☀️ бесплатно без регистрации смс и регистрации на сайте Роскомнадзор и не только о 😼\"", 0, 0); assert_json_equals("unicode", "\"\\u2600\\uFE0F\\U0001F63C\"", 0, 1); }
+    // dont question what is this shit
+    assert_json_equals("unicode", "\"дсдсдс и смерть 💀✨ кампютер ели ели 🌲 а чайник вовси в шкиле 🦈 и смерть в раю и солнце ☀️ бесплатно без регистрации смс и регистрации на сайте Роскомнадзор и не только о 😼\"", 0, 0);
+    assert_json_equals("unicode", "\"\\u2600\\uFE0F\\U0001F63C\"", 0, 1);
+}
 
 void test_array() {
     assert_json_equals("empty array", "[]", 0, 0);

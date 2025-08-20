@@ -1,7 +1,10 @@
-#include <stdio.h>
-
 #include "tscjson.h"
-#include "tscjson_arrays.h"
+#include "tscjson_macros.h"
+
+// My next goal is to get rid of format prints because they
+// are technically glibc lmfao
+// tsc_saving_writeFormat(buf, "%d", exp);
+// tsc_saving_writeFormat(buf, "%ld", tsc_toInt(v));
 
 #define TSC_JSON_CALL(thing) do { \
     tsc_json_error_t result = thing; \
@@ -12,85 +15,106 @@
 
 #define TSC_JSON_ERROR(err) ((tsc_json_error_t) { (uint32_t)(TSC_JSON_ENCODE_ERROR_##err), 0 })
 #define TSC_JSON_SUCCESS ((tsc_json_error_t) { (uint32_t)(TSC_JSON_ERROR_SUCCESS), 0 })
-#define TSC_SAVING_WRITESPACE(buf, amount) do { \
-    if ((amount)) { \
-        tsc_saving_writeFormat(buf, "%*c", (amount), ' '); \
-    } \
-} while (0)
 
-static void memcpy8(void *dst, const void *src) {
-    *(uint64_t *) dst = *(const uint64_t *) src;
+static void tsc_saving_writespace(tsc_buffer* buf, unsigned int amount) {
+    if (amount == 0) return;
+    char *dest = tsc_saving_reserveFor(buf, amount);
+    while (amount-- > 0) *dest++ = ' ';
 }
 
-static int tsc_isnan(const double d) {
-    uint64_t bits;
-    memcpy8(&bits, &d);
-    return bits >> 52 == 0x7FF && (bits & ((1ULL << 52) - 1)) != 0;
-}
-
-static int tsc_isinf(const double d) {
-    uint64_t bits;
-    memcpy8(&bits, &d);
-    return bits == 0x7FF0000000000000;
-}
-
-// these two functions are stupid shitcode
-// if you can please improve this
-static void tsc_saving_writeNumber(tsc_buffer* buf, const double d) {
+// ieee 754
+// 1 bit: sign
+// 11 bits: exponent (biased by 1023)
+// 52 bits: mantissa
+// Seeeeeee eeeeMMMM MMMMMMMM MMMM....
+static void tsc_saving_writeNumber(
+        tsc_buffer *buf,
+        const double d
+) {
     char buffer[64];
     char *p = buffer;
 
-    const uint64_t int_part = (uint64_t)d;
-    double frac_part = d - int_part;
+    const uint64_t bits = double_to_bits(d);
+    int exp = ((bits >> 52) & 0x7FF) - 1023;
+    uint64_t mantissa = bits & ((1ULL << 52) - 1);
 
-    if (int_part == 0) {
-        *p++ = '0';
+    // normalize number
+    if (exp != -1023) {
+        mantissa |= 1ULL << 52;
     }
     else {
-        char *start = p;
-        uint64_t temp = int_part;
+        exp = -1022;
+    }
 
-        do {
-            *p++ = '0' + temp % 10;
-            temp /= 10;
-        } while (temp);
+    uint64_t int_part, frac_part;
+    int frac_bits;
 
-        for (char *end = p - 1; start < end; ) {
-            const char tmp = *start;
-            *start++ = *end;
-            *end-- = tmp;
-        }
+    if (exp >= 52) {
+        int_part = mantissa << (exp - 52);
+        frac_part = 0;
+        frac_bits = 0;
+    }
+    else if (exp >= 0) {
+        int_part = mantissa >> (52 - exp);
+        frac_part = mantissa & ((1ULL << (52 - exp)) - 1);
+        frac_bits = 52 - exp;
+    }
+    else {
+        int_part = 0;
+        frac_part = mantissa;
+        frac_bits = 52 - exp;
+    }
+
+    // integer part
+    char *int_start = p;
+
+    do {
+        *p++ = int_part % 10 + '0';
+        int_part /= 10;
+    } while (int_part);
+
+    const int len = p - int_start;
+    for (int i = 0; i < len / 2; i++) {
+        const char t = int_start[i];
+        int_start[i] = int_start[len - 1 - i];
+        int_start[len - 1 - i] = t;
     }
 
     *p++ = '.';
-
     const char *frac_start = p;
 
-    for (int i = 0; i < 15; ++i) {
-        if (frac_part <= 1e-15) break;
+    // fractional part
+    int digits_written = 0;
+    for (int i = 0; i < 15 && frac_part != 0; i++) {
         frac_part *= 10;
-        int digit = (int)frac_part;
-        *p++ = '0' + digit;
-        frac_part -= digit;
+        *p++ = (frac_part >> frac_bits) % 10 + '0';
+        frac_part &= (1ULL << frac_bits) - 1;
+        digits_written++;
     }
 
-    while (p > frac_start && p[-1] == '0') p--;
-    if (p == frac_start) *p++ = '0';
+    if (digits_written == 0) {
+        *p++ = '0';
+    }
+
+    while (p > frac_start + 1 && p[-1] == '0') {
+        p--;
+    }
 
     tsc_saving_writeBytes(buf, buffer, p - buffer);
 }
 
-void tsc_saving_writeNumberScientific(
+// TODO: make it not use FPU and glibc
+static void tsc_saving_writeNumberScientific(
         tsc_buffer *buf,
         const double num
 ) {
     int exp = 0;
 
     if (num >= 1.0) {
-        while (exp <= 308 && TSC_JSON_POWER_OF_10[exp + 1] <= num) exp++;
+        while (TSC_JSON_POWER_OF_10[exp + 1] <= num) exp++;
     }
     else {
-        while (exp >= -324 && TSC_JSON_POWER_OF_10[exp] > num) exp--;
+        while (TSC_JSON_POWER_OF_10[exp] > num) exp--;
     }
 
     char digits[16];
@@ -117,27 +141,29 @@ void tsc_saving_writeNumberScientific(
         tsc_saving_writeBytes(buf, digits + 1, digit_count - 1);
     }
 
-    if (exp != 0) {
-        tsc_saving_write(buf, 'e');
-        tsc_saving_writeFormat(buf, "%d", exp);
-    }
+    tsc_saving_write(buf, 'e');
+    tsc_saving_writeFormat(buf, "%d", exp);
 }
 
 static void tsc_json_encode_number(
         tsc_buffer *buf,
         double d
 ) {
-    if (d < 0) {
+    if (signbit(d)) {
         tsc_saving_write(buf, '-');
-        d *= -1;
+        d = flipsign(d);
     }
-    if (tsc_isnan(d)) {
+    if (isnan(d)) {
         tsc_saving_writeStr(buf, "NaN");
     }
-    else if (tsc_isinf(d)) {
+    else if (isinf(d)) {
         tsc_saving_writeStr(buf, "Infinity");
     }
-    else if (d == 0.0 || (0.0001 < d && d < 1e15)) {
+    else if (double_to_bits(0.0) == double_to_bits(d)) {
+        tsc_saving_writeStr(buf, "0.0");
+    }
+    // imagine getting rid of FPU here
+    else if (0.0001 < d && d < 1e15) {
         // for "normal" numbers print with up to 15 decimal places
         tsc_saving_writeNumber(buf, d);
     }
@@ -172,7 +198,13 @@ static int tsc_json_encode_char(
         if (b0 < 0xC2) return 0; // too long
         if (ensure_ascii) {
             const unsigned int cp = ((b0 & 0x1F) << 6) | (b1 & 0x3F);
-            tsc_saving_writeFormat(buf, "\\u%04X", cp);
+            char* dest = tsc_saving_reserveFor(buf, 6);
+            *dest++ = '\\';
+            *dest++ = 'u';
+            *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 12 & 0xf];
+            *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 8 & 0xf];
+            *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 4 & 0xf];
+            *dest++ = TSC_JSON_CHAR_TO_HEX[cp & 0xf];
         }
         else {
             tsc_saving_write(buf, b0);
@@ -192,10 +224,26 @@ static int tsc_json_encode_char(
         if (ensure_ascii) {
             const unsigned int cp = ((b0 & 0x0F) << 12) | ((b1 & 0x3F) << 6) | (b2 & 0x3F);
             if (cp <= 0xFFFF) {
-                tsc_saving_writeFormat(buf, "\\u%04X", cp);
+                char* dest = tsc_saving_reserveFor(buf, 6);
+                *dest++ = '\\';
+                *dest++ = 'u';
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 12 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 8 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 4 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp & 0xf];
             }
             else {
-                tsc_saving_writeFormat(buf, "\\U%08X", cp);
+                char* dest = tsc_saving_reserveFor(buf, 10);
+                *dest++ = '\\';
+                *dest++ = 'U';
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 28 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 24 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 20 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 16 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 12 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 8 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 4 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp & 0xf];
             }
         }
         else {
@@ -219,10 +267,26 @@ static int tsc_json_encode_char(
             const unsigned int cp = ((b0 & 0x07) << 18) | ((b1 & 0x3F) << 12) | ((b2 & 0x3F) << 6) | (b3 & 0x3F);
 
             if (cp <= 0xFFFF) {
-                tsc_saving_writeFormat(buf, "\\u%04X", cp);
+                char* dest = tsc_saving_reserveFor(buf, 6);
+                *dest++ = '\\';
+                *dest++ = 'u';
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 12 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 8 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 4 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp & 0xf];
             }
             else {
-                tsc_saving_writeFormat(buf, "\\U%08X", cp);
+                char* dest = tsc_saving_reserveFor(buf, 10);
+                *dest++ = '\\';
+                *dest++ = 'U';
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 28 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 24 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 20 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 16 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 12 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 8 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp >> 4 & 0xf];
+                *dest++ = TSC_JSON_CHAR_TO_HEX[cp & 0xf];
             }
         }
         else {
@@ -292,7 +356,7 @@ static tsc_json_error_t tsc_json_encode_object(
         }
         first = false;
 
-        TSC_SAVING_WRITESPACE(buf, (current_indent + 1) * indent);
+        tsc_saving_writespace(buf, (current_indent + 1) * indent);
 
         TSC_JSON_CALL(tsc_json_encode_string(buf, o->keys[i], ensure_ascii));
         tsc_saving_writeStr(buf, ": ");
@@ -301,7 +365,7 @@ static tsc_json_error_t tsc_json_encode_object(
 
     if (indent > 0) {
         tsc_saving_write(buf, '\n');
-        TSC_SAVING_WRITESPACE(buf, current_indent * indent);
+        tsc_saving_writespace(buf, current_indent * indent);
     }
     tsc_saving_write(buf, '}');
     return TSC_JSON_SUCCESS;
@@ -337,14 +401,14 @@ static tsc_json_error_t tsc_json_encode_array(
         }
         first = false;
 
-        TSC_SAVING_WRITESPACE(buf, (current_indent + 1) * indent);
+        tsc_saving_writespace(buf, (current_indent + 1) * indent);
 
         TSC_JSON_CALL(tsc_json_encode_any(buf, a->values[i], current_indent + 1, indent, ensure_ascii));
     }
 
     if (indent) {
         tsc_saving_write(buf, '\n');
-        TSC_SAVING_WRITESPACE(buf, current_indent * indent);
+        tsc_saving_writespace(buf, current_indent * indent);
     }
     tsc_saving_write(buf, ']');
     return TSC_JSON_SUCCESS;
@@ -402,10 +466,10 @@ static tsc_json_error_t tsc_json_encode_any(
 }
 
 tsc_buffer tsc_json_encode(
-    const tsc_value value,
-    tsc_json_error_t *err,
-    const int indent,
-    const bool ensure_ascii
+        const tsc_value value,
+        tsc_json_error_t *err,
+        const int indent,
+        const bool ensure_ascii
 ) {
     tsc_buffer buf = tsc_saving_newBuffer(NULL);
     const tsc_json_error_t result = tsc_json_encode_any(&buf, value, 0, indent, ensure_ascii);

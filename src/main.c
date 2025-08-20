@@ -121,7 +121,7 @@ void tsc_loadEnabledPacks() {
     tsc_json_error_t err;
     tsc_value l = tsc_json_decode(data, &err); // if this fails u are an idiot
     if(err.status != TSC_JSON_ERROR_SUCCESS) {
-        fprintf(stderr, "ERROR: %s: byte %d\n", tsc_json_error[err.status], err.index);
+        tsc_json_perror(err);
         exit(1);
     }
 
