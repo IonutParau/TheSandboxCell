@@ -453,7 +453,7 @@ void tsc_storeSettings() {
     tsc_json_error_t err;
     tsc_buffer buffer = tsc_json_encode(tsc_settingStore, &err, 0, false);
     if(err.status != TSC_JSON_ERROR_SUCCESS) {
-        fprintf(stderr, "Error: %s\n", tsc_json_error[err.status]);
+        tsc_json_perror(err);
         exit(1);
     }
     FILE *settings = fopen(savingPath, "w");
@@ -475,7 +475,7 @@ void tsc_loadSettings() {
         char *buffer = tsc_allocfile(savingPath, NULL);
         tsc_settingStore = tsc_json_decode(buffer, &err);
         if(err.status != TSC_JSON_ERROR_SUCCESS) {
-            fprintf(stderr, "Error: %s: byte %d\n", tsc_json_error[err.status], err.index);
+            tsc_json_perror(err);
             exit(1);
         }
         tsc_freefile(buffer);
