@@ -485,7 +485,7 @@ int main(int argc, char **argv) {
             tsc_ui_pushFrame(tsc_mainMenu);
             int textHeight = 100;
             tsc_ui_row({
-                tsc_ui_text("The Sandbox Cell v0.1.0", 50, WHITE);
+                tsc_ui_text("The Sandbox Cell v0.1.1", 50, WHITE);
                 #ifdef TSC_TURBO
                 tsc_ui_text("turbo", 20, BLUE);
                 #endif
