@@ -22,7 +22,7 @@ typedef tscjson_stack_type_t* tscjson_stack_t;
             #define TSC_JSON_BZERO_STACK(s, b) __builtin_bzero(*(s), (b))
         #endif
     #else
-        #define TSC_JSON_BZERO_STACK(s, b) memset(*(s), 0, b); // bzero() is actually not present in windows api will you believe it
+        #define TSC_JSON_BZERO_STACK(s, b) memset(*(s), 0, (b)); // bzero() is actually not present in windows api will you believe it
     #endif
 #endif
 
