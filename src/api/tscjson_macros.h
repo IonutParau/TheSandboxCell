@@ -6,17 +6,26 @@
 #define INFINITY (1.0f/0.0f)
 #endif
 
-#ifndef NAN
-#define NAN (0.0f/0.0f)
+// Not really but I have no other choice
+#include <stdlib.h>
+typedef uint32_t tscjson_stack_type_t;
+typedef tscjson_stack_type_t* tscjson_stack_t;
+#define TSC_JSON_ALLOC_STACK(s, b) do { (*(s)) = malloc((b)); } while (0)
+#define TSC_JSON_FREE_STACK(s) free(*(s))
+#if defined(__has_builtin)
+    #if __has_builtin(__builtin_bzero)
+        #define TSC_JSON_BZERO_STACK(s, b) __builtin_bzero(*(s), (b))
+    #endif
+#else
+    #if defined(__GNUC__) && !defined(__clang__)
+        #if __GNUC__ >= 3
+            #define TSC_JSON_BZERO_STACK(s, b) __builtin_bzero(*(s), (b))
+        #endif
+    #else
+        #define TSC_JSON_BZERO_STACK(s, b) memset(*(s), 0, (b)); // bzero() is actually not present in windows api will you believe it
+    #endif
 #endif
 
-#ifndef INT64_MAX
-#define INT64_MAX 9223372036854775807L
-#endif
-
-#ifndef INT64_MIN
-#define INT64_MIN (-9223372036854775808L)
-#endif
 
 static uint64_t double_to_bits(const double d) {
     union {
@@ -36,6 +45,42 @@ static double bits_to_double(const uint64_t u) {
     return conv.d;
 }
 
+static uint64_t int64_to_bits(const int64_t i) {
+    union {
+        int64_t i;
+        uint64_t u;
+    } conv;
+    conv.i = i;
+    return conv.u;
+}
+
+static int64_t bits_to_int64(const uint64_t u) {
+    union {
+        int64_t i;
+        uint64_t u;
+    } conv;
+    conv.u = u;
+    return conv.i;
+}
+
+static uint32_t int32_to_bits(const int32_t i) {
+    union {
+        int32_t i;
+        uint32_t u;
+    } conv;
+    conv.i = i;
+    return conv.u;
+}
+
+static int32_t bits_to_int32(const uint32_t u) {
+    union {
+        int32_t i;
+        uint32_t u;
+    } conv;
+    conv.u = u;
+    return conv.i;
+}
+
 #ifndef isnan
 static int isnan(const double d) {
     uint64_t b = double_to_bits(d);
@@ -44,25 +89,13 @@ static int isnan(const double d) {
 #define isnan isnan
 #endif
 
-#ifndef isinf
-#define isinf(d) (double_to_bits(d) == 0x7FF0000000000000)
-#endif
-
 #ifndef signbit
 #define signbit(d) ((double_to_bits(d) & 0x8000000000000000ULL) != 0)
 #endif
 
 #define flipsign(d) (bits_to_double(double_to_bits(d) ^ 0x8000000000000000ULL))
-
-#ifndef __NO_CTYPE
-#define __NO_CTYPE
-#define isdigit(c) (TSC_JSON_ISDIGIT[(unsigned char)(c)])
-#define isspace(c) (TSC_JSON_ISSPACE[(unsigned char)(c)])
-#define isxdigit(c) (TSC_JSON_ISXDIGIT[(unsigned char)(c)])
-#endif
-
-#ifndef NULL
-#define NULL (void*)0
+#ifndef isinf
+#define isinf(d) (double_to_bits(d) == 0x7FF0000000000000)
 #endif
 
 static const char TSC_JSON_BACKSLASH[256] = {
